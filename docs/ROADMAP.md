@@ -26,7 +26,7 @@ skills under `.claude/skills/`, and none of the Codex-specific layout (`.agents/
 
 ---
 
-## Phase 2 — Repository independence · todo
+## Phase 2 — Repository independence · done
 
 **Outcome.** Nothing in the repository points at the upstream account for updates.
 Until this lands, an update check can overwrite local work with the upstream copy.
@@ -67,21 +67,23 @@ re-uploaded by hand.
 
 ---
 
-## Phase 3 — Quick wins · todo
+## Phase 3 — Quick wins · done
 
-| Outcome | Target | Approach |
+| Outcome | Target | What was done |
 | --- | --- | --- |
-| Gem upgrades buy `Immune` first | `automation/lib/Items.js:272-307` | The affinity index is `TypeEffectiveness` (`Immune, NotVery, Neutral, Very`). Iterate an explicit priority list instead of `Array(Gems.nEffects).keys()`. Immune upgrades are the ones that turn zero damage into non-zero, so they pay first. |
-| Additional Visual Settings laid out vertically | `additionalvisualsettings.user.js:120` | The per-state `<td style="display:flex">` becomes a column. The `div.px-3` children at `:125` follow unchanged. |
-| Remaining evolution count on hover | `automation/lib/Trivia.js:438,494` | `__internal__hasStoneEvolutionCandidate` returns a count instead of a boolean; each stone `<img>` gains `hasAutomationTooltip` + `automation-tooltip-text`. Keep the existing lock-reason filter — region and time-of-day locks count, others do not. |
-| Auto-quest watchdog | `automation/lib/Focus/Quests.js` | Timestamp updated in `__internal__claimCompletedQuests` (`:285`); past the threshold, refresh through `__internal__skipRemainingQuests` (`:335`), which already handles free vs. paid refreshes and the unaffordable-refresh money detour. Threshold in minutes via `createTextInputElement`, following `automation/lib/SaveBackup.js:148-170`. |
+| Gem upgrades complete `Immune` first | `automation/lib/Items.js` | The planned fix was wrong: `TypeEffectiveness.Immune` is already 0, so the old loop *did* reach it first. The real problem was that it bought one level of every affinity per tick, spreading a type's gems evenly. It now walks an explicit priority list and stops at the first affinity of that type which is not maxed — including when it cannot afford it, so gems accumulate for it instead of leaking into lower-priority upgrades. Types never compete, each has its own wallet. |
+| Additional Visual Settings laid out vertically | `additionalvisualsettings.user.js` | The per-state `<td>` became `flex-direction: column`, and each row a `d-flex justify-content-between` so the checkboxes line up. |
+| Remaining evolution count on hover | `automation/lib/Trivia.js` | `__internal__hasStoneEvolutionCandidate` became `__internal__getStoneEvolutionCandidateCount`. The stone images are now built through the DOM rather than concatenated HTML, so the tooltip separator's line breaks survive into the attribute. The refresh cache key carries the counts, otherwise a changed count would not redraw. The existing lock-reason filter is unchanged — region and time-of-day locks count, others do not. |
+| Auto-quest watchdog | `automation/lib/Focus/Quests.js` | New `Focus-Quests-StuckRefreshMinutes`, 0 (off) by default. `__internal__claimCompletedQuests` stamps the time; `__internal__refreshQuestsIfStuck` runs from the loop's working branch and calls `App.game.quests.refreshQuests()` past the delay. It does **not** reuse `__internal__skipRemainingQuests` as planned: that one diverts to money farming when a refresh is unaffordable, which would abandon a quest the automation is actively working on. Here an unaffordable refresh is simply retried next tick. Note `refreshQuests()` quits every quest in progress — the tooltip says so. |
 
 **Acceptance criteria.** Each option defaults to off; the watchdog threshold persists
 across a reload; the gem loop still self-disables once everything is maxed.
 
-**Validation.** `node automation/build.mjs && cd automation/test && npm test`.
-In-game: leave auto-quest running with every quest type disabled and confirm the
-refresh fires once, not in a loop.
+**Validation.** `node automation/build.mjs && cd automation/test && npm test` — 68
+checks pass. In-game validation still pending: leave auto-quest running with every
+quest type disabled and confirm the refresh fires once, not in a loop; hover a stone
+in the Trivia panel; check that a type's gems now pile up toward its Immune upgrade
+instead of being spread.
 
 ---
 

@@ -57,8 +57,12 @@ class AutomationFocusQuests
     static __internal__autoQuestLoop = null;
     static __internal__questLabels = {};
 
+    // Timestamp of the last quest reward claimed, used by the stuck-quest watchdog
+    static __internal__lastQuestCompletionTime = null;
+
     static __internal__advancedSettings = {
-                                              QuestEnabled: function(questName) { return `Focus-${questName}-Enabled`; }
+                                              QuestEnabled: function(questName) { return `Focus-${questName}-Enabled`; },
+                                              StuckRefreshMinutes: "Focus-Quests-StuckRefreshMinutes"
                                           };
 
     /**
@@ -154,6 +158,54 @@ class AutomationFocusQuests
                 toggleButton.addEventListener("click", this.__internal__takeOverFarmIfNeeded.bind(this), false);
             }
         }
+
+        this.__internal__buildStuckWatchdogSetting(parent);
+    }
+
+    /**
+     * @brief Adds the stuck-quest watchdog setting to the given @p parent
+     *
+     * Some quests cannot be completed at all in the player's current state, and the automation has
+     * no way to detect it: it will keep working on such a quest forever. Refreshing the list is the
+     * only way out, and it costs money, so the delay is left to the user and disabled by default.
+     *
+     * @param {Element} parent: The parent div to add the setting to
+     */
+    static __internal__buildStuckWatchdogSetting(parent)
+    {
+        const setting = this.__internal__advancedSettings.StuckRefreshMinutes;
+
+        // Disabled by default: refreshing costs pokédollars and resets every quest in progress
+        Automation.Utils.LocalStorage.setDefaultValue(setting, 0);
+
+        const container = document.createElement("div");
+        container.style.textAlign = "right";
+        container.style.marginTop = "5px";
+        container.style.paddingRight = "10px";
+        container.classList.add("hasAutomationTooltip");
+        container.classList.add("rightMostAutomationTooltip");
+        container.classList.add("shortTransitionAutomationTooltip");
+        container.setAttribute("automation-tooltip-text",
+                               "Refreshes the quest list when no quest reward was claimed for that long"
+                             + Automation.Menu.TooltipSeparator
+                             + "Set it to 0 to never refresh\n"
+                             + "⚠️ Refreshing is cost-heavy, and quits every quest in progress");
+        parent.appendChild(container);
+
+        container.appendChild(document.createTextNode("Refresh quests if stuck for (minutes):"));
+
+        const input = Automation.Menu.createTextInputElement(4, "[0-9]");
+        input.id = setting;
+        input.textContent = Automation.Utils.LocalStorage.getValue(setting);
+        input.style.display = "inline-block";
+        input.style.width = "45px";
+        input.style.marginLeft = "5px";
+        container.appendChild(input);
+
+        input.oninput = function()
+            {
+                Automation.Utils.LocalStorage.setValue(setting, input.textContent.trim());
+            };
     }
 
     /**
@@ -176,6 +228,9 @@ class AutomationFocusQuests
             Automation.Click.toggleAutoClick(true);
             Automation.Hatchery.toggleAutoHatchery(true);
             Automation.Underground.toggleAutoMining(true);
+
+            // Start the stuck watchdog from now, not from whenever the feature was last running
+            this.__internal__lastQuestCompletionTime = Date.now();
 
             // Set auto-quest loop
             this.__internal__autoQuestLoop = setInterval(this.__internal__questLoop.bind(this), 1000); // Runs every second
@@ -276,6 +331,9 @@ class AutomationFocusQuests
         {
             this.__internal__workOnQuest(filteredQuests);
             this.__internal__workOnBackgroundQuests();
+
+            // Only relevant while there is something to work on: the branch above already refreshes
+            this.__internal__refreshQuestsIfStuck();
         }
     }
 
@@ -289,8 +347,55 @@ class AutomationFocusQuests
             if (quest.isCompleted() && !quest.claimed())
             {
                 App.game.quests.claimQuest(index);
+
+                // Progress was made, restart the stuck watchdog
+                this.__internal__lastQuestCompletionTime = Date.now();
             }
         }
+    }
+
+    /**
+     * @brief Refreshes the quest list if no quest was completed for the user-configured delay
+     *
+     * Does nothing if the watchdog is disabled, or if the refresh cannot be afforded. In the latter
+     * case the check is simply retried on the next loop, rather than diverting to money farming:
+     * the automation is already working on a quest, it is just not one it can finish.
+     */
+    static __internal__refreshQuestsIfStuck()
+    {
+        const configuredDelay = parseInt(Automation.Utils.LocalStorage.getValue(
+            this.__internal__advancedSettings.StuckRefreshMinutes), 10);
+
+        if (isNaN(configuredDelay) || (configuredDelay <= 0))
+        {
+            return;
+        }
+
+        const elapsed = Date.now() - this.__internal__lastQuestCompletionTime;
+        if (elapsed < (configuredDelay * 60 * 1000))
+        {
+            return;
+        }
+
+        if (!App.game.quests.freeRefresh() && !App.game.quests.canAffordRefresh())
+        {
+            return;
+        }
+
+        const pokedollarsImage = '<img src="assets/images/currency/money.svg" height="25px">';
+        const refreshCost = App.game.quests.freeRefresh()
+                          ? "free"
+                          : `${App.game.quests.getRefreshCost().amount} ${pokedollarsImage}`;
+
+        App.game.quests.refreshQuests();
+
+        // Restart the countdown, otherwise the watchdog would fire again on the very next loop
+        this.__internal__lastQuestCompletionTime = Date.now();
+
+        Automation.Notifications.sendNotif(
+            `No quest was completed in ${configuredDelay} minutes, refreshed the list for ${refreshCost}`,
+            "Focus",
+            "Quests");
     }
 
     /**

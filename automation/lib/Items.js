@@ -34,6 +34,14 @@ class AutomationItems
         }
         else if (initStep == Automation.InitSteps.Finalize)
         {
+            this.__internal__gemUpgradePriority =
+                [
+                    GameConstants.TypeEffectiveness.Immune,
+                    GameConstants.TypeEffectiveness.NotVery,
+                    GameConstants.TypeEffectiveness.Neutral,
+                    GameConstants.TypeEffectiveness.Very
+                ];
+
             // Restore previous session state
             this.__internal__toggleAutoOakUpgrade();
             this.__internal__toggleAutoGemUpgrade();
@@ -50,6 +58,14 @@ class AutomationItems
 
     static __internal__autoOakUpgradeLoop = null;
     static __internal__autoGemUpgradeLoop = null;
+
+    // The order gem upgrades are bought in, most rewarding first.
+    // Immune turns a match-up that deals no damage at all into one that does, so it is worth
+    // far more than any other step; Very effective is already the best case, so it comes last.
+    // This happens to be the declaration order of GameConstants.TypeEffectiveness, but the
+    // intent is stated here so a reordering upstream does not silently change the strategy.
+    // Filled in at init time: a static initializer would run before the game defines GameConstants
+    static __internal__gemUpgradePriority = [];
 
     /**
      * @brief Builds the menu
@@ -92,7 +108,13 @@ class AutomationItems
         this.__internal__gemUpgradeContainer.hidden = !hasAccessToGems || this.__internal__areEveryGemsMaxedOut();
         this.__internal__gemUpgradeContainer.hiddenForAccessReason = !hasAccessToGems;
 
-        let gemsTooltip = "Automatically uses Gems to upgrade attack effectiveness";
+        const gemsTooltip = "Automatically uses Gems to upgrade attack effectiveness"
+                          + Automation.Menu.TooltipSeparator
+                          + "Each type is upgraded in this order:\n"
+                          + "Immune → Not very effective → Neutral → Very effective\n"
+                          + "An affinity is maxed-out before the next one is started,\n"
+                          + "since removing an immunity is worth far more than\n"
+                          + "improving a match-up that already deals damage";
         let gemUpgradeButton =
             Automation.Menu.addAutomationButton("Gems", this.Settings.UpgradeGems, gemsTooltip, this.__internal__gemUpgradeContainer);
         gemUpgradeButton.addEventListener("click", this.__internal__toggleAutoGemUpgrade.bind(this), false);
@@ -268,15 +290,28 @@ class AutomationItems
      * Any pokemon weakness efficiency will be upgraded if:
      *   - It's not max-leveled
      *   - The player has enough gem to buy the upgrade
+     *   - Every higher-priority affinity of that type is already maxed-out
+     *
+     * @see __internal__gemUpgradePriority for the affinity order
      */
     static __internal__gemUpgradeLoop()
     {
-        let areAllGemsMaxedOut = true;
+        if (this.__internal__gemUpgradePriority.length == 0)
+        {
+            // Not initialized yet. Bailing out matters: an empty priority list would otherwise
+            // look exactly like "every gem is maxed-out" and permanently hide the feature
+            return;
+        }
+
         // Iterate over gem types
         for (const type of Array(Gems.nTypes).keys())
         {
-            // Iterate over affinity (backward)
-            for (const affinity of Array(Gems.nEffects).keys())
+            // Each gem type has its own wallet, so types never compete with each other.
+            // Within a type, spend on the most rewarding affinity first, and only move on
+            // once it is maxed-out
+            let hasBoughtForThisType = false;
+
+            for (const affinity of this.__internal__gemUpgradePriority)
             {
                 // Ignore invalid upgrades
                 if (!App.game.gems.isValidUpgrade(type, affinity))
@@ -284,17 +319,22 @@ class AutomationItems
                     continue;
                 }
 
-                if (!App.game.gems.hasMaxUpgrade(type, affinity)
-                    && App.game.gems.canBuyGemUpgrade(type, affinity))
+                if (!App.game.gems.hasMaxUpgrade(type, affinity))
                 {
-                    App.game.gems.buyGemUpgrade(type, affinity);
-                }
+                    if (!hasBoughtForThisType && App.game.gems.canBuyGemUpgrade(type, affinity))
+                    {
+                        App.game.gems.buyGemUpgrade(type, affinity);
+                    }
 
-                areAllGemsMaxedOut &= App.game.gems.hasMaxUpgrade(type, affinity);
+                    // Whether or not the upgrade was affordable, keep this type's gems for it
+                    hasBoughtForThisType = true;
+                }
             }
         }
 
-        if (areAllGemsMaxedOut)
+        // Asked rather than accumulated above, so the answer stays right even if the priority list
+        // ever stops covering every affinity the game defines
+        if (this.__internal__areEveryGemsMaxedOut())
         {
             // Hide the feature
             this.__internal__gemUpgradeContainer.hiddenForAccessReason = false;

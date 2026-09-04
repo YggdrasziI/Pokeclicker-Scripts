@@ -672,8 +672,12 @@ class AutomationFocusQuests
     static __internal__autoQuestLoop = null;
     static __internal__questLabels = {};
 
+    // Timestamp of the last quest reward claimed, used by the stuck-quest watchdog
+    static __internal__lastQuestCompletionTime = null;
+
     static __internal__advancedSettings = {
-                                              QuestEnabled: function(questName) { return `Focus-${questName}-Enabled`; }
+                                              QuestEnabled: function(questName) { return `Focus-${questName}-Enabled`; },
+                                              StuckRefreshMinutes: "Focus-Quests-StuckRefreshMinutes"
                                           };
 
     /**
@@ -769,6 +773,54 @@ class AutomationFocusQuests
                 toggleButton.addEventListener("click", this.__internal__takeOverFarmIfNeeded.bind(this), false);
             }
         }
+
+        this.__internal__buildStuckWatchdogSetting(parent);
+    }
+
+    /**
+     * @brief Adds the stuck-quest watchdog setting to the given @p parent
+     *
+     * Some quests cannot be completed at all in the player's current state, and the automation has
+     * no way to detect it: it will keep working on such a quest forever. Refreshing the list is the
+     * only way out, and it costs money, so the delay is left to the user and disabled by default.
+     *
+     * @param {Element} parent: The parent div to add the setting to
+     */
+    static __internal__buildStuckWatchdogSetting(parent)
+    {
+        const setting = this.__internal__advancedSettings.StuckRefreshMinutes;
+
+        // Disabled by default: refreshing costs pokédollars and resets every quest in progress
+        Automation.Utils.LocalStorage.setDefaultValue(setting, 0);
+
+        const container = document.createElement("div");
+        container.style.textAlign = "right";
+        container.style.marginTop = "5px";
+        container.style.paddingRight = "10px";
+        container.classList.add("hasAutomationTooltip");
+        container.classList.add("rightMostAutomationTooltip");
+        container.classList.add("shortTransitionAutomationTooltip");
+        container.setAttribute("automation-tooltip-text",
+                               "Refreshes the quest list when no quest reward was claimed for that long"
+                             + Automation.Menu.TooltipSeparator
+                             + "Set it to 0 to never refresh\n"
+                             + "⚠️ Refreshing is cost-heavy, and quits every quest in progress");
+        parent.appendChild(container);
+
+        container.appendChild(document.createTextNode("Refresh quests if stuck for (minutes):"));
+
+        const input = Automation.Menu.createTextInputElement(4, "[0-9]");
+        input.id = setting;
+        input.textContent = Automation.Utils.LocalStorage.getValue(setting);
+        input.style.display = "inline-block";
+        input.style.width = "45px";
+        input.style.marginLeft = "5px";
+        container.appendChild(input);
+
+        input.oninput = function()
+            {
+                Automation.Utils.LocalStorage.setValue(setting, input.textContent.trim());
+            };
     }
 
     /**
@@ -791,6 +843,9 @@ class AutomationFocusQuests
             Automation.Click.toggleAutoClick(true);
             Automation.Hatchery.toggleAutoHatchery(true);
             Automation.Underground.toggleAutoMining(true);
+
+            // Start the stuck watchdog from now, not from whenever the feature was last running
+            this.__internal__lastQuestCompletionTime = Date.now();
 
             // Set auto-quest loop
             this.__internal__autoQuestLoop = setInterval(this.__internal__questLoop.bind(this), 1000); // Runs every second
@@ -891,6 +946,9 @@ class AutomationFocusQuests
         {
             this.__internal__workOnQuest(filteredQuests);
             this.__internal__workOnBackgroundQuests();
+
+            // Only relevant while there is something to work on: the branch above already refreshes
+            this.__internal__refreshQuestsIfStuck();
         }
     }
 
@@ -904,8 +962,55 @@ class AutomationFocusQuests
             if (quest.isCompleted() && !quest.claimed())
             {
                 App.game.quests.claimQuest(index);
+
+                // Progress was made, restart the stuck watchdog
+                this.__internal__lastQuestCompletionTime = Date.now();
             }
         }
+    }
+
+    /**
+     * @brief Refreshes the quest list if no quest was completed for the user-configured delay
+     *
+     * Does nothing if the watchdog is disabled, or if the refresh cannot be afforded. In the latter
+     * case the check is simply retried on the next loop, rather than diverting to money farming:
+     * the automation is already working on a quest, it is just not one it can finish.
+     */
+    static __internal__refreshQuestsIfStuck()
+    {
+        const configuredDelay = parseInt(Automation.Utils.LocalStorage.getValue(
+            this.__internal__advancedSettings.StuckRefreshMinutes), 10);
+
+        if (isNaN(configuredDelay) || (configuredDelay <= 0))
+        {
+            return;
+        }
+
+        const elapsed = Date.now() - this.__internal__lastQuestCompletionTime;
+        if (elapsed < (configuredDelay * 60 * 1000))
+        {
+            return;
+        }
+
+        if (!App.game.quests.freeRefresh() && !App.game.quests.canAffordRefresh())
+        {
+            return;
+        }
+
+        const pokedollarsImage = '<img src="assets/images/currency/money.svg" height="25px">';
+        const refreshCost = App.game.quests.freeRefresh()
+                          ? "free"
+                          : `${App.game.quests.getRefreshCost().amount} ${pokedollarsImage}`;
+
+        App.game.quests.refreshQuests();
+
+        // Restart the countdown, otherwise the watchdog would fire again on the very next loop
+        this.__internal__lastQuestCompletionTime = Date.now();
+
+        Automation.Notifications.sendNotif(
+            `No quest was completed in ${configuredDelay} minutes, refreshed the list for ${refreshCost}`,
+            "Focus",
+            "Quests");
     }
 
     /**
@@ -11646,6 +11751,14 @@ class AutomationItems
         }
         else if (initStep == Automation.InitSteps.Finalize)
         {
+            this.__internal__gemUpgradePriority =
+                [
+                    GameConstants.TypeEffectiveness.Immune,
+                    GameConstants.TypeEffectiveness.NotVery,
+                    GameConstants.TypeEffectiveness.Neutral,
+                    GameConstants.TypeEffectiveness.Very
+                ];
+
             // Restore previous session state
             this.__internal__toggleAutoOakUpgrade();
             this.__internal__toggleAutoGemUpgrade();
@@ -11662,6 +11775,14 @@ class AutomationItems
 
     static __internal__autoOakUpgradeLoop = null;
     static __internal__autoGemUpgradeLoop = null;
+
+    // The order gem upgrades are bought in, most rewarding first.
+    // Immune turns a match-up that deals no damage at all into one that does, so it is worth
+    // far more than any other step; Very effective is already the best case, so it comes last.
+    // This happens to be the declaration order of GameConstants.TypeEffectiveness, but the
+    // intent is stated here so a reordering upstream does not silently change the strategy.
+    // Filled in at init time: a static initializer would run before the game defines GameConstants
+    static __internal__gemUpgradePriority = [];
 
     /**
      * @brief Builds the menu
@@ -11704,7 +11825,13 @@ class AutomationItems
         this.__internal__gemUpgradeContainer.hidden = !hasAccessToGems || this.__internal__areEveryGemsMaxedOut();
         this.__internal__gemUpgradeContainer.hiddenForAccessReason = !hasAccessToGems;
 
-        let gemsTooltip = "Automatically uses Gems to upgrade attack effectiveness";
+        const gemsTooltip = "Automatically uses Gems to upgrade attack effectiveness"
+                          + Automation.Menu.TooltipSeparator
+                          + "Each type is upgraded in this order:\n"
+                          + "Immune → Not very effective → Neutral → Very effective\n"
+                          + "An affinity is maxed-out before the next one is started,\n"
+                          + "since removing an immunity is worth far more than\n"
+                          + "improving a match-up that already deals damage";
         let gemUpgradeButton =
             Automation.Menu.addAutomationButton("Gems", this.Settings.UpgradeGems, gemsTooltip, this.__internal__gemUpgradeContainer);
         gemUpgradeButton.addEventListener("click", this.__internal__toggleAutoGemUpgrade.bind(this), false);
@@ -11880,15 +12007,28 @@ class AutomationItems
      * Any pokemon weakness efficiency will be upgraded if:
      *   - It's not max-leveled
      *   - The player has enough gem to buy the upgrade
+     *   - Every higher-priority affinity of that type is already maxed-out
+     *
+     * @see __internal__gemUpgradePriority for the affinity order
      */
     static __internal__gemUpgradeLoop()
     {
-        let areAllGemsMaxedOut = true;
+        if (this.__internal__gemUpgradePriority.length == 0)
+        {
+            // Not initialized yet. Bailing out matters: an empty priority list would otherwise
+            // look exactly like "every gem is maxed-out" and permanently hide the feature
+            return;
+        }
+
         // Iterate over gem types
         for (const type of Array(Gems.nTypes).keys())
         {
-            // Iterate over affinity (backward)
-            for (const affinity of Array(Gems.nEffects).keys())
+            // Each gem type has its own wallet, so types never compete with each other.
+            // Within a type, spend on the most rewarding affinity first, and only move on
+            // once it is maxed-out
+            let hasBoughtForThisType = false;
+
+            for (const affinity of this.__internal__gemUpgradePriority)
             {
                 // Ignore invalid upgrades
                 if (!App.game.gems.isValidUpgrade(type, affinity))
@@ -11896,17 +12036,22 @@ class AutomationItems
                     continue;
                 }
 
-                if (!App.game.gems.hasMaxUpgrade(type, affinity)
-                    && App.game.gems.canBuyGemUpgrade(type, affinity))
+                if (!App.game.gems.hasMaxUpgrade(type, affinity))
                 {
-                    App.game.gems.buyGemUpgrade(type, affinity);
-                }
+                    if (!hasBoughtForThisType && App.game.gems.canBuyGemUpgrade(type, affinity))
+                    {
+                        App.game.gems.buyGemUpgrade(type, affinity);
+                    }
 
-                areAllGemsMaxedOut &= App.game.gems.hasMaxUpgrade(type, affinity);
+                    // Whether or not the upgrade was affordable, keep this type's gems for it
+                    hasBoughtForThisType = true;
+                }
             }
         }
 
-        if (areAllGemsMaxedOut)
+        // Asked rather than accumulated above, so the answer stays right even if the priority list
+        // ever stops covering every affinity the game defines
+        if (this.__internal__areEveryGemsMaxedOut())
         {
             // Hide the feature
             this.__internal__gemUpgradeContainer.hiddenForAccessReason = false;
@@ -15317,6 +15462,8 @@ class AutomationTrivia
         evolutionLabel.classList.add("centeredAutomationTooltip");
         const tooltip = "Displays the available stone evolutions"
                       + Automation.Menu.TooltipSeparator
+                      + "Hovering a stone shows how many evolutions it has left\n"
+                      + "before every pokémon it can evolve has been caught\n"
                       + "You can click on a stone to get to the according page\n"
                       + "in your inventory directly";
         evolutionLabel.setAttribute("automation-tooltip-text", tooltip);
@@ -15634,23 +15781,43 @@ class AutomationTrivia
      */
     static __internal__refreshEvolutionTrivia()
     {
-        const evoStones = Object.keys(GameConstants.StoneType).filter(
-            (stone) => isNaN(stone) && (stone !== "None") && this.__internal__hasStoneEvolutionCandidate(stone));
+        const evoStonesData =
+            Object.keys(GameConstants.StoneType)
+                  .filter((stone) => isNaN(stone) && (stone !== "None"))
+                  .map((stone) => ({ stone, count: this.__internal__getStoneEvolutionCandidateCount(stone) }))
+                  .filter((data) => (data.count > 0));
 
-        this.__internal__availableEvolutionTriviaContainer.hidden = (evoStones.length == 0);
+        this.__internal__availableEvolutionTriviaContainer.hidden = (evoStonesData.length == 0);
 
-        if (!this.__internal__availableEvolutionTriviaContainer.hidden && !Automation.Utils.areArrayEquals(this.__internal__lastEvoStone, evoStones))
+        // The tooltip carries the remaining count, so the content needs rebuilding when a count
+        // changes, not only when a stone appears or disappears
+        const currentState = evoStonesData.map((data) => `${data.stone}:${data.count}`);
+
+        if (!this.__internal__availableEvolutionTriviaContainer.hidden
+            && !Automation.Utils.areArrayEquals(this.__internal__lastEvoStone, currentState))
         {
             this.__internal__availableEvolutionTriviaContent.innerHTML = "";
 
-            for (const stone of evoStones)
+            for (const data of evoStonesData)
             {
-                this.__internal__availableEvolutionTriviaContent.innerHTML +=
-                    `<img style="max-width: 28px;" src="assets/images/items/evolution/${stone}.png"`
-                  + ` onclick="javascript: Automation.Trivia.__internal__goToStoneMenu('${stone}');">`;
+                // Built through the DOM rather than concatenated HTML, so the tooltip separator's
+                // line breaks survive into the attribute the tooltip CSS reads
+                const stoneImage = document.createElement("img");
+                stoneImage.style.maxWidth = "28px";
+                stoneImage.src = `assets/images/items/evolution/${data.stone}.png`;
+                stoneImage.classList.add("hasAutomationTooltip");
+                stoneImage.classList.add("centeredAutomationTooltip");
+                stoneImage.classList.add("shortTransitionAutomationTooltip");
+                stoneImage.setAttribute("automation-tooltip-text",
+                                        data.stone.replace(/_/g, " ")
+                                      + Automation.Menu.TooltipSeparator
+                                      + `${data.count} evolution${(data.count > 1) ? "s" : ""} left to unlock a new pokémon`);
+                stoneImage.onclick = function() { Automation.Trivia.__internal__goToStoneMenu(data.stone); };
+
+                this.__internal__availableEvolutionTriviaContent.appendChild(stoneImage);
             }
 
-            this.__internal__lastEvoStone = evoStones;
+            this.__internal__lastEvoStone = currentState;
         }
     }
 
@@ -15682,15 +15849,15 @@ class AutomationTrivia
     }
 
     /**
-     * @brief Checks if the given @p stone has a pokemon evolution candidate
+     * @brief Counts the evolutions the given @p stone can still perform to obtain a new pokemon
      *
      * @param stone: The stone to check
      *
-     * @returns True if any pokemon can be evolved using the @p stone, False otherwise
+     * @returns The number of uncaught evolutions reachable with the @p stone, 0 if there is none
      */
-    static __internal__hasStoneEvolutionCandidate(stone)
+    static __internal__getStoneEvolutionCandidateCount(stone)
     {
-        var hasCandidate = false;
+        var candidateCount = 0;
 
         for (const pokemon of PartyController.getPokemonsWithEvolution(GameConstants.StoneType[stone]))
         {
@@ -15710,11 +15877,14 @@ class AutomationTrivia
                     }
                 }
 
-                hasCandidate |= (data.status == 0);
+                if (data.status == 0)
+                {
+                    candidateCount++;
+                }
             }
         }
 
-        return hasCandidate;
+        return candidateCount;
     }
 
 

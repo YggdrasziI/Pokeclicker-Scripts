@@ -120,6 +120,8 @@ class AutomationTrivia
         evolutionLabel.classList.add("centeredAutomationTooltip");
         const tooltip = "Displays the available stone evolutions"
                       + Automation.Menu.TooltipSeparator
+                      + "Hovering a stone shows how many evolutions it has left\n"
+                      + "before every pokémon it can evolve has been caught\n"
                       + "You can click on a stone to get to the according page\n"
                       + "in your inventory directly";
         evolutionLabel.setAttribute("automation-tooltip-text", tooltip);
@@ -437,23 +439,43 @@ class AutomationTrivia
      */
     static __internal__refreshEvolutionTrivia()
     {
-        const evoStones = Object.keys(GameConstants.StoneType).filter(
-            (stone) => isNaN(stone) && (stone !== "None") && this.__internal__hasStoneEvolutionCandidate(stone));
+        const evoStonesData =
+            Object.keys(GameConstants.StoneType)
+                  .filter((stone) => isNaN(stone) && (stone !== "None"))
+                  .map((stone) => ({ stone, count: this.__internal__getStoneEvolutionCandidateCount(stone) }))
+                  .filter((data) => (data.count > 0));
 
-        this.__internal__availableEvolutionTriviaContainer.hidden = (evoStones.length == 0);
+        this.__internal__availableEvolutionTriviaContainer.hidden = (evoStonesData.length == 0);
 
-        if (!this.__internal__availableEvolutionTriviaContainer.hidden && !Automation.Utils.areArrayEquals(this.__internal__lastEvoStone, evoStones))
+        // The tooltip carries the remaining count, so the content needs rebuilding when a count
+        // changes, not only when a stone appears or disappears
+        const currentState = evoStonesData.map((data) => `${data.stone}:${data.count}`);
+
+        if (!this.__internal__availableEvolutionTriviaContainer.hidden
+            && !Automation.Utils.areArrayEquals(this.__internal__lastEvoStone, currentState))
         {
             this.__internal__availableEvolutionTriviaContent.innerHTML = "";
 
-            for (const stone of evoStones)
+            for (const data of evoStonesData)
             {
-                this.__internal__availableEvolutionTriviaContent.innerHTML +=
-                    `<img style="max-width: 28px;" src="assets/images/items/evolution/${stone}.png"`
-                  + ` onclick="javascript: Automation.Trivia.__internal__goToStoneMenu('${stone}');">`;
+                // Built through the DOM rather than concatenated HTML, so the tooltip separator's
+                // line breaks survive into the attribute the tooltip CSS reads
+                const stoneImage = document.createElement("img");
+                stoneImage.style.maxWidth = "28px";
+                stoneImage.src = `assets/images/items/evolution/${data.stone}.png`;
+                stoneImage.classList.add("hasAutomationTooltip");
+                stoneImage.classList.add("centeredAutomationTooltip");
+                stoneImage.classList.add("shortTransitionAutomationTooltip");
+                stoneImage.setAttribute("automation-tooltip-text",
+                                        data.stone.replace(/_/g, " ")
+                                      + Automation.Menu.TooltipSeparator
+                                      + `${data.count} evolution${(data.count > 1) ? "s" : ""} left to unlock a new pokémon`);
+                stoneImage.onclick = function() { Automation.Trivia.__internal__goToStoneMenu(data.stone); };
+
+                this.__internal__availableEvolutionTriviaContent.appendChild(stoneImage);
             }
 
-            this.__internal__lastEvoStone = evoStones;
+            this.__internal__lastEvoStone = currentState;
         }
     }
 
@@ -485,15 +507,15 @@ class AutomationTrivia
     }
 
     /**
-     * @brief Checks if the given @p stone has a pokemon evolution candidate
+     * @brief Counts the evolutions the given @p stone can still perform to obtain a new pokemon
      *
      * @param stone: The stone to check
      *
-     * @returns True if any pokemon can be evolved using the @p stone, False otherwise
+     * @returns The number of uncaught evolutions reachable with the @p stone, 0 if there is none
      */
-    static __internal__hasStoneEvolutionCandidate(stone)
+    static __internal__getStoneEvolutionCandidateCount(stone)
     {
-        var hasCandidate = false;
+        var candidateCount = 0;
 
         for (const pokemon of PartyController.getPokemonsWithEvolution(GameConstants.StoneType[stone]))
         {
@@ -513,11 +535,14 @@ class AutomationTrivia
                     }
                 }
 
-                hasCandidate |= (data.status == 0);
+                if (data.status == 0)
+                {
+                    candidateCount++;
+                }
             }
         }
 
-        return hasCandidate;
+        return candidateCount;
     }
 
 

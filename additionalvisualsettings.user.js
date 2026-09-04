@@ -5,7 +5,7 @@
 // @description   Adds additional settings for hiding some visual things to help out with performance. Also, includes various features that help with ease of accessibility.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       3.0
+// @version       3.1.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -117,11 +117,13 @@ class AdditionalVisualSettings {
         // Graphics-disabling settings
         Object.keys(this.graphicsDisabledSettings).forEach(state => {
             elem = document.createElement('tr');
-            elem.innerHTML = `<th class="p-2 col-md-5" scope="row">${GameConstants.camelCaseToString(state)}</th><td class="p-2" style="display:flex;"></td>`;
+            // Stacked vertically: the row used to be a single horizontal strip, which ran out of
+            // width once a state had five settings, and left the labels hard to pair with their box
+            elem.innerHTML = `<th class="p-2 col-md-5" scope="row">${GameConstants.camelCaseToString(state)}</th><td class="p-2" style="display:flex; flex-direction:column; row-gap:2px;"></td>`;
             let innerElem = elem.querySelector('td');
             Object.keys(this.graphicsDisabledSettings[state]).forEach(setting => {
                 const container = document.createElement('div');
-                container.className = 'px-3'
+                container.className = 'px-3 d-flex justify-content-between'
                 container.innerHTML = `${GameConstants.camelCaseToString(setting)} <input id="checkbox-AVS-${state}-${setting}" type="checkbox" class="mx-1"></td>`;
                 const checkbox = container.querySelector('input');
                 checkbox.checked = this.graphicsDisabledSettings[state][setting]();
