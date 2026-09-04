@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Enhanced Auto Hatchery
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia (Original/Credit: Drak + Ivan Lay, Optimatum)
-// @description   Automatically hatches eggs at 100% completion. Adds an On/Off button for auto hatching as well as an option for automatically hatching store bought eggs and reviving dug up fossils.
+// @description   Automatically hatches eggs at 100% completion. Adds an On/Off button for auto hatching as well as an option for automatically hatching store bought eggs and reviving dug up fossils. Eggs are only spent while they can still hatch a pokémon you are missing, and optionally until every pokémon they can give is shiny.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       3.2.0
+// @version       3.3.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -20,6 +20,7 @@
 
 var hatchState;
 var eggState;
+var shinyEggState;
 var fossilState;
 var shinyFossilState;
 var pkrsState;
@@ -47,10 +48,14 @@ function initAutoHatch() {
     </button>
     <button id="shiny-fossils" class="btn btn-${shinyFossilState ? 'success' : 'danger'}" style="margin-left:20px;">
     Shiny Fossils [${shinyFossilState ? 'ON' : 'OFF'}]
+    </button>
+    <button id="shiny-eggs" class="btn btn-${shinyEggState ? 'success' : 'danger'}" style="margin-left:20px;">
+    Shiny Eggs [${shinyEggState ? 'ON' : 'OFF'}]
     </button>`;
 
     document.getElementById('auto-hatch-start').addEventListener('click', event => { toggleAutoHatch(event); });
     document.getElementById('auto-egg').addEventListener('click', event => { toggleEgg(event); });
+    document.getElementById('shiny-eggs').addEventListener('click', event => { toggleShinyEgg(event); });
     document.getElementById('auto-fossil').addEventListener('click', event => { toggleFossil(event); });
     document.getElementById('shiny-fossils').addEventListener('click', event => { toggleShinyFossil(event); });
     document.getElementById('pkrs-mode').addEventListener('click', event => { togglePKRS(event); });
@@ -88,6 +93,14 @@ function toggleEgg(event) {
     element.classList.replace(...(eggState ? ['btn-danger', 'btn-success'] : ['btn-success', 'btn-danger']));
     element.textContent = `Auto Egg [${eggState ? 'ON' : 'OFF'}]`;
     localStorage.setItem('autoEgg', eggState);
+}
+
+function toggleShinyEgg(event) {
+    const element = event.target;
+    shinyEggState = !shinyEggState;
+    element.classList.replace(...(shinyEggState ? ['btn-danger', 'btn-success'] : ['btn-success', 'btn-danger']));
+    element.textContent = `Shiny Eggs [${shinyEggState ? 'ON' : 'OFF'}]`;
+    localStorage.setItem('shinyEgg', shinyEggState);
 }
 
 function toggleFossil(event) {
@@ -232,7 +245,17 @@ function autoHatchPkrs() {
 }
 
 function autoHatchEgg() {
-    let eggList = GameHelper.enumStrings(GameConstants.EggItemType).filter(e => ItemHandler.hasItem(e));
+    // Only spend an egg that can still give something. getCaughtStatus() already aggregates the
+    // pokedex over everything the egg can produce within the regions you've reached, taking the
+    // worst status of the lot; the Mystery egg is aggregated over every type, since it rolls one
+    // at random when it hatches.
+    let eggList = GameHelper.enumStrings(GameConstants.EggItemType)
+        .filter(e => ItemHandler.hasItem(e))
+        .filter(e => {
+            const caughtStatus = ItemList[e].getCaughtStatus();
+            return caughtStatus == CaughtStatus.NotCaught
+                || (shinyEggState && caughtStatus == CaughtStatus.Caught);
+        });
     if (eggList.length == 0) {
         return false;
     }
@@ -285,6 +308,7 @@ function autoHatchMon() {
 
 hatchState = loadSetting('autoHatchState', false);
 eggState = loadSetting('autoEgg', false);
+shinyEggState = loadSetting('shinyEgg', false);
 fossilState = loadSetting('autoFossil', false);
 shinyFossilState = loadSetting('shinyFossil', false);
 pkrsState = loadSetting('pokerusModeState', false);
