@@ -21,6 +21,7 @@ class Automation
     static Trivia = AutomationTrivia;
     static Underground = AutomationUnderground;
     static Utils = AutomationUtils;
+    static Vitamins = AutomationVitamins;
     static ClickStats = AutomationClickStats;
     static SaveBackup = AutomationSaveBackup;
     static Bridges = AutomationBridges;
@@ -81,6 +82,7 @@ class Automation
                     this.Farm.initialize(initStep);
                     this.Shop.initialize(initStep);
                     this.Items.initialize(initStep);
+                    this.Vitamins.initialize(initStep);
                     this.Notifications.initialize(initStep);
                     this.SaveBackup.initialize(initStep);
 

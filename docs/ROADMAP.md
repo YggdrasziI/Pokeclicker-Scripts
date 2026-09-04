@@ -141,32 +141,56 @@ time.
 
 ---
 
-## Phase 5 — Vitamins, helpers, Mystery Mine · todo
+## Phase 5 — Vitamins, helpers, Mystery Mine · done
 
-**Auto-protein and balancing.** `additionalvisualsettings.user.js:407` already
-defines `PartyPokemon.prototype.optimizeVitamins`, and `:393` the breeding-efficiency
-model it optimises. The new feature distributes vitamins via `useVitamin(type, n)` up
-to a target, capped by what the player owns. Two modes: a fixed count per Pokémon,
-and levelling everyone to the same tier.
+**Auto Vitamins.** New module `automation/lib/Vitamins.js`, wired in the three places
+a module needs. One per-Pokémon target per vitamin type, all 0 (off) by default —
+starting to spend vitamins unasked would be painful to undo, since removing them is
+one Pokémon at a time and entirely manual.
 
-**Auto helpers.** Greenfield — the library has no helper code at all today. Hire and
-release `HatcheryHelpers` (game cap `MAX_HIRES = 3`; the cost is charged **per hatch**
-by `charge()`, which fires the helper automatically when funds run out) and
-`UndergroundHelpers` (consume energy potions). The requested rule — hire only while
-resource generation exceeds consumption — means measuring throughput over a sliding
-window before hiring and re-evaluating on a timer, not a one-shot check. Option for
-the maximum number of helpers, 1 to 4; note the game itself caps the hatchery at 3.
+The distribution is what makes it balancing: candidates are sorted by how far they are
+from the target and served in that order, so a short stock levels the party instead of
+maxing out whichever Pokémon happens to come first in the party order. `useVitamin`
+notifies on every refusal, so the disabled-vitamins challenge is checked once per loop
+and Pokémon that are breeding or have hit the total cap are filtered out rather than
+being allowed to generate a stream of warnings. The cap itself is
+`(highestRegion + 1) * 5` **across all three types**, so three targets summing above
+it simply leave the last one short — by design, not silently retried.
 
-**Mystery Mine.** No injection into `UndergroundHelpers.list` — decided. Instead an
-option in `Automation > Mining` that forces `MineType.Special` ("Mystery Mine", the
-only mine that yields Mega Stones; `MineType.Random` explicitly excludes them) while
-Mega Stones remain unobtained, using Cynthia's sprite. The mine-type dropdown at
-`automation/lib/Underground.js:183` is hard-coded to six types and needs `Special`
-added.
+**Auto helpers.** Added to the Achievements focus, which is where it was asked for and
+where it belongs: `HatcheryHelperRequirement` counts helpers that reached a given
+bonus, and the only way to raise that bonus is to keep a helper hired while eggs hatch.
+Off by default, with a 1-4 target that the game then caps at
+`min(MAX_HIRES = 3, egg slots)`.
 
-**Acceptance criteria.** No vitamin is spent below the configured floor. A helper is
-never hired when the measured net rate is negative. Mining returns to the chosen mine
-type once no Mega Stones remain.
+"Generation above consumption" is measured as the observed direction of the currency a
+helper charges, sampled over a 30 second window rather than between two ticks — a
+helper is paid on every hatch, so a single reading says nothing. Two consecutive
+falling samples are required before letting anyone go. Helpers with the most hatches
+are kept and hired first, since the achievement counts helpers that reached a bonus,
+not hatches overall. Note that `hire()` does **not** charge — only `charge()` does, on
+each hatch — so the hysteresis is there for notification spam, not for cost.
+
+Helpers stay hired when the focus stops. The game fires them on its own when the
+player can no longer pay, which is the same safety net a manual hire has.
+
+Underground helpers are deliberately not covered: the request named hatchery helpers,
+and the underground side is what the Mystery Mine option below is for.
+
+**Mystery Mine.** `Mining-HuntMegaStones`, off by default, with Cynthia's sprite. It
+stands in for the helper the game does not offer: helpers can only be assigned to the
+five ordinary mines, and the Mystery Mine is the only one that yields mega stones,
+since Chaos Cavern explicitly excludes them. A mega stone stops being an unlocked
+underground item as soon as the player owns one, so "no mega stone left" is exactly an
+empty filter result, and the player's own mine choice takes over again at that point.
+`MineType.Special` was also added to the mine picker, which the game itself never
+offers to search for directly.
+
+**Validation.** Build and the three suites pass. Two test assertions were updated on
+purpose: the mine picker now offers seven entries rather than six, and the module list
+`init.test.mjs` mirrors gained `Vitamins`. In-game validation pending — in particular
+that the vitamin distribution actually levels a party rather than front-loading it,
+and that a helper is let go when its currency starts falling.
 
 ---
 

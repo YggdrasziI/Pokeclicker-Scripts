@@ -44,6 +44,7 @@ const SOURCES = [
     'lib/Trivia.js',
     'lib/Underground.js',
     'lib/Utils.js',
+    'lib/Vitamins.js',
     'lib/ClickStats.js',
     'lib/SaveBackup.js',
     'lib/Bridges.js',

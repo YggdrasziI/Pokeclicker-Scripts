@@ -8,6 +8,7 @@ class AutomationUnderground
 {
     static Settings = {
                           FeatureEnabled: "Mining-Enabled",
+                          HuntMegaStones: "Mining-HuntMegaStones",
                           SafeBombs: "Mining-SafeBombs",
                           MineType: "Mining-MineType",
                           SellTreasures: "Mining-SellTreasures"
@@ -25,6 +26,9 @@ class AutomationUnderground
         {
             // Enable safe bombs usage by default
             Automation.Utils.LocalStorage.setDefaultValue(this.Settings.SafeBombs, true);
+
+            // Don't take over the mine choice unless the player asks for it
+            Automation.Utils.LocalStorage.setDefaultValue(this.Settings.HuntMegaStones, false);
 
             // Start from whichever mine the game is currently set to search for
             Automation.Utils.LocalStorage.setDefaultValue(this.Settings.MineType, MineType.Random);
@@ -64,8 +68,7 @@ class AutomationUnderground
         {
             // The mine picker below drives the search, so the in-game auto restart is optional:
             // when it is off, the loop starts the next search itself
-            App.game.underground.autoSearchMineType =
-                parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.MineType), 10);
+            App.game.underground.autoSearchMineType = this.__internal__getMineTypeToSearch();
 
             // Only set a loop if there is none active
             if (this.__internal__autoMiningLoop === null)
@@ -150,7 +153,43 @@ class AutomationUnderground
         Automation.Menu.addLabeledAdvancedSettingsToggleButton(
             "Sell treasures automatically", this.Settings.SellTreasures, sellTooltip, miningSettingPanel);
 
+        // The game's underground helpers can only be assigned to the five ordinary mines, so the
+        // Mystery Mine - the only one that yields mega stones, since Chaos Cavern excludes them -
+        // is the one place they cannot dig for you. This stands in for the helper the game does
+        // not offer, and steps aside on its own once every mega stone has been dug up
+        const megaStoneTooltip = "Searches the Mystery Mine while mega stones are still available"
+                               + Automation.Menu.TooltipSeparator
+                               + "It is the only mine that yields mega stones, and the only one\n"
+                               + "the in-game helpers cannot be sent to\n"
+                               + "Overrides the mine selected below, and gives it back as soon\n"
+                               + "as there is no mega stone left to find";
+        const megaStoneLabel = '<img src="assets/images/npcs/Cynthia.png" height="20px"'
+                             + ' style="position: relative; bottom: 3px; image-rendering: pixelated;">'
+                             + '&nbsp;Dig for mega stones';
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton(
+            megaStoneLabel, this.Settings.HuntMegaStones, megaStoneTooltip, miningSettingPanel);
+
         this.__internal__addMineTypeSelector(miningSettingPanel);
+    }
+
+    /**
+     * @brief Determines which mine the next search should look for
+     *
+     * A mega stone stops being an unlocked underground item as soon as the player owns one, so
+     * an empty list is exactly "every mega stone has been found", and the player's own choice
+     * takes over again at that point.
+     *
+     * @returns The MineType to search for
+     */
+    static __internal__getMineTypeToSearch()
+    {
+        if ((Automation.Utils.LocalStorage.getValue(this.Settings.HuntMegaStones) === "true")
+            && UndergroundItems.getUnlockedItems().some((item) => item.valueType === UndergroundItemValueType.MegaStone))
+        {
+            return MineType.Special;
+        }
+
+        return parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.MineType), 10);
     }
 
     /**
@@ -179,9 +218,9 @@ class AutomationUnderground
         selectElem.style.paddingLeft = "3px";
         container.appendChild(selectElem);
 
-        // The mines the game itself offers in its 'Find mine' dialog
+        // The mines the game itself offers in its 'Find mine' dialog, plus the Mystery Mine
         const availableMines = [ MineType.Random, MineType.Diamond, MineType.GemPlate,
-                                 MineType.Shard, MineType.Fossil, MineType.EvolutionItem ];
+                                 MineType.Shard, MineType.Fossil, MineType.EvolutionItem, MineType.Special ];
 
         const savedMineType = parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.MineType), 10);
 
@@ -233,7 +272,11 @@ class AutomationUnderground
         if (App.game.underground.mine?.completed
             && !Settings.getSetting("autoRestartUndergroundMine").observableValue())
         {
-            const mineType = parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.MineType), 10);
+            const mineType = this.__internal__getMineTypeToSearch();
+
+            // Keep the game's own auto restart in step, in case the player turns it back on
+            App.game.underground.autoSearchMineType = mineType;
+
             App.game.underground.generateMine(mineType);
             return;
         }

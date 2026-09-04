@@ -10,6 +10,8 @@ class AutomationFocusAchievements
     static __internal__advancedSettings =
         {
             DoMagikarpJumpLast: "Focus-Achievements-DoMagikarpIslandLast",
+            HireHatcheryHelpers: "Focus-Achievements-HireHatcheryHelpers",
+            MaxHatcheryHelpers: "Focus-Achievements-MaxHatcheryHelpers",
             AchievementEnabled: function(type, amount) { return `Focus-Achievements-${type}-${amount}-Enabled`; }.bind(this)
         };
 
@@ -66,8 +68,72 @@ class AutomationFocusAchievements
                 }
             }.bind(this), false);
 
+        this.__internal__buildHatcheryHelperSettings(parent);
+
         // Build the achievement selection settings
         this.__internal__buildAchievementSelectionSettings(parent);
+    }
+
+    /**
+     * @brief Builds the hatchery helper hiring settings
+     *
+     * Some achievements ask for a number of hatchery helpers to reach a given bonus, and the only
+     * way to raise that bonus is to keep a helper hired while eggs hatch. Helpers charge their fee
+     * on every hatch though, so this stays off unless asked for, and gives up as soon as the
+     * currency stops keeping up.
+     *
+     * @param {Element} parent: The parent div to add the settings to
+     */
+    static __internal__buildHatcheryHelperSettings(parent)
+    {
+        Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.HireHatcheryHelpers, false);
+        Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.MaxHatcheryHelpers, 1);
+
+        const tooltip = "Keeps hatchery helpers hired so their bonus grows"
+                      + Automation.Menu.TooltipSeparator
+                      + "A helper is only hired while the currency it charges is going up,\n"
+                      + "and is let go once it starts going down, so it never eats into\n"
+                      + "a balance you are spending elsewhere\n"
+                      + "Helpers with the most hatches are kept first, since the achievement\n"
+                      + "counts helpers that reached a bonus, not hatches overall"
+                      + Automation.Menu.TooltipSeparator
+                      + "⚠️ Helpers stay hired when you leave this focus. The game lets them\n"
+                      + "go on its own once you cannot pay them";
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton("Hire hatchery helpers to raise their bonus",
+                                                               this.__internal__advancedSettings.HireHatcheryHelpers,
+                                                               tooltip,
+                                                               parent);
+
+        const setting = this.__internal__advancedSettings.MaxHatcheryHelpers;
+
+        const container = document.createElement("div");
+        container.style.textAlign = "right";
+        container.style.marginTop = "5px";
+        container.style.paddingRight = "10px";
+        container.classList.add("hasAutomationTooltip");
+        container.classList.add("rightMostAutomationTooltip");
+        container.classList.add("shortTransitionAutomationTooltip");
+        container.setAttribute("automation-tooltip-text",
+                               "How many helpers to keep hired at once"
+                             + Automation.Menu.TooltipSeparator
+                             + "The game caps it at 3, and at the number of egg slots you have,\n"
+                             + "whichever is lower. A higher value here changes nothing");
+        parent.appendChild(container);
+
+        container.appendChild(document.createTextNode("Helpers to keep hired:"));
+
+        const input = Automation.Menu.createTextInputElement(1, "[1-4]");
+        input.id = setting;
+        input.textContent = Automation.Utils.LocalStorage.getValue(setting);
+        input.style.display = "inline-block";
+        input.style.width = "30px";
+        input.style.marginLeft = "5px";
+        container.appendChild(input);
+
+        input.oninput = function()
+            {
+                Automation.Utils.LocalStorage.setValue(setting, input.textContent.trim());
+            };
     }
 
     /*********************************************************************\
@@ -76,6 +142,16 @@ class AutomationFocusAchievements
 
     static __internal__achievementLoop = null;
     static __internal__currentAchievement = null;
+
+    // Hatchery helper bookkeeping: the last wallet reading per currency, when it was taken, and
+    // how many checks in a row that currency has been going down
+    static __internal__lastCurrencySamples = new Map();
+    static __internal__lastHelperCheckTime = 0;
+
+    // A helper charges on every hatch, so the balance has to be watched over a window rather than
+    // between two consecutive ticks, and a single dip must not be enough to let a helper go
+    static __internal__helperCheckIntervalMs = 30000;
+    static __internal__helperNegativeSamplesBeforeFiring = 2;
 
     /**
      * @brief Builds the achivement selection settings
@@ -218,6 +294,9 @@ class AutomationFocusAchievements
      */
     static __internal__focusOnAchievements()
     {
+        // Runs on its own schedule, and does not care whether the player is in an instance
+        this.__internal__manageHatcheryHelpers();
+
         // Already fighting, nothing to do for now
         if (Automation.Utils.isInInstanceState())
         {
@@ -239,6 +318,136 @@ class AutomationFocusAchievements
         {
             this.__internal__workOnAchievement();
         }
+    }
+
+    /**
+     * @brief Hires and lets go of hatchery helpers, so their bonus grows without draining a currency
+     *
+     * "Generation above consumption" is measured as the observed direction of the currency a helper
+     * charges, sampled over a window rather than between two ticks: a helper is paid on every
+     * hatch, so a single reading says nothing. Hiring is free - only charge() takes money - so the
+     * cost of being wrong is one wasted hatch fee, but hire and fire both notify, hence the
+     * hysteresis before letting anyone go.
+     */
+    static __internal__manageHatcheryHelpers()
+    {
+        if (Automation.Utils.LocalStorage.getValue(this.__internal__advancedSettings.HireHatcheryHelpers) !== "true")
+        {
+            return;
+        }
+
+        const now = Date.now();
+        if ((now - this.__internal__lastHelperCheckTime) < this.__internal__helperCheckIntervalMs)
+        {
+            return;
+        }
+        this.__internal__lastHelperCheckTime = now;
+
+        const helpers = App.game.breeding.hatcheryHelpers;
+
+        // Not unlocked yet, or every slot the game allows is already taken
+        if (helpers.available().length === 0)
+        {
+            return;
+        }
+
+        const hired = helpers.hired();
+
+        // The game caps hiring at min(MAX_HIRES, egg slots), so this only ever lowers the count
+        const requestedMax = Automation.Utils.tryParseInt(
+            Automation.Utils.LocalStorage.getValue(this.__internal__advancedSettings.MaxHatcheryHelpers), 1);
+
+        // Let go of anyone whose currency has been going down for long enough
+        for (const helper of hired)
+        {
+            if (this.__internal__isCurrencyLosingGround(helper.cost.currency))
+            {
+                // Keep the helpers that are closest to the bonus the achievement asks for
+                const leastProgressed = hired.filter((h) => h.cost.currency === helper.cost.currency)
+                                             .sort((a, b) => a.hatched() - b.hatched())[0];
+                leastProgressed.fire();
+                return;
+            }
+        }
+
+        if ((hired.length >= requestedMax) || !helpers.canHire())
+        {
+            return;
+        }
+
+        // Hire the one that already has the most hatches: the achievement counts helpers that
+        // reached a bonus, so spreading hatches over everyone would satisfy nothing
+        const candidate = helpers.available()
+                                 .filter((helper) => !helper.hired()
+                                                  && App.game.wallet.hasAmount(helper.cost)
+                                                  && this.__internal__isCurrencyGainingGround(helper.cost.currency))
+                                 .sort((a, b) => b.hatched() - a.hatched())[0];
+
+        if (candidate !== undefined)
+        {
+            candidate.hire();
+        }
+    }
+
+    /**
+     * @brief Samples the given @p currency and reports whether it has been going down long enough
+     *
+     * @param currency: The GameConstants.Currency to check
+     *
+     * @returns True if the currency dropped over the last few samples, False otherwise
+     */
+    static __internal__isCurrencyLosingGround(currency)
+    {
+        const sample = this.__internal__sampleCurrency(currency);
+
+        return (sample.negativeStreak >= this.__internal__helperNegativeSamplesBeforeFiring);
+    }
+
+    /**
+     * @brief Samples the given @p currency and reports whether it grew since the last check
+     *
+     * @param currency: The GameConstants.Currency to check
+     *
+     * @returns True if the currency went up, False otherwise
+     */
+    static __internal__isCurrencyGainingGround(currency)
+    {
+        const sample = this.__internal__sampleCurrency(currency);
+
+        // The very first reading has nothing to compare against; wait one window rather than
+        // hiring on no evidence at all
+        return (sample.previous !== null) && (sample.current > sample.previous);
+    }
+
+    /**
+     * @brief Records the current value of the given @p currency and updates its trend
+     *
+     * @param currency: The GameConstants.Currency to sample
+     *
+     * @returns The sample record for that currency
+     */
+    static __internal__sampleCurrency(currency)
+    {
+        const current = App.game.wallet.currencies[currency]();
+        let sample = this.__internal__lastCurrencySamples.get(currency);
+
+        if (sample === undefined)
+        {
+            sample = { previous: null, current, negativeStreak: 0 };
+            this.__internal__lastCurrencySamples.set(currency, sample);
+            return sample;
+        }
+
+        // Only move the window on the first read of a given check, so both questions above see
+        // the same sample
+        if (sample.current !== current)
+        {
+            sample.previous = sample.current;
+            sample.current = current;
+            sample.negativeStreak = (current < sample.previous) ? (sample.negativeStreak + 1) : 0;
+        }
+
+        return sample;
     }
 
     /**

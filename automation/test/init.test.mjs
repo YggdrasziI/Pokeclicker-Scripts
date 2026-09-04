@@ -23,7 +23,8 @@ const code = await readFile(BUNDLE, 'utf8');
 // Mirror the module list Automation.js initializes, so a module added there without
 // being wired here shows up as a gap.
 const MODULES = ['Click', 'ClickStats', 'Focus', 'Hatchery', 'Underground', 'Farm', 'Shop', 'Items',
-                 'Notifications', 'SaveBackup', 'Trivia', 'Gym', 'Dungeon', 'BattleFrontier', 'BattleCafe'];
+                 'Vitamins', 'Notifications', 'SaveBackup', 'Trivia', 'Gym', 'Dungeon',
+                 'BattleFrontier', 'BattleCafe'];
 
 const driver = `
 ;(() => {
@@ -121,8 +122,11 @@ console.log('Ported mine picker and treasure selling:');
 const picker = d.getElementById('selectedMineType-Underground');
 const pchk = (label, cond) => { if (!cond) failures++; console.log(`  ${cond ? 'ok  ' : 'FAIL'}  ${label}`); };
 pchk('mine picker rendered', !!picker);
-pchk('offers the six mines the game does', picker?.options?.length === 6);
+// Six from the game's own 'Find mine' dialog, plus the Mystery Mine, which the game only ever
+// reaches by chance and never offers to search for directly.
+pchk('offers the six mines the game does, plus the Mystery Mine', picker?.options?.length === 7);
 pchk('sell treasures toggle rendered', d.getElementById('Mining-SellTreasures') !== null);
+pchk('mega stone hunt toggle rendered', d.getElementById('Mining-HuntMegaStones') !== null);
 
 // Ported from the Ephenia auto clicker, which is the only side that measures anything.
 console.log('');

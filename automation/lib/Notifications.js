@@ -13,6 +13,7 @@ class AutomationNotifications
                           Shop: "Notifications-Shop",
                           Mining: "Notifications-Mining",
                           Focus: "Notifications-Focus",
+                          Vitamins: "Notifications-Vitamins",
                       };
 
     /**
@@ -114,6 +115,9 @@ class AutomationNotifications
 
         let battleCafeLabel = 'Show Battle Café feature notifications';
         Automation.Menu.addLabeledAdvancedSettingsToggleButton(battleCafeLabel, this.Settings.BattleCafe, "", notificationsSettingPanel);
+
+        let vitaminsLabel = 'Show Auto Vitamins feature notifications';
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton(vitaminsLabel, this.Settings.Vitamins, "", notificationsSettingPanel);
     }
 
     /**

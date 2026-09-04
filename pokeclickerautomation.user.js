@@ -36,6 +36,8 @@ class AutomationFocusAchievements
     static __internal__advancedSettings =
         {
             DoMagikarpJumpLast: "Focus-Achievements-DoMagikarpIslandLast",
+            HireHatcheryHelpers: "Focus-Achievements-HireHatcheryHelpers",
+            MaxHatcheryHelpers: "Focus-Achievements-MaxHatcheryHelpers",
             AchievementEnabled: function(type, amount) { return `Focus-Achievements-${type}-${amount}-Enabled`; }.bind(this)
         };
 
@@ -92,8 +94,72 @@ class AutomationFocusAchievements
                 }
             }.bind(this), false);
 
+        this.__internal__buildHatcheryHelperSettings(parent);
+
         // Build the achievement selection settings
         this.__internal__buildAchievementSelectionSettings(parent);
+    }
+
+    /**
+     * @brief Builds the hatchery helper hiring settings
+     *
+     * Some achievements ask for a number of hatchery helpers to reach a given bonus, and the only
+     * way to raise that bonus is to keep a helper hired while eggs hatch. Helpers charge their fee
+     * on every hatch though, so this stays off unless asked for, and gives up as soon as the
+     * currency stops keeping up.
+     *
+     * @param {Element} parent: The parent div to add the settings to
+     */
+    static __internal__buildHatcheryHelperSettings(parent)
+    {
+        Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.HireHatcheryHelpers, false);
+        Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.MaxHatcheryHelpers, 1);
+
+        const tooltip = "Keeps hatchery helpers hired so their bonus grows"
+                      + Automation.Menu.TooltipSeparator
+                      + "A helper is only hired while the currency it charges is going up,\n"
+                      + "and is let go once it starts going down, so it never eats into\n"
+                      + "a balance you are spending elsewhere\n"
+                      + "Helpers with the most hatches are kept first, since the achievement\n"
+                      + "counts helpers that reached a bonus, not hatches overall"
+                      + Automation.Menu.TooltipSeparator
+                      + "⚠️ Helpers stay hired when you leave this focus. The game lets them\n"
+                      + "go on its own once you cannot pay them";
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton("Hire hatchery helpers to raise their bonus",
+                                                               this.__internal__advancedSettings.HireHatcheryHelpers,
+                                                               tooltip,
+                                                               parent);
+
+        const setting = this.__internal__advancedSettings.MaxHatcheryHelpers;
+
+        const container = document.createElement("div");
+        container.style.textAlign = "right";
+        container.style.marginTop = "5px";
+        container.style.paddingRight = "10px";
+        container.classList.add("hasAutomationTooltip");
+        container.classList.add("rightMostAutomationTooltip");
+        container.classList.add("shortTransitionAutomationTooltip");
+        container.setAttribute("automation-tooltip-text",
+                               "How many helpers to keep hired at once"
+                             + Automation.Menu.TooltipSeparator
+                             + "The game caps it at 3, and at the number of egg slots you have,\n"
+                             + "whichever is lower. A higher value here changes nothing");
+        parent.appendChild(container);
+
+        container.appendChild(document.createTextNode("Helpers to keep hired:"));
+
+        const input = Automation.Menu.createTextInputElement(1, "[1-4]");
+        input.id = setting;
+        input.textContent = Automation.Utils.LocalStorage.getValue(setting);
+        input.style.display = "inline-block";
+        input.style.width = "30px";
+        input.style.marginLeft = "5px";
+        container.appendChild(input);
+
+        input.oninput = function()
+            {
+                Automation.Utils.LocalStorage.setValue(setting, input.textContent.trim());
+            };
     }
 
     /*********************************************************************\
@@ -102,6 +168,16 @@ class AutomationFocusAchievements
 
     static __internal__achievementLoop = null;
     static __internal__currentAchievement = null;
+
+    // Hatchery helper bookkeeping: the last wallet reading per currency, when it was taken, and
+    // how many checks in a row that currency has been going down
+    static __internal__lastCurrencySamples = new Map();
+    static __internal__lastHelperCheckTime = 0;
+
+    // A helper charges on every hatch, so the balance has to be watched over a window rather than
+    // between two consecutive ticks, and a single dip must not be enough to let a helper go
+    static __internal__helperCheckIntervalMs = 30000;
+    static __internal__helperNegativeSamplesBeforeFiring = 2;
 
     /**
      * @brief Builds the achivement selection settings
@@ -244,6 +320,9 @@ class AutomationFocusAchievements
      */
     static __internal__focusOnAchievements()
     {
+        // Runs on its own schedule, and does not care whether the player is in an instance
+        this.__internal__manageHatcheryHelpers();
+
         // Already fighting, nothing to do for now
         if (Automation.Utils.isInInstanceState())
         {
@@ -265,6 +344,136 @@ class AutomationFocusAchievements
         {
             this.__internal__workOnAchievement();
         }
+    }
+
+    /**
+     * @brief Hires and lets go of hatchery helpers, so their bonus grows without draining a currency
+     *
+     * "Generation above consumption" is measured as the observed direction of the currency a helper
+     * charges, sampled over a window rather than between two ticks: a helper is paid on every
+     * hatch, so a single reading says nothing. Hiring is free - only charge() takes money - so the
+     * cost of being wrong is one wasted hatch fee, but hire and fire both notify, hence the
+     * hysteresis before letting anyone go.
+     */
+    static __internal__manageHatcheryHelpers()
+    {
+        if (Automation.Utils.LocalStorage.getValue(this.__internal__advancedSettings.HireHatcheryHelpers) !== "true")
+        {
+            return;
+        }
+
+        const now = Date.now();
+        if ((now - this.__internal__lastHelperCheckTime) < this.__internal__helperCheckIntervalMs)
+        {
+            return;
+        }
+        this.__internal__lastHelperCheckTime = now;
+
+        const helpers = App.game.breeding.hatcheryHelpers;
+
+        // Not unlocked yet, or every slot the game allows is already taken
+        if (helpers.available().length === 0)
+        {
+            return;
+        }
+
+        const hired = helpers.hired();
+
+        // The game caps hiring at min(MAX_HIRES, egg slots), so this only ever lowers the count
+        const requestedMax = Automation.Utils.tryParseInt(
+            Automation.Utils.LocalStorage.getValue(this.__internal__advancedSettings.MaxHatcheryHelpers), 1);
+
+        // Let go of anyone whose currency has been going down for long enough
+        for (const helper of hired)
+        {
+            if (this.__internal__isCurrencyLosingGround(helper.cost.currency))
+            {
+                // Keep the helpers that are closest to the bonus the achievement asks for
+                const leastProgressed = hired.filter((h) => h.cost.currency === helper.cost.currency)
+                                             .sort((a, b) => a.hatched() - b.hatched())[0];
+                leastProgressed.fire();
+                return;
+            }
+        }
+
+        if ((hired.length >= requestedMax) || !helpers.canHire())
+        {
+            return;
+        }
+
+        // Hire the one that already has the most hatches: the achievement counts helpers that
+        // reached a bonus, so spreading hatches over everyone would satisfy nothing
+        const candidate = helpers.available()
+                                 .filter((helper) => !helper.hired()
+                                                  && App.game.wallet.hasAmount(helper.cost)
+                                                  && this.__internal__isCurrencyGainingGround(helper.cost.currency))
+                                 .sort((a, b) => b.hatched() - a.hatched())[0];
+
+        if (candidate !== undefined)
+        {
+            candidate.hire();
+        }
+    }
+
+    /**
+     * @brief Samples the given @p currency and reports whether it has been going down long enough
+     *
+     * @param currency: The GameConstants.Currency to check
+     *
+     * @returns True if the currency dropped over the last few samples, False otherwise
+     */
+    static __internal__isCurrencyLosingGround(currency)
+    {
+        const sample = this.__internal__sampleCurrency(currency);
+
+        return (sample.negativeStreak >= this.__internal__helperNegativeSamplesBeforeFiring);
+    }
+
+    /**
+     * @brief Samples the given @p currency and reports whether it grew since the last check
+     *
+     * @param currency: The GameConstants.Currency to check
+     *
+     * @returns True if the currency went up, False otherwise
+     */
+    static __internal__isCurrencyGainingGround(currency)
+    {
+        const sample = this.__internal__sampleCurrency(currency);
+
+        // The very first reading has nothing to compare against; wait one window rather than
+        // hiring on no evidence at all
+        return (sample.previous !== null) && (sample.current > sample.previous);
+    }
+
+    /**
+     * @brief Records the current value of the given @p currency and updates its trend
+     *
+     * @param currency: The GameConstants.Currency to sample
+     *
+     * @returns The sample record for that currency
+     */
+    static __internal__sampleCurrency(currency)
+    {
+        const current = App.game.wallet.currencies[currency]();
+        let sample = this.__internal__lastCurrencySamples.get(currency);
+
+        if (sample === undefined)
+        {
+            sample = { previous: null, current, negativeStreak: 0 };
+            this.__internal__lastCurrencySamples.set(currency, sample);
+            return sample;
+        }
+
+        // Only move the window on the first read of a given check, so both questions above see
+        // the same sample
+        if (sample.current !== current)
+        {
+            sample.previous = sample.current;
+            sample.current = current;
+            sample.negativeStreak = (current < sample.previous) ? (sample.negativeStreak + 1) : 0;
+        }
+
+        return sample;
     }
 
     /**
@@ -14730,6 +14939,7 @@ class AutomationNotifications
                           Shop: "Notifications-Shop",
                           Mining: "Notifications-Mining",
                           Focus: "Notifications-Focus",
+                          Vitamins: "Notifications-Vitamins",
                       };
 
     /**
@@ -14831,6 +15041,9 @@ class AutomationNotifications
 
         let battleCafeLabel = 'Show Battle Café feature notifications';
         Automation.Menu.addLabeledAdvancedSettingsToggleButton(battleCafeLabel, this.Settings.BattleCafe, "", notificationsSettingPanel);
+
+        let vitaminsLabel = 'Show Auto Vitamins feature notifications';
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton(vitaminsLabel, this.Settings.Vitamins, "", notificationsSettingPanel);
     }
 
     /**
@@ -16441,6 +16654,7 @@ class AutomationUnderground
 {
     static Settings = {
                           FeatureEnabled: "Mining-Enabled",
+                          HuntMegaStones: "Mining-HuntMegaStones",
                           SafeBombs: "Mining-SafeBombs",
                           MineType: "Mining-MineType",
                           SellTreasures: "Mining-SellTreasures"
@@ -16458,6 +16672,9 @@ class AutomationUnderground
         {
             // Enable safe bombs usage by default
             Automation.Utils.LocalStorage.setDefaultValue(this.Settings.SafeBombs, true);
+
+            // Don't take over the mine choice unless the player asks for it
+            Automation.Utils.LocalStorage.setDefaultValue(this.Settings.HuntMegaStones, false);
 
             // Start from whichever mine the game is currently set to search for
             Automation.Utils.LocalStorage.setDefaultValue(this.Settings.MineType, MineType.Random);
@@ -16497,8 +16714,7 @@ class AutomationUnderground
         {
             // The mine picker below drives the search, so the in-game auto restart is optional:
             // when it is off, the loop starts the next search itself
-            App.game.underground.autoSearchMineType =
-                parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.MineType), 10);
+            App.game.underground.autoSearchMineType = this.__internal__getMineTypeToSearch();
 
             // Only set a loop if there is none active
             if (this.__internal__autoMiningLoop === null)
@@ -16583,7 +16799,43 @@ class AutomationUnderground
         Automation.Menu.addLabeledAdvancedSettingsToggleButton(
             "Sell treasures automatically", this.Settings.SellTreasures, sellTooltip, miningSettingPanel);
 
+        // The game's underground helpers can only be assigned to the five ordinary mines, so the
+        // Mystery Mine - the only one that yields mega stones, since Chaos Cavern excludes them -
+        // is the one place they cannot dig for you. This stands in for the helper the game does
+        // not offer, and steps aside on its own once every mega stone has been dug up
+        const megaStoneTooltip = "Searches the Mystery Mine while mega stones are still available"
+                               + Automation.Menu.TooltipSeparator
+                               + "It is the only mine that yields mega stones, and the only one\n"
+                               + "the in-game helpers cannot be sent to\n"
+                               + "Overrides the mine selected below, and gives it back as soon\n"
+                               + "as there is no mega stone left to find";
+        const megaStoneLabel = '<img src="assets/images/npcs/Cynthia.png" height="20px"'
+                             + ' style="position: relative; bottom: 3px; image-rendering: pixelated;">'
+                             + '&nbsp;Dig for mega stones';
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton(
+            megaStoneLabel, this.Settings.HuntMegaStones, megaStoneTooltip, miningSettingPanel);
+
         this.__internal__addMineTypeSelector(miningSettingPanel);
+    }
+
+    /**
+     * @brief Determines which mine the next search should look for
+     *
+     * A mega stone stops being an unlocked underground item as soon as the player owns one, so
+     * an empty list is exactly "every mega stone has been found", and the player's own choice
+     * takes over again at that point.
+     *
+     * @returns The MineType to search for
+     */
+    static __internal__getMineTypeToSearch()
+    {
+        if ((Automation.Utils.LocalStorage.getValue(this.Settings.HuntMegaStones) === "true")
+            && UndergroundItems.getUnlockedItems().some((item) => item.valueType === UndergroundItemValueType.MegaStone))
+        {
+            return MineType.Special;
+        }
+
+        return parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.MineType), 10);
     }
 
     /**
@@ -16612,9 +16864,9 @@ class AutomationUnderground
         selectElem.style.paddingLeft = "3px";
         container.appendChild(selectElem);
 
-        // The mines the game itself offers in its 'Find mine' dialog
+        // The mines the game itself offers in its 'Find mine' dialog, plus the Mystery Mine
         const availableMines = [ MineType.Random, MineType.Diamond, MineType.GemPlate,
-                                 MineType.Shard, MineType.Fossil, MineType.EvolutionItem ];
+                                 MineType.Shard, MineType.Fossil, MineType.EvolutionItem, MineType.Special ];
 
         const savedMineType = parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.MineType), 10);
 
@@ -16666,7 +16918,11 @@ class AutomationUnderground
         if (App.game.underground.mine?.completed
             && !Settings.getSetting("autoRestartUndergroundMine").observableValue())
         {
-            const mineType = parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.MineType), 10);
+            const mineType = this.__internal__getMineTypeToSearch();
+
+            // Keep the game's own auto restart in step, in case the player turns it back on
+            App.game.underground.autoSearchMineType = mineType;
+
             App.game.underground.generateMine(mineType);
             return;
         }
@@ -17437,6 +17693,293 @@ class AutomationUtils
             }
         }
         return result;
+    }
+}
+
+/* ========================================================================
+ * lib/Vitamins.js
+ * ======================================================================== */
+/**
+ * @class The AutomationVitamins regroups the 'Auto Vitamins' functionalities
+ *
+ * Vitamins are handed out to bring the whole party up to a target, rather than pouring everything
+ * into whichever pokémon happens to come first. The pokémon furthest from the target are served
+ * first, so a short stock spreads instead of maxing out a handful of them.
+ *
+ * @note The menu is hidden until the player can actually buy a vitamin
+ */
+class AutomationVitamins
+{
+    static Settings = {
+                          FeatureEnabled: "Vitamins-Enabled",
+                          // One target per vitamin type, in the GameConstants.VitaminType order
+                          Target: function(vitaminName) { return `Vitamins-${vitaminName}-Target`; }
+                      };
+
+    /**
+     * @brief Builds the menu, and restores the previous running state if needed
+     *
+     * @param initStep: The current automation init step
+     */
+    static initialize(initStep)
+    {
+        if (initStep == Automation.InitSteps.BuildMenu)
+        {
+            this.__internal__buildMenu();
+        }
+        else if (initStep == Automation.InitSteps.Finalize)
+        {
+            // Restore previous session state
+            this.__internal__toggleAutoVitamins();
+        }
+    }
+
+    /*********************************************************************\
+    |***    Internal members, should never be used by other classes    ***|
+    \*********************************************************************/
+
+    static __internal__vitaminsContainer = null;
+    static __internal__autoVitaminsLoop = null;
+
+    /**
+     * @brief Builds the menu
+     */
+    static __internal__buildMenu()
+    {
+        this.__internal__vitaminsContainer = document.createElement("div");
+        Automation.Menu.AutomationButtonsDiv.appendChild(this.__internal__vitaminsContainer);
+
+        Automation.Menu.addSeparator(this.__internal__vitaminsContainer);
+
+        // Only display the menu when the mechanic is available
+        this.__internal__vitaminsContainer.hidden = !this.__internal__isVitaminMechanicAvailable();
+
+        const titleDiv = Automation.Menu.createTitleElement("Auto Vitamins");
+        this.__internal__vitaminsContainer.appendChild(titleDiv);
+
+        const tooltip = "Hands out vitamins until every pokémon reaches the targets below"
+                      + Automation.Menu.TooltipSeparator
+                      + "The pokémon furthest from a target are served first, so a short\n"
+                      + "stock spreads over the party instead of maxing out a few of them\n"
+                      + "A target of 0 leaves that vitamin alone. Nothing is ever removed"
+                      + Automation.Menu.TooltipSeparator
+                      + "⚠️ The game caps the total vitamins per pokémon at\n"
+                      + "5 per region reached, all three types combined";
+        const featureButton =
+            Automation.Menu.addAutomationButton("Vitamins", this.Settings.FeatureEnabled, tooltip, this.__internal__vitaminsContainer, true);
+        featureButton.addEventListener("click", this.__internal__toggleAutoVitamins.bind(this), false);
+
+        // Build the advanced settings panel
+        const settingPanel = Automation.Menu.addSettingPanel(featureButton.parentElement.parentElement);
+        settingPanel.style.textAlign = "right";
+
+        const settingTitle = Automation.Menu.createTitleElement("Vitamins advanced settings");
+        settingTitle.style.marginBottom = "10px";
+        settingPanel.appendChild(settingTitle);
+
+        for (const vitaminName of this.__internal__getVitaminNames())
+        {
+            this.__internal__addTargetSetting(settingPanel, vitaminName);
+        }
+
+        if (this.__internal__vitaminsContainer.hidden)
+        {
+            this.__internal__setVitaminUnlockWatcher();
+        }
+    }
+
+    /**
+     * @brief Adds the per-pokémon target input for the given @p vitaminName
+     *
+     * @param {Element} parent: The settings panel to add the input to
+     * @param {string} vitaminName: The vitamin name, as the game spells it
+     */
+    static __internal__addTargetSetting(parent, vitaminName)
+    {
+        const setting = this.Settings.Target(vitaminName);
+
+        // Opt-in: an automation that starts spending the player's vitamins on its own would be
+        // hard to undo, since removing them one pokémon at a time is entirely manual
+        Automation.Utils.LocalStorage.setDefaultValue(setting, 0);
+
+        const container = document.createElement("div");
+        container.style.marginTop = "5px";
+        container.style.paddingRight = "10px";
+        parent.appendChild(container);
+
+        const label = document.createElement("span");
+        label.innerHTML = `<img src="assets/images/items/vitamin/${vitaminName}.png" height="20px"`
+                        + ` style="position: relative; bottom: 3px; image-rendering: pixelated;">`
+                        + `&nbsp;${vitaminName} per pokémon:`;
+        container.appendChild(label);
+
+        const input = Automation.Menu.createTextInputElement(3, "[0-9]");
+        input.id = setting;
+        input.textContent = Automation.Utils.LocalStorage.getValue(setting);
+        input.style.display = "inline-block";
+        input.style.width = "45px";
+        input.style.marginLeft = "5px";
+        container.appendChild(input);
+
+        input.oninput = function()
+            {
+                Automation.Utils.LocalStorage.setValue(setting, input.textContent.trim());
+            };
+    }
+
+    /**
+     * @brief Watches for the in-game functionality to be unlocked.
+     *        Once unlocked, the menu will be displayed to the user
+     */
+    static __internal__setVitaminUnlockWatcher()
+    {
+        const watcher = setInterval(function()
+            {
+                if (this.__internal__isVitaminMechanicAvailable())
+                {
+                    clearInterval(watcher);
+                    this.__internal__vitaminsContainer.hidden = false;
+                }
+            }.bind(this), 10000); // Check every 10 seconds
+    }
+
+    /**
+     * @brief Toggles the 'Auto Vitamins' feature
+     *
+     * @param enable: [Optional] If a boolean is passed, it will be used to set the right state.
+     *                Otherwise, the local storage value will be used
+     */
+    static __internal__toggleAutoVitamins(enable)
+    {
+        if ((enable !== true) && (enable !== false))
+        {
+            enable = (Automation.Utils.LocalStorage.getValue(this.Settings.FeatureEnabled) === "true");
+        }
+
+        if (enable)
+        {
+            if (this.__internal__autoVitaminsLoop === null)
+            {
+                // Vitamin stocks move slowly, there is nothing to gain from checking often
+                this.__internal__autoVitaminsLoop = setInterval(this.__internal__vitaminsLoop.bind(this), 10000);
+                this.__internal__vitaminsLoop();
+            }
+        }
+        else
+        {
+            clearInterval(this.__internal__autoVitaminsLoop);
+            this.__internal__autoVitaminsLoop = null;
+        }
+    }
+
+    /**
+     * @brief The 'Auto Vitamins' loop
+     *
+     * Every vitamin type with a target above zero is distributed over the party, the pokémon
+     * furthest from the target first.
+     */
+    static __internal__vitaminsLoop()
+    {
+        // useVitamin notifies on every refusal, so the challenge is checked here rather than
+        // letting the game turn a disabled mechanic into a stream of warnings
+        if (App.game.challenges.list.disableVitamins.active())
+        {
+            return;
+        }
+
+        for (const [ vitaminType, vitaminName ] of this.__internal__getVitaminNames().entries())
+        {
+            const target = Automation.Utils.tryParseInt(
+                Automation.Utils.LocalStorage.getValue(this.Settings.Target(vitaminName)), 0);
+
+            if (target <= 0)
+            {
+                continue;
+            }
+
+            this.__internal__distributeVitamin(vitaminType, vitaminName, target);
+        }
+    }
+
+    /**
+     * @brief Brings as many pokémon as the stock allows up to the given @p target
+     *
+     * @param vitaminType: The GameConstants.VitaminType to hand out
+     * @param {string} vitaminName: The matching item name, used to read the player's stock
+     * @param {number} target: The per-pokémon amount to reach
+     */
+    static __internal__distributeVitamin(vitaminType, vitaminName, target)
+    {
+        let remainingStock = player.itemList[vitaminName]();
+
+        if (remainingStock <= 0)
+        {
+            return;
+        }
+
+        // A pokémon in the hatchery or the queue refuses vitamins with a warning notification,
+        // and one that reached the total cap cannot take any more of any type
+        const candidates = App.game.party.caughtPokemon.filter(
+            (pokemon) => !pokemon.breeding
+                      && (pokemon.vitaminsUsed[vitaminType]() < target)
+                      && (pokemon.vitaminUsesRemaining() > 0));
+
+        // Furthest from the target first, so a short stock levels the party instead of maxing
+        // out whichever pokémon happens to come first in the party order
+        candidates.sort((a, b) => a.vitaminsUsed[vitaminType]() - b.vitaminsUsed[vitaminType]());
+
+        let usedTotal = 0;
+
+        for (const pokemon of candidates)
+        {
+            if (remainingStock <= 0)
+            {
+                break;
+            }
+
+            const amount = Math.min(target - pokemon.vitaminsUsed[vitaminType](),
+                                    pokemon.vitaminUsesRemaining(),
+                                    remainingStock);
+
+            if (amount <= 0)
+            {
+                continue;
+            }
+
+            pokemon.useVitamin(vitaminType, amount);
+
+            remainingStock -= amount;
+            usedTotal += amount;
+        }
+
+        if (usedTotal > 0)
+        {
+            Automation.Notifications.sendNotif(
+                `Gave ${usedTotal.toLocaleString('en-US')} ${vitaminName} to ${candidates.length} pokémon`, "Vitamins");
+        }
+    }
+
+    /**
+     * @brief Lists the vitamin names, indexed by their GameConstants.VitaminType value
+     *
+     * The game uses that name for the item, its image and the player's inventory key alike.
+     *
+     * @returns An array of vitamin names
+     */
+    static __internal__getVitaminNames()
+    {
+        return Object.keys(GameConstants.VitaminType).filter((key) => isNaN(key));
+    }
+
+    /**
+     * @brief Checks whether the player can use vitamins at all
+     *
+     * @returns True if the mechanic is available, False otherwise
+     */
+    static __internal__isVitaminMechanicAvailable()
+    {
+        return !App.game.challenges.list.disableVitamins.active()
+            && (App.game.party.caughtPokemon.length > 0);
     }
 }
 
@@ -18496,6 +19039,7 @@ class Automation
     static Trivia = AutomationTrivia;
     static Underground = AutomationUnderground;
     static Utils = AutomationUtils;
+    static Vitamins = AutomationVitamins;
     static ClickStats = AutomationClickStats;
     static SaveBackup = AutomationSaveBackup;
     static Bridges = AutomationBridges;
@@ -18556,6 +19100,7 @@ class Automation
                     this.Farm.initialize(initStep);
                     this.Shop.initialize(initStep);
                     this.Items.initialize(initStep);
+                    this.Vitamins.initialize(initStep);
                     this.Notifications.initialize(initStep);
                     this.SaveBackup.initialize(initStep);
 
