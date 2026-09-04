@@ -8,12 +8,12 @@
 // @description   Adds in toggable options to move/catch pokemons/pick up items and have fast animations on both safari zones
 // @copyright     https://github.com/Kanzen01
 // @license       GPL-3.0 License
-// @version       1.2.4
+// @version       1.3.0
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/autosafarizone.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/autosafarizone.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/autosafarizone.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/autosafarizone.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com
@@ -23,8 +23,9 @@
 
 function initAutoSafari() {
   var autoSafariState = false;
-  var autoSafariPickItemsState = loadSetting('autoSafariPickItemsState', true);
+  var autoSafariPickItemsState = loadSetting('autoSafariPickItemsState', false);
   var autoSafariThrowBaitsState = loadSetting('autoSafariThrowBaitsState', false);
+  var autoSafariPinapState = loadSetting('autoSafariPinapState', false);
   var autoSafariSeekUncaught = loadSetting('autoSafariSeekUncaught', false);
   var autoSafariSeekContagious = loadSetting('autoSafariSeekContagious', false);
   var autoSafariFastAnimationsState = loadSetting('autoSafariFastAnimationsState', false);
@@ -401,8 +402,8 @@ function initAutoSafari() {
 
     // Handle shiny encounters specially
     if (SafariBattle.enemy.shiny) {
-      let canNanab = App.game.farming.berryList[BerryType.Nanab]() > 5;
-      let canRazz = App.game.farming.berryList[BerryType.Razz]() > 5;
+      let canNanab = App.game.farming.berryInventory[BerryType.Nanab]() > 5;
+      let canRazz = App.game.farming.berryInventory[BerryType.Razz]() > 5;
       // Bait is usually the best approach
       if (!(SafariBattle.enemy.angry || SafariBattle.enemy.eating || SafariBattle.enemy.eatingBait !== BaitType.Bait)) {
         // Nanab is highest catch chance, though not highest catch-per-ball efficiency
@@ -436,6 +437,13 @@ function initAutoSafari() {
       }
     }
     // Not shiny
+    // Pinap doubles the chance of spawning an extra item on the grid while the pokemon eats,
+    // so it's worth using on non-priority encounters even after the bait achievement is done
+    else if (autoSafariPinapState && !isPriority && !(SafariBattle.enemy.eating || SafariBattle.enemy.angry)
+             && App.game.farming.berryInventory[BerryType.Pinap]() > 0) {
+      SafariBattle.selectedBait(BaitList.Pinap);
+      SafariBattle.throwBait();
+    }
     // Throw regular bait to grind achievement
     else if (autoSafariThrowBaitsState && !isPriority && !(SafariBattle.enemy.eating || SafariBattle.enemy.angry) && App.game.statistics.safariBaitThrown() < 1000) {
       SafariBattle.selectedBait(BaitList.Bait);
@@ -453,11 +461,11 @@ function initAutoSafari() {
         SafariBattle.selectedBait(BaitList.Bait);
         // Nanab into rock is best combo of catch chance and efficient ball use
         // Don't waste Nanabs if they won't improve catch rate over just rocks
-        if (App.game.farming.berryList[BerryType.Nanab]() > 25 && SafariBattle.enemy.catchFactor < 100 / (2 + SafariBattle.enemy.levelModifier)) {
+        if (App.game.farming.berryInventory[BerryType.Nanab]() > 25 && SafariBattle.enemy.catchFactor < 100 / (2 + SafariBattle.enemy.levelModifier)) {
           SafariBattle.selectedBait(BaitList.Nanab);
         }
         // Razz into rock is second best
-        else if (App.game.farming.berryList[BerryType.Razz]() > 25) {
+        else if (App.game.farming.berryInventory[BerryType.Razz]() > 25) {
           SafariBattle.selectedBait(BaitList.Razz);
         }
         // Use berry if one was selected
@@ -529,6 +537,7 @@ function initAutoSafari() {
     createButton('safari', 'Safari', autoSafariState, () => toggleAutoSafari(true));
     createButton('pick-items', 'Pick Items', autoSafariPickItemsState, toggleAutoPickItems);
     createButton('throw-baits', 'Throw Bait', autoSafariThrowBaitsState, toggleThrowBaits);
+    createButton('pinap', 'Pinap', autoSafariPinapState, togglePinap);
     createButton('seek-uncaught', 'Seek New', autoSafariSeekUncaught, toggleSeekUncaught);
     createButton('seek-contagious', 'Seek PKRS', autoSafariSeekContagious, toggleSeekContagious);
     createButton('fast-anim', 'Fast Anim', autoSafariFastAnimationsState, toggleFastAnimations);
@@ -583,6 +592,15 @@ function initAutoSafari() {
     toggleButton.classList.toggle('btn-success', autoSafariThrowBaitsState);
     localStorage.setItem('autoSafariThrowBaitsState', autoSafariThrowBaitsState);
     document.getElementById('auto-throw-baits-toggle').innerHTML = `Auto Throw Bait [${autoSafariThrowBaitsState ? 'ON' : 'OFF'}]`;
+  }
+
+  function togglePinap() {
+    autoSafariPinapState = !autoSafariPinapState;
+    const toggleButton = document.getElementById('auto-pinap-toggle');
+    toggleButton.classList.toggle('btn-danger', !autoSafariPinapState);
+    toggleButton.classList.toggle('btn-success', autoSafariPinapState);
+    localStorage.setItem('autoSafariPinapState', autoSafariPinapState);
+    document.getElementById('auto-pinap-toggle').innerHTML = `Auto Pinap [${autoSafariPinapState ? 'ON' : 'OFF'}]`;
   }
 
   function toggleSeekUncaught() {

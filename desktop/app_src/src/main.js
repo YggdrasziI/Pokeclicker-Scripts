@@ -27,6 +27,7 @@ const settingsFile = path.join(dataDir, "settings.ini");
 const defaultScriptsDir = path.join(dataDir, "scripts");
 // Custom scripts directory
 const customScriptsDir = path.join(dataDir, "custom-scripts");
+const saveBackupsDir = path.join(dataDir, "save-backups"); // SAVE BACKUP ADDITION
 // Script checksums file for update checking
 const checksumsFile = path.join(defaultScriptsDir, "fileVersions.json");
 // Client's Electron version when this desktop scripts version was made
@@ -39,6 +40,7 @@ const POKECLICKER_SCRIPTS_DESKTOP_VERSION = '2.1.0';
 console.info("Data directory:", dataDir);
 
 let checkForUpdatesInterval;
+let saveBackupInterval; // SAVE BACKUP ADDITION
 let newVersion = "0.0.0";
 let currentVersion = "0.0.0";
 let windowClosed = false;
@@ -486,6 +488,7 @@ function injectDesktopScriptsModifications(gameWindow) {
   });
   gameWindow.webContents.on('did-finish-load', () => {
     startEpheniaScripts();
+    startSaveBackups();
   });
 
   // Resizable game window
@@ -928,7 +931,7 @@ function injectDesktopScriptsModifications(gameWindow) {
     runScript(`${__dirname}/scripthandler.js`);
     ensureScriptsDirsExist();
 
-    const repoUrl = 'https://api.github.com/repos/Ephenia/Pokeclicker-Scripts/contents/';
+    const repoUrl = 'https://api.github.com/repos/YggdrasziI/Pokeclicker-Scripts/contents/';
     var repoFiles;
     var localFiles;
     var runningOffline = false;
@@ -960,14 +963,14 @@ function injectDesktopScriptsModifications(gameWindow) {
       .then((data) => {
         repoFiles = repoFiles.concat(data);
         let repoFilenames = repoFiles.map(f => f[0]);
-        logInGameWindow(`Found script files in Ephenia/Pokeclicker-Scripts/ github repository:\n${repoFilenames.join('\n')}`, 'debug');
+        logInGameWindow(`Found script files in YggdrasziI/Pokeclicker-Scripts/ github repository:\n${repoFilenames.join('\n')}`, 'debug');
         let scriptsExecuted = handleScripts(repoFiles);
         disableExtraneousScripts(localFiles, repoFilenames);
         return scriptsExecuted;
       }, (err) => { 
         runningOffline = true;
         logInGameWindow(err, 'warn');
-        logInGameWindow('Could not connect to Ephenia GitHub repository, running scripts offline');
+        logInGameWindow('Could not connect to the scripts GitHub repository, running scripts offline');
         let scriptsExecutedOffline = [];
         localFiles.forEach((file) => {
           let scriptRan = runEpheniaScript(file);
@@ -985,5 +988,70 @@ function injectDesktopScriptsModifications(gameWindow) {
         gameWindow.webContents.executeJavaScript(`resolveDesktopScriptsDone('${notifyResult}');`);
       });
   }
+
+  /* SAVE BACKUP ADDITION */
+
+  // The game saves to local storage by itself, but that copy dies with the browser profile, and
+  // its 'Save Reminder' only asks you to press the download button. The Automation script decides
+  // when a backup is due and hands over its contents; writing and pruning happen here, since a
+  // page cannot touch the filesystem.
+  //
+  // Intercepting the download the game would trigger was the other option, but the save file name
+  // is a user setting, so there would be no reliable way to tell a backup from any other download.
+  function startSaveBackups() {
+    if (saveBackupInterval) {
+      clearInterval(saveBackupInterval);
+    }
+    // The script enforces the real interval; polling often just keeps the check responsive
+    saveBackupInterval = setInterval(writeSaveBackupIfDue, 6e4);
+  }
+
+  async function writeSaveBackupIfDue() {
+    let backup;
+    try {
+      backup = await gameWindow.webContents.executeJavaScript(
+        'window.AutomationSaveBackup ? window.AutomationSaveBackup.collect() : null');
+    } catch (err) {
+      // The window may be closing, or the script may not be installed at all
+      return;
+    }
+
+    if (!backup || !backup.contents || !backup.filename) {
+      return;
+    }
+
+    try {
+      if (!fs.existsSync(saveBackupsDir)) {
+        fs.mkdirSync(saveBackupsDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(saveBackupsDir, backup.filename), backup.contents, 'utf-8');
+      logInGameWindow(`Wrote save backup '${backup.filename}'`, 'debug');
+      pruneSaveBackups(backup.retention);
+    } catch (err) {
+      logInGameWindow(`Could not write the save backup:\n${err}`, 'error');
+    }
+  }
+
+  // Keeps the newest `retention` files, so the folder cannot grow without bound
+  function pruneSaveBackups(retention) {
+    if (!Number.isInteger(retention) || retention <= 0) {
+      return;
+    }
+
+    try {
+      const backups = fs.readdirSync(saveBackupsDir)
+        .filter((file) => file.endsWith('.txt'))
+        .map((file) => ({ file, time: fs.statSync(path.join(saveBackupsDir, file)).mtimeMs }))
+        .sort((a, b) => b.time - a.time);
+
+      backups.slice(retention).forEach((entry) => {
+        fs.unlinkSync(path.join(saveBackupsDir, entry.file));
+      });
+    } catch (err) {
+      logInGameWindow(`Could not prune old save backups:\n${err}`, 'error');
+    }
+  }
+
+  /* END SAVE BACKUP ADDITION */
 
 }

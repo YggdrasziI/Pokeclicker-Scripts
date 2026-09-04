@@ -3,14 +3,14 @@
 // @namespace     Pokeclicker Scripts
 // @author        kevingrillet
 // @description   Edit your save for debug (currency, gems, pokeballs, pokemons, ...)
-// @copyright     https://github.com/Ephenia
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.3
+// @version       1.1.0
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/debugcheatstools.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/debugcheatstools.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/debugcheatstools.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/debugcheatstools.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com
@@ -435,10 +435,10 @@ function initSaveEditor() {
     }
 
     // heldItems
-    HeldItem.getSortedHeldItems().forEach((itm, idx) => {
+    Object.values(BagHandler.getSortedHeldItems()).flatMap((category) => category.items).forEach((itm) => {
         const itmPretty = itm.name.replaceAll('_', ' ');
         modalBody.querySelector('#heldItems').innerHTML += `
-            <div class="btn btn-primary col-2 item-bag-item" onclick="HeldItem.getSortedHeldItems()[${idx}].gain(parseInt(document.getElementById('inputAddHeldItems').value || 0))">
+            <div class="btn btn-primary col-2 item-bag-item" onclick="ItemList['${itm.name}'].gain(parseInt(document.getElementById('inputAddHeldItems').value || 0))">
                 <img title="${itmPretty}" src="assets/images/items/heldItems/${itm.name}.png" height="25px">
                 <div>${itmPretty}</div>
             </div>

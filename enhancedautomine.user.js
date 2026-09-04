@@ -2,15 +2,15 @@
 // @name          [Pokeclicker] Enhanced Auto Mine
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia (Credit: falcon71, KarmaAlex, umbralOptimatum, Pastaficionado)
-// @description   Automatically mines the Underground with Bombs. Features adjustable settings as well.
-// @copyright     https://github.com/Ephenia
+// @description   Automatically mines the Underground, digging out treasures and searching for a new mine when a layer is cleared. Features adjustable settings as well.
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       2.2.4
+// @version       3.0.0
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/enhancedautomine.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/enhancedautomine.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/enhancedautomine.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/enhancedautomine.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com
@@ -19,63 +19,47 @@
 // ==/UserScript==
 
 var mineState;
-var smallRestoreState;
-var setThreshold;
 var autoMineTimer;
-var layersMined;
 var sellTreasureState;
-var treasureHunter;
-var itemThreshold;
+var mineTypeSelection;
+var useBombsState;
+var layersMined;
+
+// The game caps manual mining at 20 clicks per second
+const MAX_ACTIONS_PER_TICK = 20;
 
 function initAutoMine() {
-    const minerHTML = document.createElement("div");
-    minerHTML.innerHTML = `<button id="auto-mine-start" class="col-12 col-md-2 btn btn-${mineState ? 'success' : 'danger'}">Auto Mine [${mineState ? 'ON' : 'OFF'}]</button>
-<button id="small-restore-start" class="col-12 col-md-3 btn btn-${smallRestoreState ? 'success' : 'danger'}">Auto Small Restore [${smallRestoreState ? 'ON' : 'OFF'}]</button>
-<div id="threshold-input" class="col-12 col-md-3 btn-secondary"><img title="Money" src="assets/images/currency/money.svg" height="25px">
-<input title="Value at which to stop buying Small Restores." type="text" id="small-restore"></div>
-<select id="treasure-hunter" class="col-12 col-md-2 btn">
-  <option value="-1">All Items</option>
-  <option value="0">Fossils</option>
-  <option value="1">Evolution Items</option>
-  <option value="2">Gem Plates</option>
-  <option value="3">Shards</option>
-  <option value="4">Mega Stones</option>
-  <option value="5">Diamond Value</option>
-</select>
-<div id="item-threshold-input" class="col-12 col-md-2 btn-secondary"><img id="treasure-image" src="assets/images/currency/money.svg" height="25px">
-<input title="Skips layers with fewer target items than this value." type="text" id="item-threshold"></div>`
-    document.querySelectorAll('#mineBody + div')[0].prepend(minerHTML);
-    $("#auto-mine-start").unwrap();
-    document.getElementById('small-restore').value = setThreshold.toLocaleString('en-US');
-    document.getElementById('treasure-hunter').value = treasureHunter;
-    document.getElementById('item-threshold').value = itemThreshold.toLocaleString('en-US');
-    setTreasureImage();
-    const autoSeller = document.createElement("div");
+    // The mines the game lets you search for, in the order its own "Find mine" dialog lists them
+    const mineTypes = [MineType.Random, MineType.Diamond, MineType.GemPlate, MineType.Shard, MineType.Fossil, MineType.EvolutionItem];
+    // Older versions of this script stored a treasure category here instead of a mine type
+    if (!mineTypes.includes(mineTypeSelection)) {
+        mineTypeSelection = MineType.Random;
+        localStorage.setItem('autoMineType', mineTypeSelection);
+    }
+    const mineOptions = mineTypes
+        .map((type) => `<option value="${type}"${type == mineTypeSelection ? ' selected' : ''}>${MineConfigs.find(type).displayName}</option>`)
+        .join('');
+
+    const minerHTML = document.createElement('div');
+    minerHTML.setAttribute('class', 'row p-2 m-0');
+    minerHTML.innerHTML = `<button id="auto-mine-start" class="col-12 col-md-4 btn btn-${mineState ? 'success' : 'danger'}">Auto Mine [${mineState ? 'ON' : 'OFF'}]</button>
+<select id="auto-mine-type" title="Which mine to search for once a layer is cleared." class="col-12 col-md-4 btn">${mineOptions}</select>
+<button id="auto-mine-bombs" class="col-12 col-md-4 btn btn-${useBombsState ? 'success' : 'danger'}" title="Bombs uncover rock much faster, but destroy most of the treasures they dig up.">Use Bombs [${useBombsState ? 'ON' : 'OFF'}]</button>`;
+    document.getElementById('dig').prepend(minerHTML);
+
+    const autoSeller = document.createElement('div');
     autoSeller.innerHTML = `<div>
     <button id="auto-sell-treasure" class="col-12 col-md-3 btn btn-${sellTreasureState ? 'success' : 'danger'}">Auto Sell Treasure [${sellTreasureState ? 'ON' : 'OFF'}]</button>
-</div>`
+</div>`;
     document.getElementById('treasures').prepend(autoSeller);
 
     document.getElementById('auto-mine-start').addEventListener('click', event => { startAutoMine(event); });
-    document.getElementById('small-restore-start').addEventListener('click', event => { autoRestore(event); });
+    document.getElementById('auto-mine-bombs').addEventListener('click', event => { toggleBombs(event); });
     document.getElementById('auto-sell-treasure').addEventListener('click', event => { autoSellTreasure(event); });
-    document.getElementById('treasure-hunter').addEventListener('input', event => { treasureHunt(event); });
+    document.getElementById('auto-mine-type').addEventListener('input', event => { selectMineType(event); });
 
-    document.querySelector('#small-restore').addEventListener('input', event => {
-        setThreshold = +event.target.value.replace(/[A-Za-z!@#$%^&*()]/g, '').replace(/[,]/g, "");
-        localStorage.setItem("autoBuyThreshold", setThreshold);
-        event.target.value = setThreshold.toLocaleString('en-US');
-    });
-    document.querySelector('#item-threshold').addEventListener('input', event => {
-        itemThreshold = +event.target.value.replace(/[A-Za-z!@#$%^&*()]/g, '').replace(/[,]/g, "");
-        localStorage.setItem("itemThreshold", itemThreshold);
-        event.target.value = itemThreshold.toLocaleString('en-US');
-    });
-
-    addGlobalStyle('#threshold-input { display:flex;flex-direction:row;flex-wrap:wrap;align-content:center;justify-content:space-evenly;align-items:center; }');
-    addGlobalStyle('#item-threshold-input { display:flex;flex-direction:row;flex-wrap:wrap;align-content:center;justify-content:space-evenly;align-items:center; }');
-    addGlobalStyle('#small-restore { width:150px; }');
-    addGlobalStyle('#item-threshold { width:75px; }');
+    // Start from the current count so a fresh load doesn't immediately sell
+    layersMined = App.game.statistics.undergroundLayersMined();
 
     if (mineState) {
         // Wait a few seconds to not mine before underground is fully loaded
@@ -103,120 +87,105 @@ function startAutoMine(event) {
 }
 
 function doAutoMine() {
-    const treasureHunting = Math.sign(treasureHunter) >= 0 && itemThreshold > 0;
-    const treasureTypes = ['Fossils', 'Evolution Items', 'Gem Plates', 'Shards', 'Mega Stones', 'Diamond Value'];
-    const surveyResult = Mine.surveyResult();
-    let treasureAmount;
-    if (Mine.loadingNewLayer) {
-        // Do nothing while the new layer is loading
+    const underground = App.game.underground;
+    const mine = underground?.mine;
+    if (!mine) {
         return;
     }
-    if (treasureHunting && surveyResult) {
-        // Parse survey for the treasure type we want
-        try {
-            let re = new RegExp(String.raw`${treasureTypes[treasureHunter]}: (\d+)`);
-            treasureAmount = +re.exec(surveyResult)[1];
-            // Count fossil pieces as fossils
-            if (treasureHunter == 0) {
-              re = new RegExp(`Fossil Pieces: (\d+)`);
-              treasureAmount += +re.exec(surveyResult)[1];
-            }
-        } catch (err) {
-            treasureAmount = 0;
-        }
-    }
-    if (treasureHunting && !surveyResult) {
-        // Survey the layer
-        mineMain();
-    } else if (treasureHunting && treasureAmount < itemThreshold && Mine.skipsRemaining() > 0) {
-        // Too few of the desired treasure type, skip
-        resetLayer();
-    } else if (!treasureHunting && Mine.itemsBuried() < itemThreshold && Mine.skipsRemaining() > 0) {
-        // Too few items, skip
-        resetLayer();
-    } else {
-        // Either the layer meets requirements or we're out of skips
-        mineMain();
-    }
-    if (sellTreasureState && layersMined != App.game.statistics.undergroundLayersMined()) {
-        Underground.sellAllMineItems();
-        layersMined = JSON.stringify(App.game.statistics.undergroundLayersMined());
-        localStorage.setItem('undergroundLayersMined', layersMined);
+
+    // Selling doesn't depend on the state of the current layer, so handle it first
+    if (sellTreasureState && App.game.statistics.undergroundLayersMined() != layersMined) {
+        sellTreasures();
+        layersMined = App.game.statistics.undergroundLayersMined();
     }
 
-    function mineMain() {
-        if (smallRestoreState) {
-            if ((ItemList["SmallRestore"].price() == 30000) && (player.itemList["SmallRestore"]() == 0) && (App.game.wallet.currencies[GameConstants.Currency.money]() >= setThreshold + 30000)) {
-                ItemList["SmallRestore"].buy(1);
-            }
-            if (Math.floor(App.game.underground.energy) < Math.max(App.game.underground.getSurvey_Cost(), Underground.BOMB_ENERGY)) {
-                if (player.itemList["LargeRestore"]() > 0) {
-                    ItemList["LargeRestore"].use();
-                } else if (player.itemList["MediumRestore"]() > 0) {
-                    ItemList["MediumRestore"].use();
-                } else {
-                    ItemList["SmallRestore"].use();
-                }
-            }
-        }
-        if (!surveyResult && treasureHunting && Mine.skipsRemaining() != 0) {
-            if (Math.floor(App.game.underground.energy) >= App.game.underground.getSurvey_Cost()) {
-                Mine.survey();
-                $('#mine-survey-result').tooltip("hide");
-            }
-            return true;
-        } else {
-            if (Math.floor(App.game.underground.energy) >= 1) {
-                // Get location of all reward tiles
-                let rewards = Mine.rewardGrid.flatMap((row, y) => {
-                    return row.map((tile, x) => {
-                        return (tile ? {item: tile.value, revealed: tile.revealed, 'x': x, 'y': y} : 0);
-                    }).filter((tile) => tile != 0);
-                });
-                // Calculate number of distinct items visible
-                let rewardsSeen = new Set();
-                rewards.forEach((tile) => {
-                    if (tile.revealed) {
-                        rewardsSeen.add(tile.item);
-                    }
-                });
-                if (Mine.itemsBuried() > rewardsSeen.size) {
-                    // Use bombs while there are still items left to uncover
-                    if (Math.floor(App.game.underground.energy) >= Underground.BOMB_ENERGY) {
-                        Mine.bomb();
-                    }
-                } else {
-                    // All items have at least one tile revealed, let's excavate them
-                    if (Mine.toolSelected() != 0) {
-                        Mine.toolSelected(Mine.Tool.Chisel);
-                    }
-                    let tilesToMine = rewards.filter((tile) => rewardsSeen.has(tile.item) && !tile.revealed)
-                    while (tilesToMine.length && Math.floor(App.game.underground.energy) >= Underground.CHISEL_ENERGY) {
-                        let tile = tilesToMine.pop();
-                        Mine.click(tile.y, tile.x);
-                    }
-                }
-            }
-        }
+    // The mine still has to be discovered before anything can be dug up
+    if (mine.timeUntilDiscovery > 0) {
+        return;
     }
 
-    function resetLayer() {
-        if (!Mine.loadingNewLayer) {
-            Mine.loadingNewLayer = true;
-            setTimeout(Mine.completed, 1500);
-            if (Mine.skipsRemaining() > 0) {
-                GameHelper.incrementObservable(Mine.skipsRemaining, -1);
-            }
+    if (mine.completed || mine.itemsFound >= mine.itemsBuried) {
+        // The game already searches for a new mine itself when its own setting is on
+        if (!Settings.getSetting('autoRestartUndergroundMine').observableValue()) {
+            underground.generateMine(mineTypeSelection);
         }
+        return;
+    }
+
+    // Survey marks a box that's guaranteed to hold a treasure we haven't uncovered yet,
+    // so it's worth using the moment it comes off cooldown
+    if (Mine.hiddenItemsIDSet(mine).size > 0 && underground.tools.getTool(UndergroundToolType.Survey)?.canUseTool()) {
+        underground.tools.useTool(UndergroundToolType.Survey, 0, 0);
+    }
+
+    for (let action = 0; action < MAX_ACTIONS_PER_TICK; action++) {
+        if (mine.completed || mine.itemsFound >= mine.itemsBuried) {
+            break;
+        }
+        const next = nextMineAction(mine);
+        if (!next || !underground.tools.getTool(next.tool)?.canUseTool()) {
+            break;
+        }
+        underground.tools.useTool(next.tool, next.x, next.y);
     }
 }
 
-function autoRestore(event) {
+// Picks the next tile to dig and the tool to dig it with, or nothing if the layer is exhausted
+function nextMineAction(mine) {
+    const unmined = mine.grid
+        .map((tile, index) => ({ tile, index }))
+        .filter(({ tile }) => tile.layerDepth > 0);
+    if (!unmined.length) {
+        return null;
+    }
+
+    // Treasures with a tile already showing are worth finishing off with the chisel,
+    // which digs deep on a single tile and never destroys what it uncovers
+    const partiallyFound = Mine.partiallyFoundItemsIDSet(mine);
+    const exposed = unmined.filter(({ tile }) => tile.reward && !tile.reward.rewarded && partiallyFound.has(tile.reward.rewardID));
+    if (exposed.length) {
+        return { tool: UndergroundToolType.Chisel, ...mine.getCoordinateForGridIndex(exposed[0].index) };
+    }
+
+    // Nothing showing, so open up new ground instead
+    if (useBombsState) {
+        // The bomb picks its own tiles at random
+        return { tool: UndergroundToolType.Bomb, x: 0, y: 0 };
+    }
+    const surveyed = tilesUnderSurvey(mine, unmined);
+    const candidates = surveyed.length ? surveyed : unmined;
+    const choice = candidates[Math.floor(Math.random() * candidates.length)];
+    return { tool: UndergroundToolType.Hammer, ...mine.getCoordinateForGridIndex(choice.index) };
+}
+
+// Survey marks a single tile with the size of the box it revealed around it
+function tilesUnderSurvey(mine, unmined) {
+    const boxes = mine.grid
+        .map((tile, index) => ({ tile, index }))
+        .filter(({ tile }) => tile.survey > 0)
+        .map(({ tile, index }) => ({ reach: Math.floor(tile.survey / 2), ...mine.getCoordinateForGridIndex(index) }));
+    if (!boxes.length) {
+        return [];
+    }
+    return unmined.filter(({ index }) => {
+        const { x, y } = mine.getCoordinateForGridIndex(index);
+        return boxes.some((box) => Math.abs(x - box.x) <= box.reach && Math.abs(y - box.y) <= box.reach);
+    });
+}
+
+// Only diamonds and gem plates can be sold, so fossils and evolution items are never at risk
+function sellTreasures() {
+    UndergroundItems.getUnlockedItems()
+        .filter((item) => item.hasSellValue() && !item.sellLocked())
+        .forEach((item) => UndergroundController.sellMineItem(item, player.itemList[item.itemName]()));
+}
+
+function toggleBombs(event) {
     const element = event.target;
-    smallRestoreState = !smallRestoreState;
-    smallRestoreState ? element.classList.replace('btn-danger', 'btn-success') : element.classList.replace('btn-success', 'btn-danger');
-    element.textContent = `Auto Small Restore [${smallRestoreState ? 'ON' : 'OFF'}]`;
-    localStorage.setItem('autoSmallRestore', smallRestoreState);
+    useBombsState = !useBombsState;
+    useBombsState ? element.classList.replace('btn-danger', 'btn-success') : element.classList.replace('btn-success', 'btn-danger');
+    element.textContent = `Use Bombs [${useBombsState ? 'ON' : 'OFF'}]`;
+    localStorage.setItem('autoMineBombs', useBombsState);
 }
 
 function autoSellTreasure(event) {
@@ -227,46 +196,27 @@ function autoSellTreasure(event) {
     localStorage.setItem('autoSellTreasure', sellTreasureState);
 }
 
-function treasureHunt(event) {
-    const element = event.target;
-    const value = +element.value;
-    treasureHunter = value;
-    localStorage.setItem('treasureHunter', value);
-    setTreasureImage();
-}
-
-function setTreasureImage() {
-    const imageSources = ['items/underground/Hard Stone.png', 'breeding/Helix Fossil.png', 'items/evolution/Fire_stone.png',
-        'items/underground/Flame Plate.png', 'items/underground/Red Shard.png', 'megaStone/142.png', 'currency/diamond.svg'];
-    const imageTitles = ['Item', 'Fossil', 'Evolution Stone', 'Plate', 'Shard', 'Mega Stone', 'Diamond'];
-    document.getElementById('treasure-image').src = `assets/images/${imageSources[1 + treasureHunter]}`;
-    document.getElementById('treasure-image').title = imageTitles[1 + treasureHunter];
+function selectMineType(event) {
+    mineTypeSelection = +event.target.value;
+    localStorage.setItem('autoMineType', mineTypeSelection);
 }
 
 if (!validParse(localStorage.getItem('autoMineState'))) {
     localStorage.setItem("autoMineState", false);
 }
-if (!validParse(localStorage.getItem('autoSmallRestore'))) {
-    localStorage.setItem("autoSmallRestore", false);
-}
-if (!validParse(localStorage.getItem('autoBuyThreshold'))) {
-    localStorage.setItem("autoBuyThreshold", 0);
-}
 if (!validParse(localStorage.getItem('autoSellTreasure'))) {
     localStorage.setItem("autoSellTreasure", false);
 }
-if (!validParse(localStorage.getItem('treasureHunter'))) {
-    localStorage.setItem("treasureHunter", -1);
+if (!validParse(localStorage.getItem('autoMineType'))) {
+    localStorage.setItem("autoMineType", 0);
 }
-if (!validParse(localStorage.getItem('itemThreshold'))) {
-    localStorage.setItem("itemThreshold", 0);
+if (!validParse(localStorage.getItem('autoMineBombs'))) {
+    localStorage.setItem("autoMineBombs", false);
 }
 mineState = JSON.parse(localStorage.getItem('autoMineState'));
-smallRestoreState = JSON.parse(localStorage.getItem('autoSmallRestore'));
-setThreshold = JSON.parse(localStorage.getItem('autoBuyThreshold'));
 sellTreasureState = JSON.parse(localStorage.getItem('autoSellTreasure'));
-treasureHunter = JSON.parse(localStorage.getItem('treasureHunter'));
-itemThreshold = JSON.parse(localStorage.getItem('itemThreshold'));
+mineTypeSelection = JSON.parse(localStorage.getItem('autoMineType'));
+useBombsState = JSON.parse(localStorage.getItem('autoMineBombs'));
 
 function validParse(key) {
     try {
@@ -278,16 +228,6 @@ function validParse(key) {
     } catch (e) {
         return false;
     }
-}
-
-function addGlobalStyle(css) {
-    var head, style;
-    head = document.getElementsByTagName('head')[0];
-    if (!head) { return; }
-    style = document.createElement('style');
-    style.type = 'text/css';
-    style.innerHTML = css;
-    head.appendChild(style);
 }
 
 function loadEpheniaScript(scriptName, initFunction, priorityFunction) {

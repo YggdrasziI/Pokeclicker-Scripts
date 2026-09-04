@@ -2,15 +2,15 @@
 // @name          [Pokeclicker] Enhanced Auto Hatchery
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia (Original/Credit: Drak + Ivan Lay, Optimatum)
-// @description   Automatically hatches eggs at 100% completion. Adds an On/Off button for auto hatching as well as an option for automatically hatching store bought eggs and dug up fossils.
-// @copyright     https://github.com/Ephenia
+// @description   Automatically hatches eggs at 100% completion. Adds an On/Off button for auto hatching as well as an option for automatically hatching store bought eggs and reviving dug up fossils.
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       3.1.4
+// @version       3.2.0
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/enhancedautohatchery.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/enhancedautohatchery.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/enhancedautohatchery.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/enhancedautohatchery.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com
@@ -145,11 +145,16 @@ function autoHatcher() {
         // (subsequent autoHatch methods aren't called due to short-circuiting)
         let success = pkrsState && autoHatchPkrs();
         success ||= eggState && autoHatchEgg();
-        success ||= fossilState && autoHatchFossil();
         success ||= autoHatchMon();
         if (!success) {
             break;
         }
+    }
+
+    // Fossils are no longer hatched: they're revived at the Cinnabar Lab trader,
+    // which grants the pokemon directly without using an egg slot.
+    if (fossilState) {
+        autoReviveFossil();
     }
 }
 
@@ -235,25 +240,35 @@ function autoHatchEgg() {
     return ItemList[eggToUse].use();
 }
 
-function autoHatchFossil() {
-    // Fossils in inventory with amount > 0 
-    let fossilList = UndergroundItems.list.filter(it => it.valueType === UndergroundItemValueType.Fossil && player.itemList[it.itemName]() > 0);
-    if (fossilList.length == 0) {
+function autoReviveFossil() {
+    // Fossil revives are trades at the Cinnabar Lab: a fossil in, a pokemon out
+    const deals = GenericDeal.list.FossilCinnabarLab?.peek();
+    if (!deals) {
         return false;
     }
-    let priorityList = fossilList.filter(f => { 
-        const caughtStatus = PartyController.getCaughtStatusByName(GameConstants.FossilToPokemon[f.name]);
+    // Only the trades we can actually afford and have unlocked
+    const available = deals
+        .map((deal, index) => ({
+            pokemon: deal.profits[0]?.item?.type,
+            cost: deal.costs.reduce((total, c) => total + c.amount, 0),
+            index,
+        }))
+        .filter(({ pokemon, index }) => pokemon && GenericDeal.canUse('FossilCinnabarLab', index));
+    if (!available.length) {
+        return false;
+    }
+    // Prefer revives that give something we don't have yet
+    const priorityList = available.filter(({ pokemon }) => {
+        const caughtStatus = PartyController.getCaughtStatusByName(pokemon);
         return caughtStatus == CaughtStatus.NotCaught || (shinyFossilState && caughtStatus == CaughtStatus.Caught);
     });
-    if (priorityList.length) {
-        fossilList = priorityList;
-    }
-    let fossilToUse = fossilList[Math.floor(Math.random() * fossilList.length)];
-    // Workaround as sellMineItem returns null
-    let before = player.amountOfItem(fossilToUse.itemName)
-    UndergroundController.sellMineItem(fossilToUse);
-    let after = player.amountOfItem(fossilToUse.itemName);
-    return before > after;
+    const pool = priorityList.length ? priorityList : available;
+    // Don't burn a stockpile on the bulk evolution trades when a cheap revive will do
+    const cheapest = Math.min(...pool.map((deal) => deal.cost));
+    const candidates = pool.filter((deal) => deal.cost === cheapest);
+    const choice = candidates[Math.floor(Math.random() * candidates.length)];
+    GenericDeal.use('FossilCinnabarLab', choice.index, 1);
+    return true;
 }
 
 function autoHatchMon() {

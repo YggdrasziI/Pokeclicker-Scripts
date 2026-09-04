@@ -3,14 +3,14 @@
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia
 // @description   Adds in toggable options to have seasonal events infinitely run. Events can also run simultaneously with one another. Includes a custom event as well.
-// @copyright     https://github.com/Ephenia
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.3.3
+// @version       1.4.0
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/infiniteseasonalevents.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/infiniteseasonalevents.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/infiniteseasonalevents.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/infiniteseasonalevents.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com
@@ -22,7 +22,11 @@ var activeSeasonalEvents = {};
 
 //Removed setTimeout, opted to make it load like the other scrips, also helps with notifications
 function initEvents() {
-    const NUM_EVENTS = 10;
+    // Events the modal below knows how to illustrate. Anything outside this list still works,
+    // it just shows up without artwork, which is what the notification at the end reports.
+    const knownEvents = ["Flying Pikachu", "Mewtwo strikes back!", "Halloween!", "Let's GO!",
+        "Merry Christmas!", "Hoopa Day", "Lunar New Year", "Easter", "Golden Week",
+        "A Pirate's Life", "Ephenia's Gift"];
     const startDate = new Date(new Date().getFullYear(), -1);
     const endDate = new Date(new Date().getFullYear(), 10000);
 
@@ -56,15 +60,6 @@ function initEvents() {
         if (!event.hasStarted() && activeSeasonalEvents[event.title]) {
             event.start();
         }
-    }
-
-    if (App.game.specialEvents.events.length != NUM_EVENTS) {
-        Notifier.notify({
-            title: '[Outdated] Infinite Seasonal Events',
-            message: `Please contact <a href="https://github.com/Ephenia/Pokeclicker-Scripts" target="_blank">Ephenia</a> so that this script can be updated!`,
-            type: NotificationConstants.NotificationOption.danger,
-            timeout: 1000000
-        });
     }
 
     var eventLi = document.createElement('li');
@@ -119,6 +114,21 @@ function initEvents() {
                 <img src="assets/images/pokemon/1.01.png">
                 <img src="assets/images/pokemon/4.01.png">
                 <img src="assets/images/pokemon/7.01.png">
+                </div><hr>`
+                break
+            case "A Pirate's Life":
+                modalBody.innerHTML +=
+                    `<div id="event-${title}" class="event-select" data-value="${title}"><b>${title}</b><br>${description}<br>
+                <img src="assets/images/pokemon/6.05.png">
+                <img src="assets/images/pokemon/448.02.png">
+                <img src="assets/images/pokemon/720.02.png">
+                <img src="assets/images/pokemon/888.02.png"><br>
+                <img src="assets/images/pokemon/129.33.png">
+                <img src="assets/images/pokemon/570.02.png">
+                <img src="assets/images/pokemon/761.01.png">
+                <img src="assets/images/pokemon/762.01.png">
+                <img src="assets/images/pokemon/813.01.png">
+                <img src="assets/images/pokemon/814.01.png">
                 </div><hr>`
                 break
             case "Halloween!":
@@ -214,6 +224,18 @@ function initEvents() {
 
     addGlobalStyle('.event-select { cursor: pointer; }');
     addGlobalStyle('.event-select:hover { background-color: rgba(48, 197, 255, 0.5); }');
+
+    const unknownEvents = App.game.specialEvents.events
+        .map((event) => event.title)
+        .filter((title) => !knownEvents.includes(title));
+    if (unknownEvents.length) {
+        Notifier.notify({
+            title: '[Outdated] Infinite Seasonal Events',
+            message: `These events are missing their artwork: ${unknownEvents.join(', ')}.<br/>They can still be toggled.<br/>Please contact <a href="https://github.com/YggdrasziI/Pokeclicker-Scripts" target="_blank">Ephenia</a> so that this script can be updated!`,
+            type: NotificationConstants.NotificationOption.warning,
+            timeout: 30000
+        });
+    }
 }
 
 function toggleEvent() {

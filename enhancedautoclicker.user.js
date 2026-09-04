@@ -3,14 +3,14 @@
 // @namespace     Pokeclicker Scripts
 // @author        Optimatum (Original/Credit: Ephenia, Ivan Lay, Novie53, andrew951, Kaias26, kevingrillet)
 // @description   Clicks through battles, with adjustable speed, and provides various insightful statistics. Also includes an automatic gym battler and automatic dungeon explorer with multiple pathfinding modes.
-// @copyright     https://github.com/Ephenia
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       3.5.4
+// @version       3.5.5
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/enhancedautoclicker.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/enhancedautoclicker.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/enhancedautoclicker.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/enhancedautoclicker.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com
@@ -31,7 +31,7 @@ class EnhancedAutoClicker {
     static autoGymSelect = validateStorage('autoGymSelect', 0, [0, 1, 2, 3, 4]);
     // Auto Dungeon
     static autoDungeonState = ko.observable(validateStorage('autoDungeonState', false));
-    static autoDungeonFinishBeforeStopping = validateStorage('autoDungeonFinishBeforeStopping', true);
+    static autoDungeonFinishBeforeStopping = validateStorage('autoDungeonFinishBeforeStopping', false);
     static autoDungeonEncounterMode = validateStorage('autoDungeonEncounterMode', false);
     static autoDungeonChestMode = validateStorage('autoDungeonChestMode', false);
     static autoDungeonLootTier = validateStorage('autoDungeonLootTier', 0, [...Object.keys(baseLootTierChance).keys()]);
