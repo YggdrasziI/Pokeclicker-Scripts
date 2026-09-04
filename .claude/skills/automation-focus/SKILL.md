@@ -26,8 +26,8 @@ Only one topic runs at a time. `__internal__activeFocus` is what is running;
 `__internal__wantedTopicId` is what the player picked in the dropdown. They differ
 while a fallback is covering for a blocked topic — see below.
 
-**The single insertion point is `Focus.js:426-478`**
-(`__internal__buildFunctionalitiesList`). Simple topics are pushed inline there;
+**The single insertion point is `__internal__buildFunctionalitiesList` in `Focus.js`.**
+Simple topics are pushed inline there;
 complex ones live in `automation/lib/Focus/<Topic>.js` and are pulled in by
 `this.<Topic>.__registerFunctionalities(this.__internal__functionalities)`.
 **The order of that function is the order of the dropdown.**
@@ -36,7 +36,7 @@ heading option.
 
 ## Two loop styles
 
-- **Shared loop** — set a real `refreshRateAsMs`; `Focus.js:394` owns the
+- **Shared loop** — set a real `refreshRateAsMs`; `__internal__startTopic` owns the
   `setInterval` and calls `run()` immediately once. Used by XP, Gold, Dungeon
   Tokens and every Gems topic.
 - **Private loop** — set `refreshRateAsMs: Automation.Focus.__noFunctionalityRefresh`
@@ -54,15 +54,14 @@ heading option.
 2. `automation/build.mjs` — add it to `SOURCES` **before `lib/Focus.js`**.
    `Focus.js` has static field initializers naming these classes, so a later
    position is a load-time crash.
-3. `Focus.js:7-10` — `static <Topic> = AutomationFocus<Topic>;`
-4. `Focus.js:472-475` — call `__registerFunctionalities`.
-5. Optional settings tab in `Focus.js:290-343`, via
+3. `Focus.js`'s alias block — `static <Topic> = AutomationFocus<Topic>;`
+4. `__internal__buildFunctionalitiesList` — call `__registerFunctionalities`.
+5. Optional settings tab in `__internal__buildAdvancedSettings`, via
    `Automation.Menu.addTabElement(panel, "<Label>", "automationFocusSettings")`
    then `this.<Topic>.__buildAdvancedSettings(container)`.
 
-Setting keys are `Focus-<Topic>-<Setting>` (`PokerusCure.js:73-76` is the
-reference). Per-item toggles generated from game data use a key factory —
-`Achievements.js:13` and `Quests.js:61` do it differently (`Focus-Achievements-…`
+Setting keys are `Focus-<Topic>-<Setting>` (`PokerusCure.js` is the reference). Per-item toggles generated from game data use a key factory —
+`Achievements.js` and `Quests.js` do it differently (`Focus-Achievements-…`
 vs `Focus-…`); follow whichever file you are in, do not "harmonise" them.
 
 ## Shared helpers — use these, do not reimplement
@@ -79,7 +78,7 @@ From `Focus.js`, the "Focus specific members" block:
 | `__equipLoadout(candidates)` | No-op unless the Oak-item-loadout setting is on. |
 
 `Automation.Dungeon.setBeforeNewRunCallBack(fn)` is the documented hook to act
-between dungeon runs (`ShadowPurification.js:179`).
+between dungeon runs (see `setBeforeNewRunCallBack` in `ShadowPurification.js`).
 
 ## When a topic cannot progress
 
@@ -100,20 +99,20 @@ behaviour:
    when the entire chain is blocked, which reproduces the old behaviour.
 3. **Silent early `return`** from `run()` — the guard helpers above.
 4. **Self-diversion** — farm money or tokens, then come back
-   (`Quests.js:481-494`).
+   (`__internal__farmSomeMoney` in `Quests.js`).
 
 `__reportBlocked` is called from inside a topic's own loop callback, so the switch
 is deferred through a `setTimeout(0)` rather than tearing the loop down underneath
 the code that asked for it. Keep that if you touch it.
 
 `Quests.js` still never reports itself blocked: `__internal__workOnQuest` has no
-timeout, and the `CatchShadowsQuest` branch is hard-coded to
-`"Phenac City Battles"` (`Quests.js:423`) and spins forever if that dungeon is
-unreachable. Its stuck watchdog refreshes the quest list rather than handing over.
+timeout, and its `CatchShadowsQuest` branch is hard-coded to
+`"Phenac City Battles"`, so it spins forever if that dungeon is unreachable. Its
+stuck watchdog refreshes the quest list rather than handing over.
 
 ## Safety rules
 
-- `__internal__sortQuestByPriority` (`Quests.js:892-957`) is **not a valid total
+- `__internal__sortQuestByPriority` in `Quests.js` is **not a valid total
   order** — it ignores `b` once `a` matches. That is tolerated because only `[0]`
   is used. Do not feed it to anything that needs a real comparator, and do not
   "fix" it without checking every caller.

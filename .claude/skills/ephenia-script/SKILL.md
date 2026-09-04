@@ -73,19 +73,19 @@ Knockout bindings. Use it only for DOM the game will later bind to —
 
 `createScriptSettingsContainer(name)` builds (once) a "Scripts" tab in the game's
 settings modal, then returns a `<tbody>` for your script's own table. The
-canonical definition is `additionalvisualsettings.user.js:454-499`; each script
+canonical definition is `createScriptSettingsContainer` in `additionalvisualsettings.user.js`; each script
 ships a copy.
 
 Two traps:
 
 - **The id strips every letter `s`.** `"Additional Visual Settings"` becomes
-  `settings-scripts-additionalvisualetting`. Not a typo — `automation/test/bridges.test.mjs:25`
+  `settings-scripts-additionalvisualetting`. Not a typo — `automation/test/bridges.test.mjs`
   depends on it. Do not "fix" it; other scripts and the Automation card's
   relocation logic key off these ids.
 - Tables are inserted **in alphabetical order of that id**, not in load order.
 
 Rows are `<tr>` with a `<th class="p-2 col-md-5" scope="row">` label and a `<td>`
-holding the control. `automation/lib/EpheniaControls.js:129-154` later moves these
+holding the control. `__internal__relocateScriptSettings` in `automation/lib/EpheniaControls.js` later moves these
 tables into the Automation "Ephenia scripts" card, so keep the `<thead>` present —
 it is what supplies the category title there.
 
@@ -100,11 +100,11 @@ Automation bridges. Account names inside *URLs* are ours to change; these are no
 ## Interoperating with the Automation bundle
 
 - A script whose main switch should appear in the Automation "Ephenia scripts"
-  card needs its button id listed in `automation/lib/EpheniaControls.js:25-56`.
+  card needs its button id listed in `EpheniaControls`'s `Scripts` table.
   That mirror only understands on/off buttons carrying `btn-success` /
   `btn-danger`; a `<select>` needs a different path.
 - A script that drives the same activity as an Automation feature needs a conflict
-  entry in `automation/lib/Bridges.js:42-50`, or the two will fight.
+  entry in `Bridges.js`'s conflict matrix, or the two will fight.
 
 ## Safety rules
 

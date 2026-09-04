@@ -59,7 +59,7 @@ Everything is stored as a **string**.
 
 There is no number-input helper. `createTextInputElement` returns a
 `contentEditable` div, so you bind it yourself. Copy
-`automation/lib/SaveBackup.js:148-170`:
+`__internal__addNumberSetting` in `automation/lib/SaveBackup.js`:
 
 ```js
 const input = Automation.Menu.createTextInputElement(charLimit, "[0-9]");
@@ -70,7 +70,7 @@ input.oninput = () => Automation.Utils.LocalStorage.setValue(setting, input.text
 
 `createDropdownListWithHtmlOptions` returns a container, not a `<select>`. Persist
 through `container.onValueChange` and read `container.selectedValue` — see
-`Menu.js:1057` (`addPokeballList`) for the reference use.
+`addPokeballList` in `Menu.js` for the reference use.
 
 ## Tooltips
 
@@ -98,8 +98,8 @@ Automation.Menu.setButtonDisabledState(otherId, true, "reason shown to the user"
 Automation.Menu.forceAutomationState(otherId, true);
 ```
 
-and undo both in your `stop()`. `automation/lib/Focus/Quests.js:162-248` is the
-reference: it seizes Click, Hatchery, Underground and Farm on start and releases
+and undo both in your `stop()`. `__internal__start` / `__internal__stop` in `automation/lib/Focus/Quests.js`
+is the reference: it seizes Click, Hatchery, Underground and Farm on start and releases
 every one of them on stop.
 
 Cross-script conflicts with the Ephenia userscripts are declared in
@@ -115,7 +115,7 @@ player's position or an activity an Ephenia script also drives.
 - New features and settings default to **off**. `init.test.mjs` asserts it.
 - Do not use the in-game hatchery queue or any mechanic the module deliberately
   avoids without saying why — those choices are documented in the tooltips
-  (`Hatchery.js:168-174` explains why the queue is not used).
+  (the auto-hatchery tooltip in `Hatchery.js` explains why the queue is not used).
 - Keep the module's own state in `__internal__` statics. Cross-module state goes
   through a documented public field (`Automation.Farm.ForcePlantBerriesAsked` is
   the only one today) — and if you add a second writer to one, decide who wins.
@@ -130,7 +130,7 @@ cd automation/test && npm test
 
 - `menu.test.mjs` — the card docks in `#right-column`, categories are collapsible,
   floating categories stay out of the card.
-- `init.test.mjs` — all 15 modules initialize without throwing, every feature
+- `init.test.mjs` — every module in its `MODULES` list initializes without throwing, every feature
   toggle defaults to Off, advanced-settings disclosures are in-flow siblings.
 - `bridges.test.mjs` — the Ephenia conflict matrix targets real buttons.
 

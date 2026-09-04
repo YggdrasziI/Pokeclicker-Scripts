@@ -10,7 +10,7 @@ desktop client that ships them. Three families of code that do not mix:
   registration call at the bottom. They share an ABI (`loadEpheniaScript`,
   `window.epheniaScriptInitializers`, `createScriptSettingsContainer`) with every
   Ephenia script published elsewhere.
-- **The Automation library** — `automation/lib/*.js`, 31 modules concatenated by
+- **The Automation library** — `automation/lib/*.js`, concatenated by
   `automation/build.mjs` into `pokeclickerautomation.user.js` at the repo root.
   That bundle is **generated — never edit it by hand**; edit the module under
   `automation/` and rebuild. Upstream is Farigh's `pokeclicker-automation`, ported
