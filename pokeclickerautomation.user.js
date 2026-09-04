@@ -19121,9 +19121,11 @@ class AutomationBridges
  * button and clicks it when used, so the original controls keep working and, because the real
  * button is what gets clicked, @see AutomationBridges still gets its say about conflicts.
  *
- * The settings tables, on the other hand, are moved outright. They live in a tab of the in-game
- * settings modal, which is exactly the round trip this is meant to remove, and moving the
- * elements keeps their handlers intact.
+ * The scripts' settings tables are left alone, in the game's Settings > Scripts tab where each
+ * script created them: that is where every other script setting lives, so moving them here made
+ * them harder to find, not easier. The only exception is the weather and time dropdowns, which are
+ * moved because their scripts pin them to a corner of the town map, out of reach of every other
+ * screen.
  */
 class AutomationEpheniaControls
 {
@@ -19166,8 +19168,8 @@ class AutomationEpheniaControls
         }
     ];
 
-    // Dropdowns those scripts drop onto the town map instead of registering as settings, so they
-    // are neither mirrorable as buttons nor picked up by the settings relocation
+    // Dropdowns those scripts pin to the town map instead of registering as settings, so they are
+    // not mirrorable as buttons and are out of reach from any other screen
     static WorldMapSelects = [
         { id: "change-time-select", label: "In-game hour" },
         { id: "change-weather-select", label: "Weather" }
@@ -19229,9 +19231,10 @@ class AutomationEpheniaControls
             }
         }
 
+        // The scripts' settings tables are deliberately left in the game's Settings > Scripts tab,
+        // where each script created them. They were relocated here at one point; that made them
+        // harder to find rather than easier, since that tab is where every other script setting is
         this.__internal__relocateWorldMapSelects(cardBody, availableSelects);
-
-        this.__internal__relocateScriptSettings(cardBody);
     }
 
     /**
@@ -19285,47 +19288,6 @@ class AutomationEpheniaControls
             source.style.fontSize = "inherit";
 
             row.appendChild(source);
-        }
-    }
-
-    /**
-     * @brief Moves each script's settings table out of the Settings modal and into the card
-     *
-     * Those scripts register their settings in a 'Scripts' tab of the in-game settings, which
-     * means leaving the game screen and hunting through a modal to change anything. The tables
-     * are moved rather than mirrored: the elements keep their own event handlers, so the owning
-     * script carries on working with no idea it was rehoused.
-     *
-     * The desktop client's own settings (which scripts to run, auto-updates) are deliberately
-     * left behind: they live in a separate table outside this container, and the client's
-     * documentation points people at the settings menu for them.
-     *
-     * @param {Element} cardBody: The Ephenia card body to move the settings into
-     */
-    static __internal__relocateScriptSettings(cardBody)
-    {
-        const settingsContainer = document.getElementById("settings-scripts-container");
-        if (settingsContainer == null)
-        {
-            return;
-        }
-
-        // Snapshot, the tables get reparented as we go
-        for (const table of [ ...settingsContainer.children ])
-        {
-            const heading = table.querySelector("thead th");
-            const name = heading ? heading.textContent.trim() : null;
-            if (!name)
-            {
-                continue;
-            }
-
-            const categoryId = `epheniaSettings-${name.replace(/[^\w]/g, "")}`;
-            const container = Automation.Menu.addCategory(categoryId, `${name} settings`, cardBody);
-
-            // The heading is now the category title, showing it twice would be noise
-            heading.closest("thead")?.remove();
-            container.appendChild(table);
         }
     }
 

@@ -85,9 +85,9 @@ Two traps:
 - Tables are inserted **in alphabetical order of that id**, not in load order.
 
 Rows are `<tr>` with a `<th class="p-2 col-md-5" scope="row">` label and a `<td>`
-holding the control. `__internal__relocateScriptSettings` in `automation/lib/EpheniaControls.js` later moves these
-tables into the Automation "Ephenia scripts" card, so keep the `<thead>` present —
-it is what supplies the category title there.
+holding the control, under a `<thead>` carrying the script name. The table stays in
+that tab — the Automation bundle used to move these into its card and no longer does,
+since that tab is where every other script setting lives.
 
 ## Never rename the ABI
 
@@ -102,7 +102,11 @@ Automation bridges. Account names inside *URLs* are ours to change; these are no
 - A script whose main switch should appear in the Automation "Ephenia scripts"
   card needs its button id listed in `EpheniaControls`'s `Scripts` table.
   That mirror only understands on/off buttons carrying `btn-success` /
-  `btn-danger`; a `<select>` needs a different path.
+  `btn-danger`. Only the main switches are listed there on purpose — secondary
+  toggles stay on the screen they belong to.
+- A `<select>` cannot be mirrored. One pinned to the town map goes in
+  `EpheniaControls`'s `WorldMapSelects` instead, which **moves** the element into
+  the card rather than mirroring it.
 - A script that drives the same activity as an Automation feature needs a conflict
   entry in `Bridges.js`'s conflict matrix, or the two will fight.
 

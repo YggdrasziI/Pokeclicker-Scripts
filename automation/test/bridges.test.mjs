@@ -247,18 +247,19 @@ check('clicking again folds it', firstBody.classList.contains('hide'));
 // Those settings live in a tab of the game's settings modal, which is the round trip the card
 // is meant to remove. They are moved, not copied, so their handlers come along.
 console.log('');
-console.log('Script settings relocated into the card:');
+// The settings tables were relocated into the card at one point. They are deliberately left in
+// the game's Settings > Scripts tab now, which is where every other script setting lives.
+console.log('Script settings left in the settings modal:');
 const avsInput = d.getElementById('avs-opt');
 const questInput = d.getElementById('input-auto');
-check('a settings section per script',
-      d.getElementById('epheniaSettings-AdditionalVisualSettings') !== null
-   && d.getElementById('epheniaSettings-AutoQuestCompleter') !== null);
-check('AVS settings moved into the card', avsInput?.closest('.automationCardBody') !== null);
-check('Auto Quest slot count moved into the card', questInput?.closest('.automationCardBody') !== null);
-check('they left the settings modal behind',
-      d.querySelector('#settings-scripts-container table') === null);
-check('the duplicated table heading was dropped',
-      d.querySelector('.automationCardBody thead') === null);
+check('no settings section in the card',
+      d.querySelector('[id^="epheniaSettings-"]') === null);
+check('AVS settings stayed in the modal', avsInput?.closest('.automationCardBody') === null);
+check('Auto Quest slot count stayed in the modal', questInput?.closest('.automationCardBody') === null);
+check('both tables are still in the scripts container',
+      d.querySelectorAll('#settings-scripts-container table').length === 2);
+check('their headings were left intact',
+      d.querySelectorAll('#settings-scripts-container thead').length === 2);
 // The client's own script manager stays where its documentation points people
 check('desktop client settings were left alone',
       d.getElementById('desktopScriptSettings')?.closest('.automationCardBody') === null
