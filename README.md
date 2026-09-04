@@ -50,7 +50,8 @@ You may also [join my Discord server](https://discord.gg/nfbT8zJSkd) (can also c
 9. [**Script Fixer Upper**](#script-fixer-upper)
 10. [**Script Handler** (Included in desktop/app.asar)](#script-manager)
 # Custom Scripts
-1. [**Auto Quest Completer** ](#auto-quest-completer)
+1. [**Auto NPC Codes** ](#custom-auto-npc-codes)
+2. [**Auto Quest Completer** ](#auto-quest-completer)
 9. [**Auto Safari Zone** ](#auto-safari-zone)
 2. [**Catch Speed Adjuster** ](#catch-speed-adjuster)
 3. [**Challenge Mode Changer** ](#challenge-mode-changer)
@@ -392,6 +393,18 @@ You can claim as many Pokémon as you want just by clicking buttons, and they ar
 This also would **NOT** require you to link up a Discord account (for those without an account or prefer to not use Discord).
 
 This script also works while offline.
+
+<hr>
+
+<a name="custom-auto-npc-codes"></a>
+## [Custom] Auto NPC Codes (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/autonpccodes.user.js">autonpccodes.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/autonpccodes.user.js">One-Click Install</a>)
+Some NPCs give you a redeemable code in their dialogue, which you then have to copy into Start Menu &rarr; Save / Enter Code by hand. This script enters them for you and notifies you when it does, naming the code and the NPC who gave it.
+
+Nothing is granted for free: a code is only entered once you have actually opened that NPC's dialogue. The game does not record having talked to these particular NPCs, so the script keeps its own list of the codes you have been shown, separately for each save file. If you already talked to an NPC before installing this, go and talk to them once more.
+
+A code you were given before you could use it is remembered and entered later, once the game lets you claim it. Nothing is ever entered twice.
+
+Note that one of the codes refunds unused vitamins and asks you to confirm before it applies, so a confirmation box will appear when that code is entered.
 
 <hr>
   
