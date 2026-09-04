@@ -24,8 +24,9 @@ class AutomationFocusShadowPurification
                 name: "Shadow purify",
                 tooltip: "Hunts for pokémons that are corrupted by shadow"
                        + Automation.Menu.TooltipSeparator
-                       + "The Purify Chamber will automatically be used when the\n"
-                       + "max flow is reached, on the currently selected pokémon.",
+                       + "A shadow pokémon is put in the Purify Chamber whenever it is\n"
+                       + "free, and purified as soon as the flow is maxed out, so you\n"
+                       + "don't have to pick the next one yourself",
                 run: function() { this.__internal__start(); }.bind(this),
                 stop: function() { this.__internal__stop(); }.bind(this),
                 isUnlocked: isUnlockedCallback,
@@ -181,12 +182,47 @@ class AutomationFocusShadowPurification
     }
 
     /**
-     * @brief Purifies the currently selected shadow pokémon of the Purify Chamber, if the flow is maxed-out
+     * @brief Purifies the shadow pokémon sitting in the Purify Chamber, if the flow is maxed-out
+     *
+     * Puts one in the chamber first if there is none, @see __internal__selectShadowPokemonToPurify
      */
     static __internal__tryToPurifyShadowPokemon()
     {
+        this.__internal__selectShadowPokemonToPurify();
+
         // No need to check, this function calls App.game.purifyChamber.canPurify() beforehand
         App.game.purifyChamber.purify();
+    }
+
+    /**
+     * @brief Puts a shadow pokémon in the Purify Chamber, if it does not already hold one
+     *
+     * purify() only ever acts on the pokémon sitting in the chamber, and canPurify() refuses when
+     * the slot is empty or holds an already purified one. Nothing else selects it, so without
+     * this the feature purified whichever pokémon was placed there by hand and then sat idle,
+     * since that same pokémon stayed selected once purified.
+     *
+     * Selecting does not touch the flow -- only purify() resets it -- so this can be done as soon
+     * as the chamber is free, and the flow charges for the new pokémon in the meantime.
+     */
+    static __internal__selectShadowPokemonToPurify()
+    {
+        const purifyChamber = App.game.purifyChamber;
+        const selectedPokemon = purifyChamber.selectedPokemon();
+
+        // Leave any shadow pokémon in place, the flow is currently charging for it
+        if (selectedPokemon && (selectedPokemon.shadow == GameConstants.ShadowStatus.Shadow))
+        {
+            return;
+        }
+
+        const nextShadowPokemon =
+            App.game.party.caughtPokemon.find((pokemon) => pokemon.shadow == GameConstants.ShadowStatus.Shadow);
+
+        if (nextShadowPokemon !== undefined)
+        {
+            purifyChamber.selectedPokemon(nextShadowPokemon);
+        }
     }
 
     /**
