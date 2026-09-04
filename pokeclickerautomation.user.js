@@ -15466,7 +15466,8 @@ class AutomationShop
                                           };
 
     static __internal__shopListCount = 0;
-    static __internal__tabs = new Map();
+    // Currency -> the threshold inputs showing it, since two tabs can share one currency
+    static __internal__minCurrencyInputs = new Map();
 
     /**
      * @brief Builds the menu
@@ -15506,8 +15507,15 @@ class AutomationShop
         titleDiv.style.marginBottom = "10px";
         shoppingSettingPanel.appendChild(titleDiv);
 
+        // Tabs are mostly one per currency, but evolution stones are sold for quest points, just
+        // like eggs, so those two need an extra filter to tell them apart
+        const isStone = (item) => Automation.Utils.isInstanceOf(item, "EvolutionStone");
+
         let isAnyItemHidden = this.__internal__buildShopItemListMenu(shoppingSettingPanel, "Pokédollars", GameConstants.Currency.money);
-        isAnyItemHidden |= this.__internal__buildShopItemListMenu(shoppingSettingPanel, "Eggs", GameConstants.Currency.questPoint);
+        isAnyItemHidden |= this.__internal__buildShopItemListMenu(
+            shoppingSettingPanel, "Eggs", GameConstants.Currency.questPoint, (item) => !isStone(item));
+        isAnyItemHidden |= this.__internal__buildShopItemListMenu(
+            shoppingSettingPanel, "Evolution items", GameConstants.Currency.questPoint, isStone);
         isAnyItemHidden |= this.__internal__buildShopItemListMenu(shoppingSettingPanel, "Farm tools", GameConstants.Currency.farmPoint);
 
         // Set an unlock watcher if needed
@@ -15546,17 +15554,21 @@ class AutomationShop
                     if (itemData.htmlElems.row && itemData.htmlElems.row.hidden && itemData.isUnlocked())
                     {
                         itemData.htmlElems.row.hidden = false;
-                        const tabElems = this.__internal__tabs.get(itemData.item.currency);
+
+                        // Reveal the tab this item belongs to, if it was hidden for being empty
+                        const tabElems = itemData.htmlElems.tab;
                         if (tabElems)
                         {
                             tabElems.label.hidden = false;
                             tabElems.content.hidden = false;
-                            this.__internal__tabs.delete(itemData.item.currency);
                         }
                     }
                 }
 
-                if (this.__internal__shopItems.every(data => !data.rowElem?.hidden))
+                // Was reading `data.rowElem`, a field that never exists -- the field is
+                // `htmlElems.row`. `!undefined` is true for every item, so the watcher stopped on
+                // its very first run and nothing was ever revealed without a reload
+                if (this.__internal__shopItems.every((data) => !data.htmlElems.row?.hidden))
                 {
                     clearInterval(watcher);
                 }
@@ -15604,7 +15616,7 @@ class AutomationShop
      *
      * @returns True if the item is hidden, false otherwise
      */
-    static __internal__buildShopItemListMenu(parentDiv, tabName, currency)
+    static __internal__buildShopItemListMenu(parentDiv, tabName, currency, itemFilter = () => true)
     {
         this.__internal__shopListCount += 1;
 
@@ -15625,6 +15637,15 @@ class AutomationShop
         minCurrencyInputElem.innerHTML = Automation.Utils.LocalStorage.getValue(this.__internal__advancedSettings.MinPlayerCurrency(currency));
         minCurrencyInputContainer.appendChild(minCurrencyInputElem);
 
+        // Eggs and evolution items share the quest point wallet, so they share its threshold too.
+        // Both tabs show it, so an edit in one has to be mirrored in the other, or the two
+        // displayed values would disagree until the next reload.
+        if (!this.__internal__minCurrencyInputs.has(currency))
+        {
+            this.__internal__minCurrencyInputs.set(currency, []);
+        }
+        this.__internal__minCurrencyInputs.get(currency).push(minCurrencyInputElem);
+
         const minCurrencyImage = document.createElement("img");
         minCurrencyImage.src = `assets/images/currency/${GameConstants.Currency[currency]}.svg`;
         minCurrencyImage.style.height = "25px";
@@ -15642,6 +15663,16 @@ class AutomationShop
                 {
                     clearTimeout(this.__internal__activeTimeouts.get(mapKey));
                     this.__internal__activeTimeouts.delete(mapKey);
+                }
+
+                // Keep any other tab showing the same currency in step right away, rather than
+                // waiting for the debounced save
+                for (const otherInput of this.__internal__minCurrencyInputs.get(currency))
+                {
+                    if (otherInput !== minCurrencyInputElem)
+                    {
+                        otherInput.textContent = minCurrencyInputElem.textContent;
+                    }
                 }
 
                 const timeout = setTimeout(function()
@@ -15665,7 +15696,10 @@ class AutomationShop
         let isAnyItemHidden = false;
         let isAnyItemVisible = false;
 
-        for (const itemData of this.__internal__shopItems.filter(data => data.item.currency === currency))
+        const tabItems = this.__internal__shopItems.filter(
+            (data) => (data.item.currency === currency) && itemFilter(data.item));
+
+        for (const itemData of tabItems)
         {
             const isItemHidden = this.__internal__addItemToTheList(table, itemData);
             isAnyItemHidden |= isItemHidden;
@@ -15680,7 +15714,12 @@ class AutomationShop
             tabLabelContainer.hidden = true;
             tabContainer.hidden = true;
 
-            this.__internal__tabs.set(currency, { label: tabLabelContainer, content: tabContainer });
+            // Stored on the items rather than in a map keyed by currency: eggs and evolution items
+            // share a currency, so such a key would have one tab overwrite the other
+            for (const itemData of tabItems)
+            {
+                itemData.htmlElems.tab = { label: tabLabelContainer, content: tabContainer };
+            }
         }
 
         tabContainer.appendChild(table);
@@ -15932,6 +15971,9 @@ class AutomationShop
                     // Eggs
                     //   - Eggs
                     //
+                    // Evolution items
+                    //   - Evolution stones
+                    //
                     // Farm tools
                     //   - Mulch
                     //   - Shovels
@@ -15943,6 +15985,8 @@ class AutomationShop
 
                           || Automation.Utils.isInstanceOf(item, "EggItem")
 
+                          || Automation.Utils.isInstanceOf(item, "EvolutionStone")
+
                           || Automation.Utils.isInstanceOf(item, "MulchItem")
                           || Automation.Utils.isInstanceOf(item, "ShovelItem")
                           || Automation.Utils.isInstanceOf(item, "MulchShovelItem")))
@@ -15953,6 +15997,15 @@ class AutomationShop
                     // Skip any balls that are not sold in pokédollars for now (as they would be in out of contect of the tab)
                     if (Automation.Utils.isInstanceOf(item, "PokeballItem")
                         && (item.currency != GameConstants.Currency.money))
+                    {
+                        continue;
+                    }
+
+                    // Same for the stones sold in another currency than quest points: a tab only has
+                    // one currency threshold, so the Key Stone (battle points) and the Peat Block
+                    // (diamonds) would be out of context there
+                    if (Automation.Utils.isInstanceOf(item, "EvolutionStone")
+                        && (item.currency != GameConstants.Currency.questPoint))
                     {
                         continue;
                     }
