@@ -194,22 +194,33 @@ and that a helper is let go when its currency starts falling.
 
 ---
 
-## Phase 6 — In-game time and weather · todo
+## Phase 6 — In-game time and weather · done
 
 New `custom/simpletimechanger.user.js`, modelled on
-`custom/simpleweatherchanger.user.js` — the same shape: a `<select>`, a
-`localStorage`-backed choice, a monkey-patch on the time source, and a "follow the PC
-clock" default.
+`custom/simpleweatherchanger.user.js`: a `<select>`, a `localStorage`-backed choice, a
+monkey-patch on the time source, and "PC Time" as the default.
 
-Then group both controls in the Automation "Ephenia scripts" card. Blocker to solve
-first: `automation/lib/EpheniaControls.js:165-207` can only mirror on/off buttons
-carrying `btn-success` / `btn-danger`. A `<select>` needs a new path — proxy `value`
-and dispatch a `change` event on the source select — and the weather selector, which
-currently lives on `#townMap` (`custom/simpleweatherchanger.user.js:31-38`), has to
-move.
+The patch point is `GameHelper.tick`, which is the single place that refreshes
+`GameHelper.currentTime`. Everything time-of-day reads that observable — the day cycle
+indicator, time-locked evolutions, the Battle Café spin outcome — so overriding one
+function covers all of them. Only the hour is forced; minutes and seconds keep
+running. Code that calls `new Date()` directly is unaffected, which is why weather,
+whose script passes its own `new Date()`, is still a separate control.
 
-**Acceptance criteria.** Both selectors work from the card and from their original
-location; the weather script keeps working with the Automation bundle absent.
+The relocation turned out not to need the mirroring path the plan expected. These
+dropdowns are real elements with their own listeners, so `EpheniaControls` **moves**
+them into a "Time and weather" section of its card, the same way it already moves
+settings tables — no proxying, no `change` re-dispatch, and each script still works on
+its own when the Automation bundle is absent. Inline styles neutralise the absolute
+positioning those scripts pin onto the town map. The card is now built when either a
+mirrored toggle **or** one of these dropdowns exists, so the time script alone is
+enough to bring it up.
+
+**Validation.** Five new checks in `bridges.test.mjs` cover the relocation. The
+existing "a mirror section per script (5)" assertion was narrowed to count sections
+that actually contain mirrors, since the card legitimately holds a sixth section now.
+In-game validation pending: that forcing an hour actually flips the day cycle
+indicator, and that the Battle Café then offers the matching spins.
 
 ---
 

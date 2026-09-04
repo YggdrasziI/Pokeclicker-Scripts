@@ -60,7 +60,8 @@ You may also [join my Discord server](https://discord.gg/nfbT8zJSkd) (can also c
 7. [**Omega Protein Gains** ](#omega-protein-gains)
 7. [**Overnight Berry Growth** ](#overnight-berry-growth)
 8. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
-9. [**Simple Weather Changer** ](#simple-weather-changer)
+9. [**Simple Time Changer** ](#custom-simple-time-changer)
+10. [**Simple Weather Changer** ](#simple-weather-changer)
 
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
@@ -458,6 +459,15 @@ This script lets you freely edit the weather of the region you are currently in 
 ![image](https://i.imgur.com/2cBIfyH.png)
 
 In addition it will also prevent the weather from changing and will remember you choice when reloading the game
+
+<hr>
+
+## [Custom] Simple Time Changer (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/simpletimechanger.user.js">simpletimechanger.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/simpletimechanger.user.js">One-Click Install</a>)
+This script adds a dropdown next to the weather selector that forces the in-game hour, or leaves it following your computer clock.
+
+Everything that depends on the time of day follows it: the day cycle indicator, time-locked evolutions, and which Alcremie forms the Battle Cafe can give you. Only the hour is forced, so minutes and seconds keep running normally, and the setting persists across reloads.
+
+If the Automation script is installed, this dropdown and the weather one are moved together into a "Time and weather" section of its Ephenia scripts card, instead of sitting in a corner of the town map.
 
 <hr>
 

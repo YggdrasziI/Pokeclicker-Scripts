@@ -18854,6 +18854,13 @@ class AutomationEpheniaControls
         }
     ];
 
+    // Dropdowns those scripts drop onto the town map instead of registering as settings, so they
+    // are neither mirrorable as buttons nor picked up by the settings relocation
+    static WorldMapSelects = [
+        { id: "change-time-select", label: "In-game hour" },
+        { id: "change-weather-select", label: "Weather" }
+    ];
+
     /**
      * @brief Builds the category, if any of the mirrored scripts is running
      *
@@ -18884,7 +18891,9 @@ class AutomationEpheniaControls
                                 toggles: script.toggles.filter((t) => document.getElementById(t.id) != null) }))
             .filter((script) => script.toggles.length > 0);
 
-        if (available.length === 0)
+        const availableSelects = this.WorldMapSelects.filter((entry) => document.getElementById(entry.id) != null);
+
+        if ((available.length === 0) && (availableSelects.length === 0))
         {
             // None of those scripts is installed, don't add an empty category
             return;
@@ -18908,7 +18917,63 @@ class AutomationEpheniaControls
             }
         }
 
+        this.__internal__relocateWorldMapSelects(cardBody, availableSelects);
+
         this.__internal__relocateScriptSettings(cardBody);
+    }
+
+    /**
+     * @brief Moves the world map dropdowns of the given @p selects into the card
+     *
+     * The weather and time scripts drop their selector straight onto the town map, absolutely
+     * positioned in a corner, which means the controls only exist while the map is on screen and
+     * are spread across it. They are moved, not mirrored: the elements keep their own listeners,
+     * so each script carries on working with no idea it was rehoused, and still works on its own
+     * when this bundle is not installed.
+     *
+     * @param {Element} cardBody: The Ephenia card body to move the dropdowns into
+     * @param selects: The WorldMapSelects entries that were found in the page
+     */
+    static __internal__relocateWorldMapSelects(cardBody, selects)
+    {
+        if (selects.length === 0)
+        {
+            return;
+        }
+
+        const container = Automation.Menu.addCategory("epheniaControls-TimeAndWeather", "Time and weather", cardBody);
+
+        for (const entry of selects)
+        {
+            const source = document.getElementById(entry.id);
+
+            // Same DOM shape as the mirrored buttons, so the rows line up with the rest of the card
+            const rowContainer = document.createElement("span");
+            container.appendChild(rowContainer);
+
+            const row = document.createElement("div");
+            row.style.paddingLeft = "10px";
+            row.style.paddingRight = "10px";
+            row.style.display = "flex";
+            row.style.justifyContent = "space-between";
+            row.style.alignItems = "center";
+            rowContainer.appendChild(row);
+
+            const label = document.createElement("span");
+            label.textContent = `${entry.label} :`;
+            row.appendChild(label);
+
+            // Inline styles beat the id rule those scripts install, which pins the dropdown to a
+            // corner of the town map
+            source.style.position = "static";
+            source.style.right = "unset";
+            source.style.top = "unset";
+            source.style.height = "auto";
+            source.style.width = "auto";
+            source.style.fontSize = "inherit";
+
+            row.appendChild(source);
+        }
     }
 
     /**

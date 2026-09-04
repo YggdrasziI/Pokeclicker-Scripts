@@ -29,6 +29,10 @@ const dom = new JSDOM(`<!doctype html><html><head></head><body>
     <table id="desktopScriptSettings"><thead><tr><th colspan="2">Downloaded scripts</th></tr></thead>
       <tbody id="settings-scripts-enableScriptsEphenia"></tbody></table>
   </div>
+  <div id="townMap">
+    <select id="change-time-select" style="position: absolute; right: 190px;"><option value="-1">PC Time</option></select>
+    <select id="change-weather-select" style="position: absolute; right: 100px;"><option value="-1">Default Weather</option></select>
+  </div>
   <div id="epheniaButtons">
     ${EPHENIA_BUTTONS.map((id) => `<button id="${id}" class="btn btn-danger"></button>`).join('\n    ')}
   </div>
@@ -177,8 +181,11 @@ check('Ephenia gets its own card', !!epheniaCard);
 check('it is docked in the right column', epheniaCard?.parentElement?.id === 'right-column');
 check('it is separate from the Automation card',
       !!epheniaCard && epheniaCard !== d.getElementById('automationDisplayContainer'));
-// One collapsible section per script, so each can be folded away independently
-const mirrorSections = [...(epheniaCard?.querySelectorAll('.automationCategoryContainer[id^="epheniaControls-"]') ?? [])];
+// One collapsible section per script, so each can be folded away independently. The
+// Time and weather section is checked further down: it holds relocated dropdowns, not mirrors.
+const mirrorSections = [...(epheniaCard?.querySelectorAll('.automationCategoryContainer[id^="epheniaControls-"]') ?? [])]
+    .filter((section) => section.id !== 'epheniaControls-TimeAndWeatherDiv'
+                      && section.querySelector('[id^="ephenia-mirror-"]') !== null);
 check(`a mirror section per script (${mirrorSections.length})`, mirrorSections.length === 5);
 check('no Ephenia section leaked into the Automation card',
       d.querySelector('#automationDisplayContainer [id^="epheniaControls-"]') === null);
@@ -256,6 +263,20 @@ check('the duplicated table heading was dropped',
 check('desktop client settings were left alone',
       d.getElementById('desktopScriptSettings')?.closest('.automationCardBody') === null
    && d.getElementById('settings-scripts-enableScriptsEphenia') !== null);
+
+// The weather and time scripts drop their dropdown onto the town map rather than registering a
+// settings table, so they need a relocation path of their own.
+console.log('');
+console.log('World map dropdowns relocated into the card:');
+const timeSelect = d.getElementById('change-time-select');
+const weatherSelect = d.getElementById('change-weather-select');
+check('a Time and weather section', d.getElementById('epheniaControls-TimeAndWeather') !== null);
+check('the hour dropdown moved into the card', timeSelect?.closest('.automationCardBody') !== null);
+check('the weather dropdown moved into the card', weatherSelect?.closest('.automationCardBody') !== null);
+check('they left the town map behind', d.querySelector('#townMap select') === null);
+// They were absolutely positioned in a corner of the map, which makes no sense inside a card
+check('the map positioning was neutralized',
+      timeSelect?.style.position === 'static' && weatherSelect?.style.position === 'static');
 
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);
