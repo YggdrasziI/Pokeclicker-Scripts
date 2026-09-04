@@ -87,7 +87,8 @@ If the Enhanced Auto Clicker script is installed, an additional setting is avail
 The script adds various buttons for quicker navigation and quality of life.
 
 • Quick Settings, Inventory, and Pokédex buttons, found to the left of the Start Menu.<br/>
-• Quick Dock, Gyms, and Dungeons buttons, found above the Town Map so you don't have to search for them. The Gyms and Dungeons buttons show all in the current region.<br/>
+• Quick Dock, Gyms, Dungeons and Shops buttons, found above the Town Map so you don't have to search for them. The Gyms and Dungeons buttons show all in the current region.<br/>
+• The Shops button lists every item on sale across the current region in one place, so you can find an evolution stone or an egg without opening each shop in turn. An item sold in several towns is listed once, with its price and where to buy it; clicking it takes you there and opens the shop. Only unlocked towns and items you have unlocked are shown, so everything in the list is something you can actually buy.<br/>
 • Optimize vitamins buttons, found in the all vitamins menu. This feature uses the optimal combination of vitamins for your current region on the pokemon you select (assuming you have enough). It looks like a set of scales: ⚖
 
 <hr>

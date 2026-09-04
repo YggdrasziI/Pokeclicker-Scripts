@@ -5,7 +5,7 @@
 // @description   Adds additional settings for hiding some visual things to help out with performance. Also, includes various features that help with ease of accessibility.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       3.1.0
+// @version       3.2.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -155,7 +155,7 @@ class AdditionalVisualSettings {
             ['dock-button', 'Dock', {left: 32, top: 0}, MapHelper.openShipModal],
             ['gyms-button', 'Gyms', {left: 75, top: -8}, () => { AdditionalVisualSettings.generateRegionGymsList(); $('#gymsShortcutModal').modal('show'); }],
             ['dungeons-button', 'Dungeons', {left: 121, top: -8}, () => { AdditionalVisualSettings.generateRegionDungeonssList(); $('#dungeonsShortcutModal').modal('show'); }],
-            ['shops-button', 'Shops', {left: 190, top: -8}, () => { AdditionalVisualSettings.generateRegionShopsList(); $('#shopsShortcutModal').modal('show'); }],
+            ['shops-button', 'Shops', {left: 190, top: -8}, () => { AdditionalVisualSettings.generateRegionShopItemsList(); $('#shopsShortcutModal').modal('show'); }],
         ];
 
         travelShortcutsToAdd.forEach(([id, name, pos, func]) => {
@@ -172,17 +172,19 @@ class AdditionalVisualSettings {
         document.getElementById('dock-button').setAttribute('data-bind', 'enabled: TownList[GameConstants.DockTowns[player.region]].isUnlocked()');
         ko.applyBindings(App.game, document.getElementById('dock-button'));
 
-        // Create gym and dungeon shortcut modals
-        const modalNames = ['gyms', 'dungeons', 'shops'];
+        // Create gym, dungeon and shop shortcut modals.
+        // Shop rows carry an image, a name, a price and a town, so they need more room than the
+        // single-line gym and dungeon rows.
+        const modalNames = [['gyms', 'modal-sm'], ['dungeons', 'modal-sm'], ['shops', '']];
         const fragment = new DocumentFragment();
-        for (const name of modalNames) {
+        for (const [name, sizeClass] of modalNames) {
             const customModal = document.createElement('div');
             customModal.setAttribute('class', 'modal noselect fade');
             customModal.setAttribute('tabindex', '-1');
             customModal.setAttribute('role', 'dialogue');
             customModal.setAttribute('id', `${name}ShortcutModal`);
             customModal.setAttribute('aria-labelledby', `${name}ShortcutModalLabel`);
-            customModal.innerHTML = `<div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-sm" role="document">
+            customModal.innerHTML = `<div class="modal-dialog modal-dialog-scrollable modal-dialog-centered ${sizeClass}" role="document">
                 <div class="modal-content">
                     <div class="modal-header" style="justify-content: space-around;">
                         <h5 id="${name}-shortcut-modal-title" class="modal-title"></h5>
@@ -213,6 +215,10 @@ class AdditionalVisualSettings {
         addGlobalStyle('.dungeons-shortcut-info { position: relative; font-weight: bold }');
         addGlobalStyle('.shops-shortcut-info { position: relative; font-weight: bold }');
         addGlobalStyle('.shops-shortcut-info > div { font-weight: normal; font-size: 11px; opacity: 0.8 }');
+        // Item sprite on the left, price on the right, name and town in the middle
+        addGlobalStyle('.shops-shortcut-item { position: absolute; height: 32px; top: 4px; left: 8px; image-rendering: pixelated; }');
+        addGlobalStyle('.shops-shortcut-item > img { height: 32px }');
+        addGlobalStyle('.shops-shortcut-costs { position: absolute; top: 8px; right: 8px; filter: none !important }');
     }
 
     static generateRegionGymsList() {
@@ -285,39 +291,97 @@ class AdditionalVisualSettings {
         dungeonsBtns.appendChild(fragment);
     }
 
-    static generateRegionShopsList() {
+    // Rough shopping order for the item list. Read off constructor.name rather than instanceof,
+    // because the game's item classes live in modules and are not all exposed as globals — the
+    // same reason the dungeon list above tests town.constructor.name.
+    static shopItemOrder = ['PokeballItem', 'EggItem', 'EvolutionStone', 'BattleItem', 'EnergyRestore',
+                            'Vitamin', 'MulchItem', 'ShovelItem', 'MulchShovelItem'];
+
+    /**
+     * Collects every item on sale in the current region, deduplicated.
+     *
+     * Shops all reference the same ItemList singletons and the price lives on the item rather than
+     * on the shop, so an item sold in five towns can be shown once without losing anything. Only
+     * unlocked towns and unlocked items are considered, so everything listed is actually reachable.
+     */
+    static generateRegionShopItemsList() {
         const shopsBtns = document.getElementById('shops-shortcut-buttons');
         const shopsHead = document.getElementById('shops-shortcut-modal-title');
-        shopsHead.textContent = `Shop Select (${GameConstants.camelCaseToString(GameConstants.Region[player.region])})`;
+        shopsHead.textContent = `Shop Items (${GameConstants.camelCaseToString(GameConstants.Region[player.region])})`;
         shopsBtns.innerHTML = '';
         const fragment = new DocumentFragment();
 
-        // Every shop variant (poké mart, berry master, gem master, traders...) derives from Shop,
-        // so instanceof catches them all where a constructor.name check would only find plain shops
-        const regionTowns = Object.values(TownList).filter((town) => town.region === player.region);
+        // Keyed by item name, first unlocked town selling it wins
+        const itemsForSale = new Map();
+        const regionTowns = Object.values(TownList).filter((town) => town.region === player.region && town.isUnlocked());
         for (const town of regionTowns) {
-            const shops = (town.content ?? []).filter((content) => content instanceof Shop && content.isVisible());
+            // Every shop variant (poké mart, berry master, gem master, traders...) derives from Shop,
+            // so instanceof catches them all where a constructor.name check would only find plain shops
+            const shops = (town.content ?? []).filter((content) => content instanceof Shop && content.isVisible() && content.isUnlocked());
             for (const shop of shops) {
-                const canAccess = town.isUnlocked() && shop.isUnlocked();
-                const btn = document.createElement('button');
-                btn.setAttribute('style', 'position: relative;');
-                btn.setAttribute('class', 'btn btn-block btn-success');
-                btn.addEventListener('click', () => {
-                    if (!MapHelper.isTownCurrentLocation(town.name)) {
-                        MapHelper.moveToTown(town.name);
+                for (const item of shop.items) {
+                    // isAvailable() is the game's own "has the player unlocked this item" check
+                    if (!item.isAvailable() || itemsForSale.has(item.name)) {
+                        continue;
                     }
-                    $('#shopsShortcutModal').modal('hide');
-                    // protectedOnclick re-checks the requirements and opens whichever modal this
-                    // shop variant uses, instead of assuming every one of them uses #shopModal
-                    shop.protectedOnclick();
-                });
-                btn.disabled = !canAccess;
-                btn.innerHTML = `<div class="shops-shortcut-info">
-                    <span>${shop.text()}</span>
-                    <div>${town.name}</div>
-                    </div>`;
-                fragment.appendChild(btn);
+                    itemsForSale.set(item.name, { item, town, shop });
+                }
             }
+        }
+
+        const sorted = [...itemsForSale.values()].sort((a, b) => {
+            if (a.item.currency !== b.item.currency) {
+                return a.item.currency - b.item.currency;
+            }
+            const rankA = AdditionalVisualSettings.shopItemOrder.indexOf(a.item.constructor.name);
+            const rankB = AdditionalVisualSettings.shopItemOrder.indexOf(b.item.constructor.name);
+            // Anything unlisted sorts after the families we know about
+            const orderA = rankA === -1 ? AdditionalVisualSettings.shopItemOrder.length : rankA;
+            const orderB = rankB === -1 ? AdditionalVisualSettings.shopItemOrder.length : rankB;
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+            return a.item.displayName.localeCompare(b.item.displayName);
+        });
+
+        if (!sorted.length) {
+            const empty = document.createElement('div');
+            empty.className = 'shops-shortcut-info';
+            empty.textContent = 'No shop items available here';
+            shopsBtns.appendChild(empty);
+            return;
+        }
+
+        for (const { item, town, shop } of sorted) {
+            // totalPrice(1) rather than basePrice, so the price follows the purchase multiplier
+            const price = item.totalPrice(1);
+            const canAfford = App.game.wallet.currencies[item.currency]() >= price;
+            const btn = document.createElement('button');
+            btn.setAttribute('style', 'position: relative;');
+            btn.setAttribute('class', 'btn btn-block btn-success');
+            btn.addEventListener('click', () => {
+                if (!MapHelper.isTownCurrentLocation(town.name)) {
+                    MapHelper.moveToTown(town.name);
+                }
+                $('#shopsShortcutModal').modal('hide');
+                // protectedOnclick re-checks the requirements and opens whichever modal this
+                // shop variant uses, instead of assuming every one of them uses #shopModal
+                shop.protectedOnclick();
+            });
+            // item.image is the game's own getter; building the path by hand gets the
+            // per-item-type subdirectory wrong
+            btn.innerHTML = `<div class="shops-shortcut-item">
+                <img src="${item.image}" onerror="{ this.onerror=null; this.style.visibility='hidden'; }">
+                </div>
+                <div class="shops-shortcut-costs">
+                <img src="assets/images/currency/${GameConstants.Currency[item.currency]}.svg" style="height: 24px; width: 24px;">
+                <span style="font-weight: bold;color: ${canAfford ? 'greenyellow' : '#f04124'}">${price.toLocaleString('en-US')}</span>
+                </div>
+                <div class="shops-shortcut-info">
+                <span>${item.displayName}</span>
+                <div>${town.name}</div>
+                </div>`;
+            fragment.appendChild(btn);
         }
         shopsBtns.appendChild(fragment);
     }
