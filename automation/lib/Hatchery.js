@@ -905,21 +905,36 @@ class AutomationHatchery
      */
     static __internal__reviveFossil()
     {
-        const deals = GenericDeal.list.FossilCinnabarLab?.peek();
-        if (!deals)
-        {
-            return false;
-        }
+        // Each region has its own fossil trader: Cinnabar Lab for Kanto, Devon Corporation for
+        // Hoenn, then Oreburgh, Nacrene, Ambrette and Galar Route 6. Looking only at Cinnabar
+        // meant every fossil past Kanto was ignored. Read from the list rather than hardcoded, so
+        // a trader added with a future region is picked up on its own.
+        const traderIds = Object.keys(GenericDeal.list).filter((id) => id.startsWith("Fossil"));
 
         // Only consider the trades that are unlocked and currently affordable
-        const available = deals.map((deal, index) =>
+        const available = [];
+        for (const traderId of traderIds)
+        {
+            const deals = GenericDeal.list[traderId]?.peek();
+            if (!deals)
             {
-                return {
-                    pokemon: deal.profits[0]?.item?.type,
-                    cost: deal.costs.reduce((total, cost) => total + cost.amount, 0),
-                    index
-                };
-            }).filter((deal) => deal.pokemon && GenericDeal.canUse("FossilCinnabarLab", deal.index));
+                continue;
+            }
+
+            for (const [ index, deal ] of deals.entries())
+            {
+                const pokemon = deal.profits[0]?.item?.type;
+                if (pokemon && GenericDeal.canUse(traderId, index))
+                {
+                    available.push({
+                                       traderId,
+                                       pokemon,
+                                       cost: deal.costs.reduce((total, cost) => total + cost.amount, 0),
+                                       index
+                                   });
+                }
+            }
+        }
 
         if (available.length == 0)
         {
@@ -944,7 +959,7 @@ class AutomationHatchery
         const candidates = pool.filter((deal) => deal.cost === cheapest);
         const choice = candidates[Math.floor(Math.random() * candidates.length)];
 
-        GenericDeal.use("FossilCinnabarLab", choice.index, 1);
+        GenericDeal.use(choice.traderId, choice.index, 1);
 
         Automation.Notifications.sendNotif(`Revived a fossil into ${choice.pokemon}!`, "Hatchery");
 

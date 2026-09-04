@@ -5,7 +5,7 @@
 // @description   Automatically hatches eggs at 100% completion. Adds an On/Off button for auto hatching as well as an option for automatically hatching store bought eggs and reviving dug up fossils. Eggs are only spent while they can still hatch a pokémon you are missing, and optionally until every pokémon they can give is shiny.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       3.3.0
+// @version       3.4.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -264,19 +264,20 @@ function autoHatchEgg() {
 }
 
 function autoReviveFossil() {
-    // Fossil revives are trades at the Cinnabar Lab: a fossil in, a pokemon out
-    const deals = GenericDeal.list.FossilCinnabarLab?.peek();
-    if (!deals) {
-        return false;
-    }
+    // Fossil revives are trades: a fossil in, a pokemon out. Each region has its own trader -
+    // Cinnabar Lab for Kanto, Devon Corporation for Hoenn, then Oreburgh, Nacrene, Ambrette and
+    // Galar Route 6 - so looking only at Cinnabar ignored every fossil past Kanto. Read from the
+    // list rather than hardcoded, so a trader added with a future region is picked up on its own.
+    const traderIds = Object.keys(GenericDeal.list).filter((id) => id.startsWith('Fossil'));
     // Only the trades we can actually afford and have unlocked
-    const available = deals
+    const available = traderIds.flatMap((traderId) => (GenericDeal.list[traderId]?.peek() ?? [])
         .map((deal, index) => ({
+            traderId,
             pokemon: deal.profits[0]?.item?.type,
             cost: deal.costs.reduce((total, c) => total + c.amount, 0),
             index,
         }))
-        .filter(({ pokemon, index }) => pokemon && GenericDeal.canUse('FossilCinnabarLab', index));
+        .filter(({ pokemon, index }) => pokemon && GenericDeal.canUse(traderId, index)));
     if (!available.length) {
         return false;
     }
@@ -290,7 +291,7 @@ function autoReviveFossil() {
     const cheapest = Math.min(...pool.map((deal) => deal.cost));
     const candidates = pool.filter((deal) => deal.cost === cheapest);
     const choice = candidates[Math.floor(Math.random() * candidates.length)];
-    GenericDeal.use('FossilCinnabarLab', choice.index, 1);
+    GenericDeal.use(choice.traderId, choice.index, 1);
     return true;
 }
 
