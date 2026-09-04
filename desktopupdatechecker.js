@@ -10,7 +10,7 @@
 			Notifier.notify({
 		      type: NotificationConstants.NotificationOption.info,
 		      title: 'Pokéclicker Scripts Desktop update',
-		      message: 'A new version of Pokéclicker Scripts Desktop is available for download:\n\n<a href="https://github.com/Ephenia/Pokeclicker-Scripts/tree/master/desktop" target="_blank">https://github.com/Ephenia/Pokeclicker-Scripts/tree/master/desktop</a>',
+		      message: 'A new version of Pokéclicker Scripts Desktop is available for download:\n\n<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/tree/master/desktop" target="_blank">https://github.com/YggdrasziI/Pokeclicker-Scripts/tree/master/desktop</a>',
 		      timeout: GameConstants.DAY,
 		    });
 		}

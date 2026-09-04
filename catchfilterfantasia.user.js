@@ -3,14 +3,14 @@
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia (Credit: Pastaficionado, umamaistempo)
 // @description   An experimental catch filter that aims to help you have much better control and will completely change how you capture Pokémon.
-// @copyright     https://github.com/Ephenia
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
 // @version       1.9.3
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/catchfilterfantasia.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/catchfilterfantasia.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/catchfilterfantasia.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/catchfilterfantasia.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com

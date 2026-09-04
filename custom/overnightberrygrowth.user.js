@@ -3,14 +3,14 @@
 // @namespace     Pokeclicker Scripts
 // @author        Optimatum (Credit: Ephenia)
 // @description   Allows berres to grow while the game is closed.
-// @copyright     https://github.com/Ephenia
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
 // @version       1.1.4
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/overnightberrygrowth.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/overnightberrygrowth.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/overnightberrygrowth.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/overnightberrygrowth.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com

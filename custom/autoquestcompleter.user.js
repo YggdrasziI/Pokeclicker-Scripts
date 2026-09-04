@@ -3,14 +3,14 @@
 // @namespace     Pokeclicker Scripts
 // @author        Optimatum (Credit: KarmaAlex, Ephenia)
 // @description   Removes the limit for the number of quests you can do at once and auto completes/starts new ones.
-// @copyright     https://github.com/Ephenia
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
 // @version       2.0.3
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/autoquestcompleter.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/autoquestcompleter.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/autoquestcompleter.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/autoquestcompleter.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com

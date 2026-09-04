@@ -3,14 +3,14 @@
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia (Original/Credit: G1)
 // @description   Lets you generate infinite amounts of Discord codes for Pokémon that are exclusive and locked behind Pokeclicker's Discord bot & activities. No linking of a Discord account required + fully works offline.
-// @copyright     https://github.com/Ephenia
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
 // @version       1.3.3
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/discordcodegenerator.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/custom/discordcodegenerator.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/discordcodegenerator.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/custom/discordcodegenerator.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com

@@ -3,14 +3,14 @@
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia
 // @description   Automates the usage of Battle Items as effectively and efficiently as possible. Now includes which items you would like to automate specifically and being able to toggle them.
-// @copyright     https://github.com/Ephenia
+// @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
 // @version       1.1.3
 
-// @homepageURL   https://github.com/Ephenia/Pokeclicker-Scripts/
-// @supportURL    https://github.com/Ephenia/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/autobattleitems.user.js
-// @updateURL     https://raw.githubusercontent.com/Ephenia/Pokeclicker-Scripts/master/autobattleitems.user.js
+// @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
+// @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/autobattleitems.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/autobattleitems.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com
