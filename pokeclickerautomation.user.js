@@ -487,9 +487,8 @@ class AutomationFocusAchievements
 
             if (this.__internal__currentAchievement === null)
             {
-                // No more achievements, stop the feature
-                Automation.Menu.forceAutomationState(Automation.Focus.Settings.FeatureEnabled, false);
-                Automation.Notifications.sendWarningNotif("No more achievement to automate.\nTurning the feature off", "Focus");
+                // No more achievements, hand over to the fallback chain
+                Automation.Focus.__reportBlocked("No more achievement to automate");
 
                 return;
             }
@@ -2111,10 +2110,8 @@ class AutomationFocusPokerusCure
         }
         else
         {
-            // No more location available, stop the focus
-            Automation.Menu.forceAutomationState(Automation.Focus.Settings.FeatureEnabled, false);
-            Automation.Notifications.sendWarningNotif("No more route, nor dungeon, available to cure pokémon from pokérus.\nTurning the feature off",
-                                                      "Focus");
+            // No more location available, hand over to the fallback chain
+            Automation.Focus.__reportBlocked("No more route, nor dungeon, available to cure pokémon from pokérus");
         }
     }
 
@@ -2699,10 +2696,8 @@ class AutomationFocusShadowPurification
         }
         else
         {
-            // No more location available, stop the focus
-            Automation.Menu.forceAutomationState(Automation.Focus.Settings.FeatureEnabled, false);
-            Automation.Notifications.sendWarningNotif("No more available Shadow pokémons to capture or Purify.\nTurning the feature off",
-                                                      "Focus");
+            // No more location available, hand over to the fallback chain
+            Automation.Focus.__reportBlocked("No more available Shadow pokémons to capture or Purify");
         }
     }
 
@@ -10095,6 +10090,7 @@ class AutomationFocus
     static Settings = {
                           FeatureEnabled: "Focus-Enabled",
                           FocusedTopic: "Focus-SelectedTopic",
+                          FallbackOrder: "Focus-FallbackOrder",
                           OakItemLoadoutUpdate: "Focus-OakItemLoadoutUpdate",
                           BallToUseToCatch: "Focus-BallToUseToCatch"
                       };
@@ -10128,6 +10124,41 @@ class AutomationFocus
 
     static __noFunctionalityRefresh = -1;
     static __pokeballToUseSelectElem = null;
+
+    /**
+     * @brief Reports that the running topic cannot make any progress right now
+     *
+     * Until this existed, a topic that ran out of work turned the whole feature off. It now says
+     * so instead, and the feature moves on to the next topic of the fallback chain, coming back
+     * to the chosen one once it has something to do again. Turning the feature off is still what
+     * happens when the entire chain is blocked.
+     *
+     * @param {string} reason: Why the topic cannot progress, shown to the user if everything is blocked
+     */
+    static __reportBlocked(reason)
+    {
+        // Nothing is running, so there is nothing to hand over
+        if (this.__internal__activeFocus === null)
+        {
+            return;
+        }
+
+        this.__internal__blockedTopics.set(this.__internal__activeFocus.id, { reason, blockedAt: Date.now() });
+
+        // This is called from inside the topic's own loop callback. Unwinding first keeps the
+        // teardown from running underneath the code that asked for it
+        if (this.__internal__isSwitchPending)
+        {
+            return;
+        }
+
+        this.__internal__isSwitchPending = true;
+        setTimeout(function()
+            {
+                AutomationFocus.__internal__isSwitchPending = false;
+                AutomationFocus.__internal__switchToBestAvailableTopic();
+            }, 0);
+    }
 
     /**
      * @brief Makes sure no instance is in progress
@@ -10274,11 +10305,11 @@ class AutomationFocus
             const pokeballName = GameConstants.Pokeball[ballType];
             const pokeballItem = ItemList[pokeballName];
 
-            // Disable the feature if we are not able to buy more balls (for now, only money currency is supported)
+            // Hand over if we are not able to buy more balls (for now, only money currency is supported).
+            // A topic that does not catch anything can still make progress in the meantime
             if (pokeballItem.currency != GameConstants.Currency.money)
             {
-                Automation.Menu.forceAutomationState(this.Settings.FeatureEnabled, false);
-                Automation.Notifications.sendWarningNotif("No more pokéball of the selected type are available", "Focus");
+                this.__reportBlocked("No more pokéball of the selected type are available");
                 return false;
             }
 
@@ -10308,6 +10339,28 @@ class AutomationFocus
     static __internal__lockedFunctionalities = [];
 
     static __internal__lastFocusData = null;
+
+    // The topic the player picked in the dropdown, as opposed to whichever one is running now
+    static __internal__wantedTopicId = null;
+
+    // topic id -> { reason, blockedAt }, for the topics that reported they cannot progress
+    static __internal__blockedTopics = new Map();
+
+    static __internal__supervisorLoop = null;
+    static __internal__isSwitchPending = false;
+
+    static __internal__fallbackSelectElems = [];
+
+    // How long a topic stays out of the running order after reporting itself blocked. What blocks
+    // a topic is usually something the player can undo, so it is worth re-testing periodically
+    static __internal__blockedTopicRetryDelayMs = 15 * 60 * 1000;
+
+    // Only needs to be often enough to notice the chosen topic became possible again
+    static __internal__supervisorIntervalMs = 60000;
+
+    // How many fallbacks the user can order. A full drag-and-drop list over the twenty-odd topics
+    // would be far more UI than the choice deserves
+    static __internal__fallbackSlotCount = 3;
 
     /**
      * @brief Builds the menu
@@ -10404,6 +10457,12 @@ class AutomationFocus
                                                                generalTabContainer);
 
         /*********************\
+        |*  Fallback chain   *|
+        \*********************/
+
+        this.__internal__buildFallbackAdvancedSettings(generalTabContainer);
+
+        /*********************\
         |*  Quests settings  *|
         \*********************/
 
@@ -10423,6 +10482,95 @@ class AutomationFocus
 
         const pokerusCureTabContainer = Automation.Menu.addTabElement(focusSettingPanel, "Pokérus Cure", focusSettingsTabsGroup);
         this.PokerusCure.__buildAdvancedSettings(pokerusCureTabContainer);
+    }
+
+    /**
+     * @brief Builds the fallback chain settings
+     *
+     * One ordered dropdown per fallback slot, all written back into a single comma-separated
+     * setting. The topics themselves are the same list the main dropdown offers, minus the
+     * separators, which are not selectable.
+     *
+     * @param {Element} generalTabContainer: The tab container
+     */
+    static __internal__buildFallbackAdvancedSettings(generalTabContainer)
+    {
+        generalTabContainer.appendChild(document.createElement("br"));
+
+        const titleDiv = Automation.Menu.createTitleElement("Fall back to, in order");
+        titleDiv.classList.add("hasAutomationTooltip");
+        titleDiv.classList.add("rightMostAutomationTooltip");
+        titleDiv.classList.add("shortTransitionAutomationTooltip");
+        titleDiv.setAttribute("automation-tooltip-text",
+                              "What to focus on while the chosen topic has nothing left to do"
+                            + Automation.Menu.TooltipSeparator
+                            + "A topic that runs out of work hands over instead of switching\n"
+                            + "the feature off, and gets it back as soon as it can progress\n"
+                            + "again. The feature only stops once the whole chain is stuck");
+        generalTabContainer.appendChild(titleDiv);
+
+        const savedOrder = this.__internal__getFallbackOrder();
+
+        for (const slotIndex of Array(this.__internal__fallbackSlotCount).keys())
+        {
+            const container = document.createElement("div");
+            container.style.textAlign = "right";
+            container.style.marginTop = "3px";
+            container.style.paddingRight = "10px";
+            generalTabContainer.appendChild(container);
+
+            container.appendChild(document.createTextNode(`${slotIndex + 1}. `));
+
+            const selectElem = Automation.Menu.createDropDownListElement(`focusFallback-${slotIndex}`);
+            selectElem.style.width = "calc(100% - 30px)";
+            selectElem.style.paddingLeft = "3px";
+            container.appendChild(selectElem);
+
+            const noneOption = document.createElement("option");
+            noneOption.textContent = "None";
+            noneOption.value = "";
+            selectElem.options.add(noneOption);
+
+            for (const functionality of this.__internal__functionalities)
+            {
+                // Separators are headings, not topics
+                if (functionality.id === "separator")
+                {
+                    continue;
+                }
+
+                const opt = document.createElement("option");
+                opt.textContent = functionality.name;
+                opt.value = functionality.id;
+                selectElem.options.add(opt);
+            }
+
+            selectElem.value = savedOrder[slotIndex] ?? "";
+            selectElem.onchange = this.__internal__onFallbackOrderChanged.bind(this);
+
+            this.__internal__fallbackSelectElems.push(selectElem);
+        }
+    }
+
+    /**
+     * @brief Saves the fallback chain from the slot dropdowns
+     *
+     * The same topic picked twice would only ever be tried once, so duplicates are dropped rather
+     * than left to look like they do something.
+     */
+    static __internal__onFallbackOrderChanged()
+    {
+        const order = [];
+
+        for (const selectElem of this.__internal__fallbackSelectElems)
+        {
+            if ((selectElem.value !== "") && !order.includes(selectElem.value))
+            {
+                order.push(selectElem.value);
+            }
+        }
+
+        Automation.Utils.LocalStorage.setValue(this.Settings.FallbackOrder, order.join(","));
     }
 
     /**
@@ -10466,41 +10614,205 @@ class AutomationFocus
 
         if (enable)
         {
-            // Only set a loop if there is none active
-            if (this.__internal__focusLoop === null)
+            // Only start if nothing is running yet. Topics that own their loop leave
+            // __internal__focusLoop null, so the active topic is what says whether we are running
+            if (this.__internal__activeFocus === null)
             {
-                // Save the active focus
-                this.__internal__activeFocus =
-                    this.__internal__functionalities.filter((functionality) => functionality.id === this.__internal__focusSelectElem.value)[0];
+                // The dropdown holds the topic the player asked for. The fallback chain may run
+                // something else for a while, but this is what we always come back to
+                this.__internal__wantedTopicId = this.__internal__focusSelectElem.value;
 
-                // Set focus loop if needed
-                if (this.__internal__activeFocus.refreshRateAsMs !== this.__noFunctionalityRefresh)
-                {
-                    this.__internal__focusLoop = setInterval(this.__internal__activeFocus.run, this.__internal__activeFocus.refreshRateAsMs);
-                }
+                // A fresh run deserves a fresh assessment of what is blocked
+                this.__internal__blockedTopics.clear();
 
-                // First loop run (to avoid waiting too long before the first iteration, in case of long refresh rate)
-                this.__internal__activeFocus.run();
+                const wantedFocus =
+                    this.__internal__functionalities.filter((functionality) => functionality.id === this.__internal__wantedTopicId)[0];
+
+                this.__internal__startTopic(wantedFocus);
+
+                // Watches for the chosen topic becoming possible again
+                this.__internal__supervisorLoop =
+                    setInterval(this.__internal__switchToBestAvailableTopic.bind(this), this.__internal__supervisorIntervalMs);
             }
         }
         else
         {
-            // Unregister the loop
-            clearInterval(this.__internal__focusLoop);
-            if (this.__internal__activeFocus !== null)
-            {
-                if (this.__internal__activeFocus.stop !== undefined)
-                {
-                    // Reset any dungeon request that might have occured
-                    Automation.Dungeon.stopAfterThisRun();
+            clearInterval(this.__internal__supervisorLoop);
+            this.__internal__supervisorLoop = null;
 
-                    this.__internal__activeFocus.stop();
-                }
-                this.__internal__activeFocus = null;
-            }
-            this.__internal__focusLoop = null;
-            this.__internal__lastFocusData = null;
+            this.__internal__stopActiveTopic();
+
+            this.__internal__wantedTopicId = null;
+            this.__internal__blockedTopics.clear();
         }
+    }
+
+    /**
+     * @brief Starts the given @p functionality
+     *
+     * @param functionality: The focus topic to start
+     */
+    static __internal__startTopic(functionality)
+    {
+        this.__internal__activeFocus = functionality;
+
+        // Set focus loop if needed
+        if (functionality.refreshRateAsMs !== this.__noFunctionalityRefresh)
+        {
+            this.__internal__focusLoop = setInterval(functionality.run, functionality.refreshRateAsMs);
+        }
+
+        // First loop run (to avoid waiting too long before the first iteration, in case of long refresh rate)
+        functionality.run();
+    }
+
+    /**
+     * @brief Stops whichever topic is currently running, if any
+     */
+    static __internal__stopActiveTopic()
+    {
+        // Unregister the loop
+        clearInterval(this.__internal__focusLoop);
+
+        if (this.__internal__activeFocus !== null)
+        {
+            if (this.__internal__activeFocus.stop !== undefined)
+            {
+                // Reset any dungeon request that might have occured
+                Automation.Dungeon.stopAfterThisRun();
+
+                this.__internal__activeFocus.stop();
+            }
+            this.__internal__activeFocus = null;
+        }
+
+        this.__internal__focusLoop = null;
+        this.__internal__lastFocusData = null;
+    }
+
+    /**
+     * @brief Runs the first topic of the chain that can currently make progress
+     *
+     * Called both when a topic reports itself blocked and on a timer, which is what brings the
+     * chosen topic back as soon as its block expires.
+     */
+    static __internal__switchToBestAvailableTopic()
+    {
+        // The player may have switched the feature off in the meantime
+        if (Automation.Utils.LocalStorage.getValue(this.Settings.FeatureEnabled) !== "true")
+        {
+            return;
+        }
+
+        const candidate = this.__internal__findBestAvailableTopic();
+
+        if (candidate === null)
+        {
+            // Everything in the chain is blocked, which is what the feature used to do on the
+            // very first blocked topic: say why and switch off
+            const blockedReasons = [ ...this.__internal__blockedTopics.values() ].map((blocked) => blocked.reason);
+            const lastReason = (blockedReasons.length > 0) ? blockedReasons[blockedReasons.length - 1]
+                                                           : "Nothing left to focus on";
+
+            Automation.Menu.forceAutomationState(this.Settings.FeatureEnabled, false);
+            Automation.Notifications.sendWarningNotif(`${lastReason}\nNo other focus available, turning the feature off`, "Focus");
+            return;
+        }
+
+        // Already running the best option
+        if ((this.__internal__activeFocus !== null) && (this.__internal__activeFocus.id === candidate.id))
+        {
+            return;
+        }
+
+        const previousName = this.__internal__activeFocus?.name;
+
+        this.__internal__stopActiveTopic();
+        this.__internal__startTopic(candidate);
+
+        if (previousName !== undefined)
+        {
+            Automation.Notifications.sendNotif(`${previousName} is stuck, focusing on ${candidate.name} instead`, "Focus");
+        }
+    }
+
+    /**
+     * @brief Picks the first topic of the chain that is neither blocked nor locked
+     *
+     * The chain is the chosen topic first, then the user-ordered fallbacks. The chosen topic
+     * always comes first, so the moment its block expires it takes over again.
+     *
+     * @returns The functionality to run, or null if every one of them is unavailable
+     */
+    static __internal__findBestAvailableTopic()
+    {
+        const orderedIds = [ this.__internal__wantedTopicId, ...this.__internal__getFallbackOrder() ];
+
+        for (const topicId of orderedIds)
+        {
+            if (!topicId)
+            {
+                continue;
+            }
+
+            const functionality = this.__internal__functionalities.find((candidate) => candidate.id === topicId);
+
+            if ((functionality === undefined)
+                || this.__internal__isTopicBlocked(topicId)
+                || ((functionality.isUnlocked !== undefined) && !functionality.isUnlocked()))
+            {
+                continue;
+            }
+
+            return functionality;
+        }
+
+        return null;
+    }
+
+    /**
+     * @brief Tells whether the given @p topicId is currently known to be stuck
+     *
+     * A block expires on its own: what stopped a topic is usually something the player can undo,
+     * and re-testing costs one loop iteration.
+     *
+     * @param {string} topicId: The topic to check
+     *
+     * @returns True if the topic reported itself blocked recently enough, False otherwise
+     */
+    static __internal__isTopicBlocked(topicId)
+    {
+        const blocked = this.__internal__blockedTopics.get(topicId);
+
+        if (blocked === undefined)
+        {
+            return false;
+        }
+
+        if ((Date.now() - blocked.blockedAt) >= this.__internal__blockedTopicRetryDelayMs)
+        {
+            this.__internal__blockedTopics.delete(topicId);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @brief Reads the user-configured fallback chain
+     *
+     * @returns An array of topic ids, in the order they should be tried
+     */
+    static __internal__getFallbackOrder()
+    {
+        const stored = Automation.Utils.LocalStorage.getValue(this.Settings.FallbackOrder);
+
+        if (!stored)
+        {
+            return [];
+        }
+
+        return stored.split(",").filter((topicId) => topicId !== "");
     }
 
     /**

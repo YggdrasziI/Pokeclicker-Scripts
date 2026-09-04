@@ -127,10 +127,8 @@ class AutomationFocusShadowPurification
         }
         else
         {
-            // No more location available, stop the focus
-            Automation.Menu.forceAutomationState(Automation.Focus.Settings.FeatureEnabled, false);
-            Automation.Notifications.sendWarningNotif("No more available Shadow pokémons to capture or Purify.\nTurning the feature off",
-                                                      "Focus");
+            // No more location available, hand over to the fallback chain
+            Automation.Focus.__reportBlocked("No more available Shadow pokémons to capture or Purify");
         }
     }
 

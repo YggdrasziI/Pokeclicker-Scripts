@@ -146,5 +146,50 @@ for (const id of ['SaveBackup-Enabled', 'SaveBackup-IntervalMinutes', 'SaveBacku
     console.log(`  ${el ? 'ok  ' : 'FAIL'}  ${id}${el ? ' (in card: ' + (el.closest('.automationCardBody') !== null) + ')' : ''}`);
 }
 
+// A focus topic that runs out of work used to switch the whole feature off. It now hands over to
+// the next topic of this chain, and takes over again once its block expires.
+console.log('');
+console.log('Focus fallback chain:');
+const fchk = (label, cond) => { if (!cond) failures++; console.log(`  ${cond ? 'ok  ' : 'FAIL'}  ${label}`); };
+const fallbackSelects = [0, 1, 2].map((i) => d.getElementById(`focusFallback-${i}`));
+fchk('three ordered fallback slots', fallbackSelects.every((s) => s !== null));
+fchk('each defaults to None', fallbackSelects.every((s) => s?.value === ''));
+
+// Exercise the selection directly: driving a real topic into a blocked state would need a
+// working game behind it, and the ordering is the part worth pinning down.
+new vm.Script(`
+;(() => {
+    const focus = Automation.Focus;
+    const made = (id) => ({ id, name: id, run: () => {}, refreshRateAsMs: 1000 });
+    focus.__internal__functionalities = [made('Wanted'), made('First'), made('Second'), made('Locked')];
+    focus.__internal__functionalities[3].isUnlocked = () => false;
+    Automation.Utils.LocalStorage.setValue(focus.Settings.FallbackOrder, 'Locked,First,Second');
+    focus.__internal__wantedTopicId = 'Wanted';
+
+    focus.__internal__blockedTopics.clear();
+    globalThis.__fallback = { none: focus.__internal__findBestAvailableTopic()?.id };
+
+    focus.__internal__blockedTopics.set('Wanted', { reason: 'test', blockedAt: Date.now() });
+    globalThis.__fallback.skipsLocked = focus.__internal__findBestAvailableTopic()?.id;
+
+    focus.__internal__blockedTopics.set('First', { reason: 'test', blockedAt: Date.now() });
+    globalThis.__fallback.second = focus.__internal__findBestAvailableTopic()?.id;
+
+    focus.__internal__blockedTopics.set('Second', { reason: 'test', blockedAt: Date.now() });
+    globalThis.__fallback.exhausted = focus.__internal__findBestAvailableTopic();
+
+    // A block expires on its own, which is what brings the chosen topic back
+    focus.__internal__blockedTopics.set('Wanted',
+        { reason: 'test', blockedAt: Date.now() - focus.__internal__blockedTopicRetryDelayMs - 1 });
+    globalThis.__fallback.recovered = focus.__internal__findBestAvailableTopic()?.id;
+})();`, { filename: 'fallback.js' }).runInContext(ctx);
+
+const fb = ctx.__fallback;
+fchk('the chosen topic wins while it can progress', fb.none === 'Wanted');
+fchk('a locked fallback is skipped', fb.skipsLocked === 'First');
+fchk('the chain is followed in order', fb.second === 'Second');
+fchk('an exhausted chain reports nothing', fb.exhausted === null);
+fchk('an expired block returns the chosen topic', fb.recovered === 'Wanted');
+
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} failure(s).`);
 process.exit(failures === 0 ? 0 : 1);

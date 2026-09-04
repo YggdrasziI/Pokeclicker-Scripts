@@ -170,10 +170,8 @@ class AutomationFocusPokerusCure
         }
         else
         {
-            // No more location available, stop the focus
-            Automation.Menu.forceAutomationState(Automation.Focus.Settings.FeatureEnabled, false);
-            Automation.Notifications.sendWarningNotif("No more route, nor dungeon, available to cure pokémon from pokérus.\nTurning the feature off",
-                                                      "Focus");
+            // No more location available, hand over to the fallback chain
+            Automation.Focus.__reportBlocked("No more route, nor dungeon, available to cure pokémon from pokérus");
         }
     }
 

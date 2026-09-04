@@ -224,39 +224,55 @@ indicator, and that the Battle Café then offers the matching spins.
 
 ---
 
-## Phase 7 — Focus fallback order · todo
+## Phase 7 — Focus fallback order · done
 
-The only change here that is a real rework.
+The only change of the set that was a real rework.
 
-**Problem.** A focus topic has no way to say "I am blocked". It calls
+**Problem.** A focus topic had no way to say "I am blocked". It called
 `Menu.forceAutomationState(Focus.Settings.FeatureEnabled, false)` plus a warning
-notification, and everything stops — `Focus.js:67`, `Focus.js:197`,
-`Focus/Achievements.js:256`, `Focus/PokerusCure.js:174`,
-`Focus/ShadowPurification.js:131`. There is no priority chain, no queue, no watchdog;
-`__internal__activeFocus` is a singleton.
+notification, and everything stopped. There was no priority chain, no queue, no
+watchdog.
 
-**Approach.**
+**What was built.**
 
-1. Introduce a `Blocked` outcome a `run()` can return — a reason, and optionally a
-   retry delay — instead of killing the feature.
-2. Convert those five self-disable sites to report `Blocked`. Turning the feature off
-   stays as the last resort, for when the entire chain is blocked.
-3. Add a reorderable fallback list to the focus settings "General" tab, persisted as
-   `Focus-FallbackOrder`.
-4. Supervisor in `Focus.js:376-421`: on `Blocked`, call the current topic's `stop()`,
-   move to the first unblocked topic in the chain, and periodically re-test the chosen
-   topic to return to it as soon as it becomes possible again.
-5. The dropdown stays the source of truth for the *wanted* topic; the chain only
-   describes fallbacks.
+`Automation.Focus.__reportBlocked(reason)` is the new outcome. It marks the running
+topic blocked and hands over. Four of the five self-disable sites now use it:
+Achievements out of achievements, Pokérus Cure out of locations, Shadow Purification
+out of shadows, and the "cannot buy that pokéball" case — a topic that does not catch
+anything can still make progress meanwhile.
 
-**Risk.** `Focus/Quests.js:162-184` seizes Click, Hatchery, Underground and Farm and
-releases them in `__internal__stop()` (`:217-248`). Every automatic switch must go
-through `stop()`. Short-circuiting it leaves those features force-enabled and
-disabled-in-the-UI with no owner.
+`__ensureNoInstanceIsInProgress` deliberately still switches the feature off. Being
+inside an instance blocks *every* topic, so cycling the chain would accomplish
+nothing but noise. Turning the feature off also remains what happens when the whole
+chain is blocked, which reproduces the old behaviour exactly.
 
-**Acceptance criteria.** A topic that runs out of work hands over instead of turning
-the feature off. The chain survives a reload. Returning to the preferred topic happens
-without user action. Quests never leaves another feature stranded.
+`__internal__toggleFocus` was split into `__internal__startTopic` /
+`__internal__stopActiveTopic`, so a switch always goes through the topic's own
+`stop()`. That matters most for Quests, which seizes Click, Hatchery, Underground and
+Farm on start and only releases them there; short-circuiting it would leave those
+features force-enabled, greyed out, and with no owner. The running check also moved
+from `__internal__focusLoop` to `__internal__activeFocus`, since topics that own their
+loop leave the former null.
 
-**Manual validation.** Select Pokérus Cure with everything already cured and confirm
-the handover, then confirm the return once a new candidate appears.
+The chain is the chosen topic first, then up to three user-ordered fallbacks, stored
+as one comma-separated `Focus-FallbackOrder`. Three dropdowns rather than a
+drag-and-drop list: over twenty-odd topics that would have been far more UI than the
+choice deserves. Duplicates are dropped on save, since a repeated topic would only
+ever be tried once.
+
+A block expires after 15 minutes and a supervisor re-evaluates every minute, which is
+what brings the chosen topic back on its own. `__reportBlocked` is called from inside
+a topic's own loop callback, so the switch is deferred through `setTimeout(0)` rather
+than tearing that loop down underneath the code that asked for it.
+
+**Validation.** Seven new checks in `init.test.mjs`: the three slots render and
+default to None, and the selection itself is exercised directly — chain order,
+skipping a locked fallback, an exhausted chain returning nothing, and an expired block
+returning the chosen topic. Driving a real topic into a blocked state needs a working
+game, so the test plants fake functionalities and calls
+`__internal__findBestAvailableTopic`.
+
+In-game validation pending: select Pokérus Cure with everything already cured, confirm
+the handover and the notification, then confirm the return once a new candidate
+appears. Also worth exercising a handover *out of* Quests, since it is the topic with
+the most to release.

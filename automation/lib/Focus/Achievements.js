@@ -461,9 +461,8 @@ class AutomationFocusAchievements
 
             if (this.__internal__currentAchievement === null)
             {
-                // No more achievements, stop the feature
-                Automation.Menu.forceAutomationState(Automation.Focus.Settings.FeatureEnabled, false);
-                Automation.Notifications.sendWarningNotif("No more achievement to automate.\nTurning the feature off", "Focus");
+                // No more achievements, hand over to the fallback chain
+                Automation.Focus.__reportBlocked("No more achievement to automate");
 
                 return;
             }
