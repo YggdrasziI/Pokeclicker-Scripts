@@ -404,6 +404,8 @@ Nothing is granted for free: a code is only entered once you have actually opene
 
 A code you were given before you could use it is remembered and entered later, once the game lets you claim it. Nothing is ever entered twice.
 
+The codes you have found are listed in Start Menu &rarr; Save / Enter Code, just under the box where codes are normally typed, each showing what it gives and whether it has been entered or is still waiting on something. Below the list is a count of how many of the game's codes you have claimed in total &mdash; that count includes the ones no NPC hands out, so it can be ahead of the list.
+
 Note that one of the codes refunds unused vitamins and asks you to confirm before it applies, so a confirmation box will appear when that code is entered.
 
 <hr>

@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Auto NPC Codes
 // @namespace     Pokeclicker Scripts
 // @author        YggdrasziI
-// @description   Automatically enters the redeemable codes that NPCs give you in their dialogue, so you don't have to copy them into the Enter Code box by hand. A code is only entered once you have actually opened that NPC's dialogue, and never twice.
+// @description   Automatically enters the redeemable codes that NPCs give you in their dialogue, so you don't have to copy them into the Enter Code box by hand. A code is only entered once you have actually opened that NPC's dialogue, and never twice. The codes you have found are listed in the Save / Enter Code screen.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.0
+// @version       1.1.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -32,10 +32,13 @@ function initAutoNpcCodes() {
     npcCodesRevealed = loadRevealedCodes();
 
     overrideOpenDialog();
+    buildFoundCodesPanel();
 
     // Catch up on codes revealed earlier whose requirement has since been met, such as the Eon
     // Ticket handed over before reaching Hoenn. Nothing that was never revealed is considered.
     redeemRevealedCodes();
+
+    refreshFoundCodesList();
 }
 
 // Everything that opens an NPC dialogue goes through this one function
@@ -75,6 +78,7 @@ function revealCodesFrom(npc) {
 
     if (revealedSomething) {
         saveRevealedCodes();
+        refreshFoundCodesList();
     }
 }
 
@@ -131,6 +135,9 @@ async function tryRedeem(codeText, npcName = null) {
         return;
     }
 
+    // The status flipped from waiting to entered, and the counter moved
+    refreshFoundCodesList();
+
     Notifier.notify({
         title: 'Auto NPC Codes',
         message: npcName ? `Entered ${codeText}, given by ${npcName}` : `Entered ${codeText}`,
@@ -143,6 +150,59 @@ function redeemRevealedCodes() {
     for (const codeText of npcCodesRevealed) {
         tryRedeem(codeText);
     }
+}
+
+// Builds the panel once, in the Save / Enter Code screen, right below the box where codes are
+// typed by hand. Anchored on the input rather than the tab itself: the Discord code generator
+// prepends its buttons to the same tab, and prepending too would have the two fight over the top.
+function buildFoundCodesPanel() {
+    const codeInput = document.getElementById('redeemable-code-input');
+    const form = codeInput?.closest('form');
+    if (!form) {
+        // The game changed its save screen; the codes still work, only the list is missing
+        console.warn('Auto NPC Codes: could not find the code entry form, skipping the found list');
+        return;
+    }
+
+    const panel = document.createElement('div');
+    panel.id = 'autonpccodes-found';
+    form.after(panel);
+}
+
+// Rewritten in full on every change, so the list is right as soon as an NPC hands a code over
+// instead of only after a reload
+function refreshFoundCodesList() {
+    const panel = document.getElementById('autonpccodes-found');
+    if (!panel) {
+        return;
+    }
+
+    const rows = npcCodesRevealed.map((codeText) => {
+        const code = findRedeemableCode(GameHelper.hash(codeText));
+        // A code in the register always matches, unless the game dropped one between versions
+        if (!code) {
+            return `<div class="text-left"><span>${codeText}</span></div>`;
+        }
+        const waiting = !code.isRedeemed;
+        const status = code.isRedeemed
+            ? '<span class="text-success">Entered</span>'
+            : '<span class="text-warning">Waiting</span>';
+        // code.name says what the reward is, which the code text alone does not
+        const title = waiting ? ' title="Cannot be claimed yet"' : '';
+        return `<div class="d-flex justify-content-between"${title}>`
+             + `<span><strong>${codeText}</strong> <small class="text-muted">${code.name}</small></span>`
+             + `${status}</div>`;
+    });
+
+    const codeList = App.game.redeemableCodes.codeList;
+    const redeemedCount = codeList.filter((code) => code.isRedeemed).length;
+
+    panel.innerHTML = '<hr><div class="text-left"><strong>Codes found from NPCs</strong></div>'
+        + (rows.length
+            ? `<div class="text-left">${rows.join('')}</div>`
+            : '<div class="text-left"><i class="text-muted">None yet. Codes will be listed here once an NPC gives you one.</i></div>')
+        + `<div class="text-left mt-1"><small>${redeemedCount} of ${codeList.length} of the game's codes claimed.`
+        + ' Not all of them are given by NPCs.</small></div>';
 }
 
 // Namespaced per save: a code revealed on one save must not be handed to another one, which
