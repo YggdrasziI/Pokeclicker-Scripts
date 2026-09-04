@@ -9,6 +9,7 @@ class AutomationFarm
     static Settings = {
                           AutoCatchWanderers: "Farming-AutoCatchWanderers",
                           FeatureEnabled: "Farming-Enabled",
+                          FocusOnFarmPoints: "Farming-FocusOnFarmPoints",
                           FocusOnUnlocks: "Farming-FocusOnUnlocks",
                           HarvestLate: "Farming-HarvestLate",
                           OakItemLoadoutUpdate: "Farming-OakItemLoadoutUpdate",
@@ -30,6 +31,7 @@ class AutomationFarm
         if (initStep == Automation.InitSteps.BuildMenu)
         {
             Automation.Utils.LocalStorage.setDefaultValue(this.Settings.AutoCatchWanderers, true);
+            Automation.Utils.LocalStorage.setDefaultValue(this.Settings.FocusOnFarmPoints, false);
             Automation.Utils.LocalStorage.setDefaultValue(this.Settings.HarvestLate, false);
             Automation.Utils.LocalStorage.setDefaultValue(this.Settings.UseRichMulch, false);
             Automation.Utils.LocalStorage.setDefaultValue(this.Settings.UseShovel, false);
@@ -191,6 +193,18 @@ class AutomationFarm
                                                                                     unlockTooltip,
                                                                                     farmingSettingPanel);
 
+        // Focus on farm points button
+        const farmPointsLabel = "Focus on farming Farm Points";
+        const farmPointsTooltip = "Plants whichever berry yields the most Farm Points per second"
+                                + Automation.Menu.TooltipSeparator
+                                + "Overrides the berry selected below, and is reconsidered\n"
+                                + "on every loop, so it moves on as new berries unlock\n"
+                                + "Only berries currently in stock are considered";
+        const farmPointsButton = Automation.Menu.addLabeledAdvancedSettingsToggleButton(farmPointsLabel,
+                                                                                        this.Settings.FocusOnFarmPoints,
+                                                                                        farmPointsTooltip,
+                                                                                        farmingSettingPanel);
+
         // Disable oak items button
         const disableOakItemTooltip = "Modifies the oak item loadout when required for a mutation to occur"
                                     + Automation.Menu.TooltipSeparator
@@ -230,25 +244,39 @@ class AutomationFarm
         // Disable the harvest late feature if the Focus on unlocks is enabled
         const disableReason = "This settings is not considered when the\n"
                             + `'${unlockLabel}' setting is enabled`;
-        if (Automation.Utils.LocalStorage.getValue(this.Settings.FocusOnUnlocks) === "true")
-        {
-            Automation.Menu.setButtonDisabledState(this.Settings.HarvestLate, true, disableReason);
-        }
-        unlockButton.addEventListener("click", function()
-                                      {
-                                           // Disable the HarvestLate feature when unlocks focus is enabled
-                                           const disableState = (Automation.Utils.LocalStorage.getValue(this.Settings.FocusOnUnlocks) === "true");
-                                           Automation.Menu.setButtonDisabledState(this.Settings.HarvestLate, disableState, disableReason);
 
-                                           if (Automation.Utils.LocalStorage.getValue(this.Settings.FeatureEnabled) === "true")
-                                           {
-                                               // Update the floating panel content
-                                               this.__internal__updateFloatingPanel();
+        // The two focus modes decide what to plant, so only one of them can be in charge
+        const unlockDisableReason = `This setting is not considered when the\n'${farmPointsLabel}' setting is enabled`;
+        const farmPointsDisableReason = `This setting is not considered when the\n'${unlockLabel}' setting is enabled`;
 
-                                               // Run the loop
-                                               this.__internal__farmLoop();
-                                           }
-                                      }.bind(this), false);
+        const refreshFocusModeExclusion = function()
+            {
+                const isUnlockFocusOn = (Automation.Utils.LocalStorage.getValue(this.Settings.FocusOnUnlocks) === "true");
+                const isFarmPointsFocusOn = (Automation.Utils.LocalStorage.getValue(this.Settings.FocusOnFarmPoints) === "true");
+
+                Automation.Menu.setButtonDisabledState(this.Settings.HarvestLate, isUnlockFocusOn, disableReason);
+                Automation.Menu.setButtonDisabledState(this.Settings.FocusOnUnlocks, isFarmPointsFocusOn, unlockDisableReason);
+                Automation.Menu.setButtonDisabledState(this.Settings.FocusOnFarmPoints, isUnlockFocusOn, farmPointsDisableReason);
+            }.bind(this);
+
+        refreshFocusModeExclusion();
+
+        const onFocusModeChanged = function()
+            {
+                refreshFocusModeExclusion();
+
+                if (Automation.Utils.LocalStorage.getValue(this.Settings.FeatureEnabled) === "true")
+                {
+                    // Update the floating panel content
+                    this.__internal__updateFloatingPanel();
+
+                    // Run the loop
+                    this.__internal__farmLoop();
+                }
+            }.bind(this);
+
+        unlockButton.addEventListener("click", onFocusModeChanged, false);
+        farmPointsButton.addEventListener("click", onFocusModeChanged, false);
 
         // Selected berry drop-down list
         this.__internal__buildBerryDropdownList(farmingSettingPanel);
@@ -426,7 +454,20 @@ class AutomationFarm
         this.__internal__updateFloatingPanel();
 
         // Otherwise, fallback to planting berries
-        const berryToPlant = this.ForcePlantBerriesAsked ?? parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.SelectedBerryToPlant));
+        let berryToPlant = this.ForcePlantBerriesAsked ?? parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.SelectedBerryToPlant));
+
+        // A berry another feature asked for always wins over the farm points focus
+        if ((this.ForcePlantBerriesAsked == null)
+            && (Automation.Utils.LocalStorage.getValue(this.Settings.FocusOnFarmPoints) === "true"))
+        {
+            const bestFarmPointBerry = this.__internal__getBestFarmPointBerry();
+
+            // Keep the user's selection if nothing is in stock, rather than clearing the plots
+            if (bestFarmPointBerry !== null)
+            {
+                berryToPlant = bestFarmPointBerry;
+            }
+        }
 
         // Remove any unwanted berry, if enabled
         if (Automation.Utils.LocalStorage.getValue(this.Settings.UseShovel) === "true")
@@ -444,6 +485,52 @@ class AutomationFarm
             // Clear the current strategy
             this.__internal__currentStrategy = null;
         }
+    }
+
+    /**
+     * @brief Determines which berry currently yields the most Farm Points per second
+     *
+     * Only berries the player has in stock are considered, since a berry cannot be planted
+     * otherwise. Harvesting always gives at least one berry back, so the chosen berry sustains
+     * itself, and the choice is reconsidered on every loop so it follows new unlocks.
+     *
+     * The growth multiplier is left out on purpose: it applies to every berry equally, so it
+     * cannot change the ranking.
+     *
+     * @returns The berry type to plant, or null if the player has no berry in stock
+     */
+    static __internal__getBestFarmPointBerry()
+    {
+        let bestRate = 0;
+        let bestBerry = null;
+
+        for (const [ index, isUnlocked ] of App.game.farming.unlockedBerries.entries())
+        {
+            // Don't consider locked berries
+            if (!isUnlocked())
+            {
+                continue;
+            }
+
+            // Don't consider out-of-stock berries
+            if (App.game.farming.berryInventory[index]() === 0)
+            {
+                continue;
+            }
+
+            const berryData = BerryList[index];
+
+            // growthTime[PlotStage.Bloom] is the age at which the berry becomes harvestable
+            const rate = berryData.farmValue / berryData.growthTime[PlotStage.Bloom];
+
+            if (rate > bestRate)
+            {
+                bestRate = rate;
+                bestBerry = index;
+            }
+        }
+
+        return bestBerry;
     }
 
     /**

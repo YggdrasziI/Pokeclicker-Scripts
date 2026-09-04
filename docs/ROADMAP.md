@@ -87,34 +87,57 @@ instead of being spread.
 
 ---
 
-## Phase 4 — Farming, Battle Café, shop shortcut · todo
+## Phase 4 — Farming, Battle Café, shop shortcut · done
 
-**Farm Points efficiency mode.** New option in `automation/lib/Farm.js`, mutually
-exclusive with `FocusOnUnlocks` (which returns early at `:403-418`). The yield
-formula already exists in `automation/lib/Focus/Quests.js:828-863` (`farmValue` over
-`growthTime[PlotStage.Bloom]`) but is written for a fixed quest target; here it has
-to maximise FP/hour in steady state over unlocked berries and available plots.
+**Farm Points efficiency mode.** `Farming-FocusOnFarmPoints` in
+`automation/lib/Farm.js`, off by default. Ranks unlocked, in-stock berries by
+`farmValue / growthTime[PlotStage.Bloom]` — that index is the age at which a berry
+becomes harvestable, which is why the quest optimiser uses it too. The growth
+multiplier is left out on purpose: it applies to every berry equally and cannot
+change the ranking. The choice is redone every loop, so it follows new unlocks, and
+a berry another feature asked for still wins. Mutually exclusive with
+`FocusOnUnlocks`: enabling either greys out the other, through one shared
+`refreshFocusModeExclusion` that also keeps the existing `HarvestLate` interlock.
 
-**Auto Battle Café.** `automation/lib/Instances/BattleCafe.js` is an information
-overlay today — no settings, no loop, no berry use. Add an On/Off button inside its
-floating category (`automation/lib/Instances/Safari.js:149-159` is the reference for
-a button inside a floating category), and a loop that spends `spinsLeft` on uncaught
-Alcremie forms, picking duration and direction from `BattleCafeController.evolutions`.
+**Auto Battle Café.** `BattleCafe-SpinEnabled` in
+`automation/lib/Instances/BattleCafe.js`, which until now automated nothing at all.
+The loop targets Alcremie forms that are still uncaught **and** reachable at the
+current time of day — mirroring `BattleCafeController.unlockAlcremie`, where only a
+Dusk counter-clockwise spin over 10 seconds gives the rainbow form and every other
+Dusk spin resolves as a day one. Shortest spins are tried first. The one-hour
+Milcery (Cheesy) spin is deliberately excluded.
 
-When the berries a sweet needs are missing, request them from the farm through
-`Automation.Farm.ForcePlantBerriesAsked`. **That field has exactly one writer today**
-(`Focus/Quests.js`, at `:189-212` and `:501-522`). Adding a second one requires an
-explicit arbitration rule, or the quest focus and the café will fight over the farm.
+Two notes for later maintenance. `getPrice` and `canSpin` are `private` in the
+game's TypeScript, which does not exist at runtime — calling `getPrice` is what makes
+the berry request possible, and pre-validating ourselves is what keeps `spin()` from
+spamming failure notifications. And `DayCyclePart` is only ever referenced from
+TypeScript, so its four values are mirrored locally rather than assumed to be a
+global; `DayCycle` itself is one, the game's town map binds `DayCycle.color`.
 
-**Shops shortcut.** `additionalvisualsettings.user.js:152-197`. A direct analogue of
-the existing Gyms and Dungeons shortcuts: a button on `#townMap`, a
-`shopsShortcutModal` inserted after `#ShipModal`, and a `generateRegionShopsList()`
-walking `TownList` filtered to `Shop` instances — the same filter
-`automation/lib/Shop.js:506` already uses.
+Farm arbitration, which the plan flagged as needing an explicit rule:
+`Automation.Farm.ForcePlantBerriesAsked` is a single-slot channel and the quests
+focus writes to it too. **The quests focus wins.** The café claims the channel only
+while it is free, steps aside as soon as it sees a value that is not its own, and
+releases it when its berries are in, when nothing is left to catch, or when the
+feature is switched off. It asks for the berry with the largest shortfall.
+
+**Shops shortcut.** `generateRegionShopsList` in
+`additionalvisualsettings.user.js`, a direct analogue of the Gyms and Dungeons
+shortcuts. Filters `town.content` with `instanceof Shop`, which catches the berry
+master, gem master and trader variants that a `constructor.name` check would miss,
+and opens each through `protectedOnclick()` so every variant reaches its own modal
+rather than assuming `#shopModal`.
 
 **Acceptance criteria.** FP mode and unlock mode cannot both be active. The café
 stops cleanly when spins run out and releases any farm request. The shops modal
 lists only reachable shops in the current region.
+
+**Validation.** Build and the three suites pass, 68 checks. In-game validation
+pending, and it matters more here than in phase 3: the `Shops` button position on
+the town map (`left: 190`) is an estimate and may overlap `Dungeons`; the café needs
+watching through a full day/dusk/night cycle to confirm it picks the right spins;
+and the farm hand-off should be exercised with the quests focus running at the same
+time.
 
 ---
 

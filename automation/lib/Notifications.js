@@ -7,6 +7,7 @@ class AutomationNotifications
                           FeatureEnabled: "Notifications-Enabled",
 
                           // Notification types
+                          BattleCafe: "Notifications-BattleCafe",
                           Farming: "Notifications-Farming",
                           Hatchery: "Notifications-Hatchery",
                           Shop: "Notifications-Shop",
@@ -110,6 +111,9 @@ class AutomationNotifications
 
         let shopLabel = 'Show Auto Shop feature notifications';
         Automation.Menu.addLabeledAdvancedSettingsToggleButton(shopLabel, this.Settings.Shop, "", notificationsSettingPanel);
+
+        let battleCafeLabel = 'Show Battle Café feature notifications';
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton(battleCafeLabel, this.Settings.BattleCafe, "", notificationsSettingPanel);
     }
 
     /**

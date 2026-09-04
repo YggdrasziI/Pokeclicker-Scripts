@@ -155,6 +155,7 @@ class AdditionalVisualSettings {
             ['dock-button', 'Dock', {left: 32, top: 0}, MapHelper.openShipModal],
             ['gyms-button', 'Gyms', {left: 75, top: -8}, () => { AdditionalVisualSettings.generateRegionGymsList(); $('#gymsShortcutModal').modal('show'); }],
             ['dungeons-button', 'Dungeons', {left: 121, top: -8}, () => { AdditionalVisualSettings.generateRegionDungeonssList(); $('#dungeonsShortcutModal').modal('show'); }],
+            ['shops-button', 'Shops', {left: 190, top: -8}, () => { AdditionalVisualSettings.generateRegionShopsList(); $('#shopsShortcutModal').modal('show'); }],
         ];
 
         travelShortcutsToAdd.forEach(([id, name, pos, func]) => {
@@ -172,7 +173,7 @@ class AdditionalVisualSettings {
         ko.applyBindings(App.game, document.getElementById('dock-button'));
 
         // Create gym and dungeon shortcut modals
-        const modalNames = ['gyms', 'dungeons'];
+        const modalNames = ['gyms', 'dungeons', 'shops'];
         const fragment = new DocumentFragment();
         for (const name of modalNames) {
             const customModal = document.createElement('div');
@@ -210,6 +211,8 @@ class AdditionalVisualSettings {
         addGlobalStyle('#dungeons-shortcut-buttons > button * { z-index: 2 }');
         addGlobalStyle('.dungeons-shortcut-overlay { width: 100%; height: 100%; position: absolute; background-color: rgba(0,0,0,0.45); margin-top: -6px; margin-left: -8px; z-index: 1 !important }');
         addGlobalStyle('.dungeons-shortcut-info { position: relative; font-weight: bold }');
+        addGlobalStyle('.shops-shortcut-info { position: relative; font-weight: bold }');
+        addGlobalStyle('.shops-shortcut-info > div { font-weight: normal; font-size: 11px; opacity: 0.8 }');
     }
 
     static generateRegionGymsList() {
@@ -280,6 +283,43 @@ class AdditionalVisualSettings {
             fragment.appendChild(btn);
         }
         dungeonsBtns.appendChild(fragment);
+    }
+
+    static generateRegionShopsList() {
+        const shopsBtns = document.getElementById('shops-shortcut-buttons');
+        const shopsHead = document.getElementById('shops-shortcut-modal-title');
+        shopsHead.textContent = `Shop Select (${GameConstants.camelCaseToString(GameConstants.Region[player.region])})`;
+        shopsBtns.innerHTML = '';
+        const fragment = new DocumentFragment();
+
+        // Every shop variant (poké mart, berry master, gem master, traders...) derives from Shop,
+        // so instanceof catches them all where a constructor.name check would only find plain shops
+        const regionTowns = Object.values(TownList).filter((town) => town.region === player.region);
+        for (const town of regionTowns) {
+            const shops = (town.content ?? []).filter((content) => content instanceof Shop && content.isVisible());
+            for (const shop of shops) {
+                const canAccess = town.isUnlocked() && shop.isUnlocked();
+                const btn = document.createElement('button');
+                btn.setAttribute('style', 'position: relative;');
+                btn.setAttribute('class', 'btn btn-block btn-success');
+                btn.addEventListener('click', () => {
+                    if (!MapHelper.isTownCurrentLocation(town.name)) {
+                        MapHelper.moveToTown(town.name);
+                    }
+                    $('#shopsShortcutModal').modal('hide');
+                    // protectedOnclick re-checks the requirements and opens whichever modal this
+                    // shop variant uses, instead of assuming every one of them uses #shopModal
+                    shop.protectedOnclick();
+                });
+                btn.disabled = !canAccess;
+                btn.innerHTML = `<div class="shops-shortcut-info">
+                    <span>${shop.text()}</span>
+                    <div>${town.name}</div>
+                    </div>`;
+                fragment.appendChild(btn);
+            }
+        }
+        shopsBtns.appendChild(fragment);
     }
 
     // Must execute before game loads and applies knockout bindings
