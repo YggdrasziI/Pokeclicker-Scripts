@@ -1,0 +1,12 @@
+{
+  "name": "pokeclicker-automation-tests",
+  "private": true,
+  "type": "module",
+  "description": "Test harness for the Automation menu adapter. Not shipped with the scripts.",
+  "scripts": {
+    "test": "node menu.test.mjs && node init.test.mjs && node bridges.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^27.0.0"
+  }
+}
