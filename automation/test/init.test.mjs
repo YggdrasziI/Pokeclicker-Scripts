@@ -89,6 +89,16 @@ for (const id of ['Hatchery-ReviveFossils', 'Hatchery-ReviveFossilsUntilShiny'])
     console.log(`  ${present ? 'ok  ' : 'FAIL'}  ${id}`);
 }
 
+// Eggs get the same shiny-hunting option as fossils, so the behaviour matches
+// enhancedautohatchery whichever of the two hatcheries is the one running.
+console.log('');
+console.log('Egg hatching options:');
+for (const id of ['Hatchery-UseEggs', 'Hatchery-UseEggsUntilShiny']) {
+    const present = d.getElementById(id) !== null;
+    if (!present) failures++;
+    console.log(`  ${present ? 'ok  ' : 'FAIL'}  ${id}`);
+}
+
 // Advanced settings used to be a flyout anchored with `right: calc(100% - 10px)`,
 // which opened outside its container and got clipped. They must now be in-flow children
 // of the feature they belong to.

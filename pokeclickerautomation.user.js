@@ -11097,6 +11097,7 @@ class AutomationHatchery
                           UnlockMegaEvolutions: "Hatchery-UnlockMegaEvolutions",
                           SkipAlreadyUnlockedMegaEvolutions: "Hatchery-SkipAlreadyUnlockedMegaEvolutions",
                           UseEggs: "Hatchery-UseEggs",
+                          UseEggsUntilShiny: "Hatchery-UseEggsUntilShiny",
                           ReviveFossils: "Hatchery-ReviveFossils",
                           ReviveFossilsUntilShiny: "Hatchery-ReviveFossilsUntilShiny",
                           PrioritizedSorting: "Hatchery-PrioritizedSorting",
@@ -11268,10 +11269,19 @@ class AutomationHatchery
 
         const eggTooltip = "Add eggs to the hatchery as well"
                          + Automation.Menu.TooltipSeparator
-                         + "Only eggs for which some pokémon are not currently held are added\n"
+                         + "Only eggs that can still breed an uncaught pokémon are added,\n"
+                         + "unless the setting below extends it to shiny hunting\n"
                          + "Only one egg of a given type is used at the same time";
         Automation.Menu.addLabeledAdvancedSettingsToggleButton(
             "Hatch Eggs that can breed an uncaught pokémon", this.Settings.UseEggs, eggTooltip, hatcherySettingPanel);
+
+        const shinyEggTooltip = "Keep hatching eggs even once every pokémon they give is caught"
+                              + Automation.Menu.TooltipSeparator
+                              + "Hatched pokémon get a shiny roll, so this keeps using eggs\n"
+                              + "until every pokémon that egg can give has been caught shiny\n"
+                              + "The egg's caught indicator in your bag shows the same status";
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton(
+            "Hatch eggs until shiny", this.Settings.UseEggsUntilShiny, shinyEggTooltip, hatcherySettingPanel);
 
         const fossilTooltip = "Revive fossils at the Cinnabar Lab"
                             + Automation.Menu.TooltipSeparator
@@ -12028,19 +12038,30 @@ class AutomationHatchery
     {
         const eggList = Object.keys(GameConstants.EggItemType).filter((eggType) => isNaN(eggType) && player.itemList[eggType]());
 
+        const hatchUntilShiny =
+            (Automation.Utils.LocalStorage.getValue(this.Settings.UseEggsUntilShiny) === "true");
+
         for (const eggTypeName of eggList)
         {
             const eggType = ItemList[eggTypeName];
             const pokemonType = PokemonType[eggTypeName.split('_')[0]];
+
+            // The game aggregates the pokédex over everything the egg can give in the regions the
+            // player has reached, taking the worst status of the lot. It is the very value shown
+            // as the caught indicator on the egg in the bag, so the two always agree.
+            const caughtStatus = eggType.getCaughtStatus();
+            const isEggStillWorthHatching = hatchUntilShiny ? (caughtStatus != CaughtStatus.CaughtShiny)
+                                                            : (caughtStatus == CaughtStatus.NotCaught);
+
             // Use an egg only if:
             //   - a slot is available
             //   - the player has one
-            //   - a new pokémon can be caught that way
+            //   - it can still give something, see above
             //   - the item actually can be used
             //   - no other egg of that type is breeding
             if (App.game.breeding.hasFreeEggSlot()
                 && (player.itemList[eggType.name]() > 0)
-                && !eggType.getCaughtStatus()
+                && isEggStillWorthHatching
                 && eggType.checkCanUse()
                 && ![3, 2, 1, 0].some((index) => !App.game.breeding.eggList[index]().isNone()
                                                 && ((App.game.breeding.eggList[index]().pokemonType1 === pokemonType)
