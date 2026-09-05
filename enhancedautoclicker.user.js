@@ -5,7 +5,7 @@
 // @description   Clicks through battles, with adjustable speed, and provides various insightful statistics. Also includes an automatic gym battler and automatic dungeon explorer with multiple pathfinding modes.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       3.5.5
+// @version       3.5.6
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -26,6 +26,8 @@ class EnhancedAutoClicker {
     static autoClickState = ko.observable(validateStorage('autoClickState', false));
     static autoClickMultiplier = validateStorage('autoClickMultiplier', 1, (v) => (Number.isInteger(v) && v >= 1));
     static autoClickerLoop;
+    // Watches for the end of a game state the autoclicker paused itself in
+    static autoClickPauseLoop;
     // Auto Gym
     static autoGymState = ko.observable(validateStorage('autoGymState', false));
     static autoGymSelect = validateStorage('autoGymSelect', 0, [0, 1, 2, 3, 4]);
@@ -415,6 +417,40 @@ class EnhancedAutoClicker {
     }
 
     /**
+     * Whether the player is in a game state the autoclicker has nothing to do in,
+     * and stays off during to avoid lag
+     */
+    static isPausedGameState() {
+        return App.game.gameState === GameConstants.GameState.battleFrontier || App.game.gameState === GameConstants.GameState.safari;
+    }
+
+    /**
+     * Turns the autoclicker off for as long as the player stays in such a game state,
+     * then turns it back on once they leave it
+     */
+    static pauseAutoClick() {
+        this.toggleAutoClick();
+        clearInterval(this.autoClickPauseLoop);
+        this.autoClickPauseLoop = setInterval(() => {
+            if (EnhancedAutoClicker.isPausedGameState()) {
+                return;
+            }
+            EnhancedAutoClicker.resumeAutoClick();
+        }, 1000);
+    }
+
+    /**
+     * Turns the autoclicker back on after a pause, unless the player already did
+     */
+    static resumeAutoClick() {
+        clearInterval(this.autoClickPauseLoop);
+        this.autoClickPauseLoop = null;
+        if (!this.autoClickState()) {
+            this.toggleAutoClick();
+        }
+    }
+
+    /**
      * One tick of the autoclicker
      * -Performs click attacks while in an active battle
      * -Outside of battle, runs Auto Dungeon and Auto Gym
@@ -445,8 +481,8 @@ class EnhancedAutoClicker {
             this.autoGym();
         }
         // Turn off autoclicker in certain game states to avoid lag
-        else if (App.game.gameState === GameConstants.GameState.battleFrontier || App.game.gameState === GameConstants.GameState.safari) {
-            this.toggleAutoClick();
+        else if (this.isPausedGameState()) {
+            this.pauseAutoClick();
         }
         this.autoClickCalcTracker.ticks[0]++;
     }
