@@ -13856,6 +13856,8 @@ class AutomationMenu
         newButton.style.fontWeight = "400";
         newButton.style.lineHeight = "20px";
         newButton.style.verticalAlign = "middle";
+        // The game's '.card span' rule left-aligns every span in a card, beating bootstrap's '.btn'
+        newButton.style.textAlign = "center";
 
         return newButton;
     }
