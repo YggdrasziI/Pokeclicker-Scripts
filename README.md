@@ -91,11 +91,11 @@ The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//gi
 6. [**Debug Cheats Tools** ](#custom-debug-cheats-tools)
 7. [**Discord Code Generator** ](#discord-code-generator)
 8. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
-9. [**Oak Items Unlimited** ](#oak-items-unlimited)
-10. [**Omega Protein Gains** ](#omega-protein-gains)
-11. [**Overnight Berry Growth** ](#overnight-berry-growth)
-12. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
-13. [**Quest Charm** ](#custom-quest-charm)
+9. [**Oak Charms** ](#custom-oak-charms)
+10. [**Oak Items Unlimited** ](#oak-items-unlimited)
+11. [**Omega Protein Gains** ](#omega-protein-gains)
+12. [**Overnight Berry Growth** ](#overnight-berry-growth)
+13. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
 14. [**Simple Time Changer** ](#custom-simple-time-changer)
 15. [**Simple Weather Changer** ](#simple-weather-changer)
 16. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
@@ -505,6 +505,49 @@ There may be some other cool or neat custom events added in with this as well.
 
 <hr>
 
+<a name="custom-oak-charms"></a>
+## [Custom] Oak Charms (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakcharms.user.js">oakcharms.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakcharms.user.js">One-Click Install</a>)
+This script adds three Oak Items to the game's own Oak Items window. Each one multiplies a currency the way the Amulet Coin multiplies Pokédollars, takes one of your Oak Item slots like any other item, and shows up with that currency's icon since the game has no sprite for it. All three level up from the Oak Items window for a Pokédollar upgrade cost, once they have earned enough experience by being used.
+
+<strong>Quest Charm</strong> multiplies the Quest Points you gain from quests. It unlocks when you reach Johto, and gains 1 experience each time it multiplies a quest reward.
+
+| Level | Bonus | Quests claimed (total) | Upgrade cost |
+|:-----:|:-----:|:----------------------:|:------------:|
+| 0 | ×1.25 | – | 1,000,000 |
+| 1 | ×1.30 | 10 | 2,500,000 |
+| 2 | ×1.35 | 100 | 5,000,000 |
+| 3 | ×1.40 | 250 | 10,000,000 |
+| 4 | ×1.45 | 500 | 20,000,000 |
+| 5 | ×1.50 | 1,000 | – |
+
+<strong>Farm Charm</strong> multiplies the Farm Points you gain from harvesting berries and from wandering Pokémon. It unlocks once you have unlocked 5 berries, and gains 1 experience per Farm Point received while equipped.
+
+| Level | Bonus | Farm Points obtained (total) | Upgrade cost |
+|:-----:|:-----:|:----------------------------:|:------------:|
+| 0 | ×1.25 | – | 75,000 |
+| 1 | ×1.30 | 1,000 | 150,000 |
+| 2 | ×1.35 | 10,000 | 375,000 |
+| 3 | ×1.40 | 25,000 | 750,000 |
+| 4 | ×1.45 | 100,000 | 1,500,000 |
+| 5 | ×1.50 | 250,000 | – |
+
+<strong>Battle Charm</strong> multiplies the Battle Points awarded at the end of a Battle Frontier run. It unlocks once you own Deoxys, the stage 100 reward of the Battle Frontier, and gains 1 experience per Battle Frontier stage completed while equipped.
+
+| Level | Bonus | Stages completed (total) | Upgrade cost |
+|:-----:|:-----:|:------------------------:|:------------:|
+| 0 | ×1.25 | – | 10,000,000 |
+| 1 | ×1.35 | 500 | 25,000,000 |
+| 2 | ×1.50 | 1,000 | 50,000,000 |
+| 3 | ×1.60 | 2,500 | 100,000,000 |
+| 4 | ×1.75 | 5,000 | 500,000,000 |
+| 5 | ×2.00 | 25,000 | – |
+
+The items are stored in your save under their own keys, which the unmodified game simply ignores, so a save touched by this script still loads without it. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
+
+Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; and a max-level charm counts toward the "max level Oak Item" achievements.
+
+<hr>
+
 <a name="oak-items-unlimited"></a>
 ## [Custom] Oak Items Unlimited (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakitemsunlimited.user.js">oakitemsunlimited.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakitemsunlimited.user.js">One-Click Install</a>)
 This script removes the limit for the amount of Oak Items that you're able to equip:<br>
@@ -552,27 +595,6 @@ This script lets you freely edit the weather of the region you are currently in 
 ![image](https://i.imgur.com/2cBIfyH.png)
 
 In addition it will also prevent the weather from changing and will remember you choice when reloading the game
-
-<hr>
-
-<a name="custom-quest-charm"></a>
-## [Custom] Quest Charm (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/questcharm.user.js">questcharm.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/questcharm.user.js">One-Click Install</a>)
-This script adds a thirteenth Oak Item, the <strong>Quest Charm</strong>, to the game's own Oak Items window. Equipped, it multiplies the Quest Points you gain from quests, the way the Amulet Coin multiplies Pokédollars. It takes one of your Oak Item slots like any other item, and shows up with the Quest Points icon since the game has no sprite for it.
-
-It unlocks when you reach Johto. It gains 1 experience each time it multiplies a quest reward, and levels up from the Oak Items window for the usual Pokédollar upgrade cost:
-
-| Level | Bonus | Quests claimed (total) |
-|:-----:|:-----:|:----------------------:|
-| 0 | ×1.25 | – |
-| 1 | ×1.30 | 10 |
-| 2 | ×1.35 | 100 |
-| 3 | ×1.40 | 250 |
-| 4 | ×1.45 | 500 |
-| 5 | ×1.50 | 1,000 |
-
-The item is stored in your save under its own key, which the unmodified game simply ignores, so a save touched by this script still loads without it. Flat questline rewards that bypass bonuses in the base game stay flat here too.
-
-Known quirks: the quest completion message and the logbook print the base reward while the wallet receives the multiplied amount; the "all quests completed" bonus is multiplied as well; and a max-level Quest Charm counts toward the "max level Oak Item" achievements.
 
 <hr>
 
