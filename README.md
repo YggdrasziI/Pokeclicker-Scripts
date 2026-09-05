@@ -95,9 +95,10 @@ The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//gi
 10. [**Omega Protein Gains** ](#omega-protein-gains)
 11. [**Overnight Berry Growth** ](#overnight-berry-growth)
 12. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
-13. [**Simple Time Changer** ](#custom-simple-time-changer)
-14. [**Simple Weather Changer** ](#simple-weather-changer)
-15. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
+13. [**Quest Charm** ](#custom-quest-charm)
+14. [**Simple Time Changer** ](#custom-simple-time-changer)
+15. [**Simple Weather Changer** ](#simple-weather-changer)
+16. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
 
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
@@ -551,6 +552,27 @@ This script lets you freely edit the weather of the region you are currently in 
 ![image](https://i.imgur.com/2cBIfyH.png)
 
 In addition it will also prevent the weather from changing and will remember you choice when reloading the game
+
+<hr>
+
+<a name="custom-quest-charm"></a>
+## [Custom] Quest Charm (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/questcharm.user.js">questcharm.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/questcharm.user.js">One-Click Install</a>)
+This script adds a thirteenth Oak Item, the <strong>Quest Charm</strong>, to the game's own Oak Items window. Equipped, it multiplies the Quest Points you gain from quests, the way the Amulet Coin multiplies Pokédollars. It takes one of your Oak Item slots like any other item, and shows up with the Quest Points icon since the game has no sprite for it.
+
+It unlocks when you reach Johto. It gains 1 experience each time it multiplies a quest reward, and levels up from the Oak Items window for the usual Pokédollar upgrade cost:
+
+| Level | Bonus | Quests claimed (total) |
+|:-----:|:-----:|:----------------------:|
+| 0 | ×1.25 | – |
+| 1 | ×1.30 | 10 |
+| 2 | ×1.35 | 100 |
+| 3 | ×1.40 | 250 |
+| 4 | ×1.45 | 500 |
+| 5 | ×1.50 | 1,000 |
+
+The item is stored in your save under its own key, which the unmodified game simply ignores, so a save touched by this script still loads without it. Flat questline rewards that bypass bonuses in the base game stay flat here too.
+
+Known quirks: the quest completion message and the logbook print the base reward while the wallet receives the multiplied amount; the "all quests completed" bonus is multiplied as well; and a max-level Quest Charm counts toward the "max level Oak Item" achievements.
 
 <hr>
 
