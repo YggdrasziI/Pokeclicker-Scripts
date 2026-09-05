@@ -4,72 +4,138 @@
 [![GitHub issues](https://img.shields.io/github/issues/YggdrasziI/Pokeclicker-Scripts?color=%23AA4A44)](https://github.com/YggdrasziI/Pokeclicker-Scripts/issues)
 [![GitHub forks](https://img.shields.io/github/forks/YggdrasziI/Pokeclicker-Scripts?color=40826d)](https://github.com/YggdrasziI/Pokeclicker-Scripts/network)
 
-**UPDATE: April 18th, 2023**
-
-[PLEASE READ](https://github.com/Ephenia/Pokeclicker-Scripts/issues/298)
-
-It's very important for the future of the project in general and how things will be like going forward.
-
-**Troubleshooting (READ BEFORE POSTING)**
-
-[Using the Script Fixer Upper](https://github.com/Ephenia/Pokeclicker-Scripts/issues/214)<br/>
-[Issue Guidelines](https://github.com/Ephenia/Pokeclicker-Scripts/issues/119)
-
-**Only** use scripts if you have read and understood their descriptions! Report issues while using scripts here or on the Discord, **not** to the developers of Pokéclicker.
+Various scripts & enhancements for the game [Pokéclicker](https://www.pokeclicker.com/).
 
 <hr>
 
-Various scripts & enhancements for the game [Pokéclicker](https://www.pokeclicker.com/).
+## ⚠️ Read this first
 
-These scripts were created for use with Script Manager browser extensions such as [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/). They should be compatible with most other Script Managers as well. If you have a Script Manager installed, you can click on the One-Click install links to easily install any scripts here.
+**This repository is a Frankenstein fusion.** It stitches together two unrelated PokéClicker projects — [ephymew's **Pokeclicker Scripts**](https://github.com/ephymew/Pokeclicker-Scripts) and [Farigh's **pokeclicker-automation**](https://github.com/Farigh/pokeclicker-automation) — into one set of scripts, and then changes both of them. The seams show, and they are ours.
 
-If you are looking to use these scripts on the client version of Pokéclicker ([Pokéclicker Desktop](//github.com/RedSparr0w/Pokeclicker-desktop)), replace the <strong>app.asar</strong> file in the client with the [modified version from this repository](//github.com/YggdrasziI/Pokeclicker-Scripts/tree/master/desktop). For detailed instructions, see [here](//github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/desktop/README.md).
+**Do not report anything from here to the original authors.** Neither ephymew nor Farigh has anything to do with this fork, and a bug you hit here is far more likely to come from the stitching than from their code. The same goes for the Pokéclicker team: **never** report script problems to the game's developers.
 
-**If you are looking to have something specific created or have any inquiries, feel free to contact me directly (contact info on profile) OR [open and create an issue](https://github.com/YggdrasziI/Pokeclicker-Scripts/issues).**
+Anything that misbehaves in *this* repository belongs [in this repository's issues](https://github.com/YggdrasziI/Pokeclicker-Scripts/issues).
 
-<a href="https://discord.gg/nfbT8zJSkd" target="_blank"><img src="https://discordapp.com/api/guilds/950947559474618440/widget.png?style=banner2" alt="Discord Banner 2"/></a>
+**Only** use scripts if you have read and understood their descriptions. Back up your save before installing any of them.
 
-You may also [join my Discord server](https://discord.gg/nfbT8zJSkd) (can also click the banner above), be sure to grab the `PokeClicker` role from the `#pick-your-roles` channel to gain access to the Pokéclicker section.
+<hr>
 
-**Please do make sure that you read the [Issues and PR Guidelines found here](//github.com/Ephenia/Pokeclicker-Scripts/issues/119) if you are wanting to open an issue, or if you wish to contribute to the project.**
+## Installation
 
-**More scripts and things that I create will be added in due time, when I am interested and or am motivated enough to work. Remember, that I do this all free of charge and ask for literally nothing in return. I mainly created this project to simply share my passion for this game and show ways that it can be improved and or be more fun.**
+These scripts are written for script manager browser extensions such as [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/), and should work with most others. With one installed, the **One-Click Install** link in each section below is enough.
+
+For the desktop version of the game ([Pokéclicker Desktop](//github.com/RedSparr0w/Pokeclicker-desktop)), replace its <strong>app.asar</strong> with the [modified one from this repository](//github.com/YggdrasziI/Pokeclicker-Scripts/tree/master/desktop); it brings its own script manager, which downloads and updates every script here on its own. Detailed instructions are [here](//github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/desktop/README.md).
+
+Development targets PokéClicker **v0.10.26** (branch `port-v0.10.26`).
+
+<hr>
+
+## Upstream projects, and what changed here
+
+### ephymew — [Pokeclicker Scripts](https://github.com/ephymew/Pokeclicker-Scripts)
+
+Every standalone `*.user.js` here, the `custom/` folder and the desktop script manager come from that project (published under the **Ephenia** name for most of its life, hence `loadEpheniaScript` and friends throughout the code — that name is a compatibility contract with scripts published elsewhere and is deliberately left alone). This fork branched off its last commit, from May 2025.
+
+Its author has since stepped away from it: he states he is no longer providing support for any of the old scripts, and that the repository will eventually be archived. Work has moved to [**Pokeclicker Scripts Reborn**](https://github.com/ephymew/Pokeclicker-Scripts-Reborn), a from-scratch "V2" — a single unified, modular script rather than a folder of separate ones, rewritten from nothing and explicitly *not* built for compatibility with the old scripts or with anyone's automation. **No release date has been announced**, and the author's own words are "I wouldn't expect much here for a while". Nothing here will follow it automatically; if and when Reborn ships, it will be a different project.
+
+What this fork changed on that side:
+
+* Every `@downloadURL` / `@updateURL` now points at this repository. Left as they were, your script manager would quietly replace these files with the upstream copies.
+* **New:** `custom/autonpccodes.user.js` — enters NPC-given redeem codes for you, and lists the ones you have found in the Save / Enter Code screen.
+* **New:** `custom/simpletimechanger.user.js` — forces the in-game hour, the way the weather changer forces the weather.
+* Enhanced Auto Hatchery only spends eggs that can still give you something, with an "until shiny" mode.
+* The fossil revive works outside Kanto: it reads the fossil traders from the game instead of only ever asking Cinnabar Lab.
+* The Enhanced Auto Clicker comes back on its own after a Battle Frontier or Safari visit, instead of switching itself off for good.
+* Additional Visual Settings: the settings are laid out vertically, and the Shops shortcut became a region-wide item list — every item on sale in the region, in one place, with its price and where to buy it.
+
+### Farigh — [pokeclicker-automation](https://github.com/Farigh/pokeclicker-automation)
+
+The whole `automation/` folder, and the [`pokeclickerautomation.user.js`](#automation) bundle it generates. That project is alive and maintained upstream; this is a port of it, not a mirror.
+
+What this fork changed on that side:
+
+* **Bundled instead of loaded.** Upstream fetches each module from GitHub at runtime through its `ComponentLoader`. Here `node automation/build.mjs` concatenates them into one self-contained userscript, so the desktop client works offline and the script behaves like every other script in this repository.
+* **New modules:** auto vitamins, click statistics ported over from the Enhanced Auto Clicker, scheduled save backups (desktop client only), and the two pieces of glue below.
+* **`Bridges`** — the two projects automate overlapping things. Turning on a feature that would fight an Ephenia script (two auto-clickers, two miners, two hatcheries) now asks before switching the other one off, in both directions.
+* **`EpheniaControls`** — the Ephenia scripts each bury their switches in the screen they act on. Their main switches are mirrored into the Automation card, so everything is reachable from one place; their settings stay where they were, in Settings → Scripts.
+* **New options** in the existing modules: a Farm Points mode for the farm, automatic Battle Café spinning, Mystery Mine mega-stone hunting, hatchery-helper hiring for the Achievements focus, an Evolution items tab in the auto-shop, an "until shiny" egg mode, automatic Purify Chamber loading, a stuck-quest watchdog, a remaining-evolution count on the Trivia stone tooltips, and a gem-upgrade order that finishes one affinity before starting the next instead of spreading a type's gems thin.
+* **A focus fallback chain.** A blocked "Focus on" topic used to switch the whole feature off. It now hands over to up to three fallback topics of your choosing, and comes back on its own once it can make progress again.
+
+The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/docs/ROADMAP.md).
+
+<hr>
+
+## The scripts
 
 **Vanilla scripts** are purely for automation or other QoL things.<br>
-**Custom scripts** are able to do or change things that aren't within the bounds of the vanilla game or they may be considered more cheaty.
+**Custom scripts** are able to do or change things that aren't within the bounds of the vanilla game, or they may be considered more cheaty.
 
 # Vanilla Scripts
-1. [**Additional Visual Settings** ](#additional-visual-settings)
-2. [**Auto Battle Frontier** ](#auto-battle-frontier)
-3. [**Auto Battle Items** ](#auto-battle-items)
-4. [**Catch Filter Fantasia** ](#catch-filter-fantasia)
-5. [**Enhanced Auto Clicker** ](#enhanced-auto-clicker)
-6. [**Enhanced Auto Hatchery** ](#enhanced-auto-hatchery)
-7. [**Enhanced Auto Mine** ](#enhanced-auto-mine)
-8. [**Simple Auto Farmer** ](#simple-auto-farmer)
-9. [**Script Fixer Upper**](#script-fixer-upper)
-10. [**Script Handler** (Included in desktop/app.asar)](#script-manager)
+1. [**Automation** ](#automation)
+2. [**Additional Visual Settings** ](#additional-visual-settings)
+3. [**Auto Battle Frontier** ](#auto-battle-frontier)
+4. [**Auto Battle Items** ](#auto-battle-items)
+5. [**Catch Filter Fantasia** ](#catch-filter-fantasia)
+6. [**Enhanced Auto Clicker** ](#enhanced-auto-clicker)
+7. [**Enhanced Auto Hatchery** ](#enhanced-auto-hatchery)
+8. [**Enhanced Auto Mine** ](#enhanced-auto-mine)
+9. [**Simple Auto Farmer** ](#simple-auto-farmer)
+10. [**Script Fixer Upper**](#script-fixer-upper)
+11. [**Script Manager** (Included in desktop/app.asar)](#script-manager)
 # Custom Scripts
 1. [**Auto NPC Codes** ](#custom-auto-npc-codes)
 2. [**Auto Quest Completer** ](#auto-quest-completer)
-9. [**Auto Safari Zone** ](#auto-safari-zone)
-2. [**Catch Speed Adjuster** ](#catch-speed-adjuster)
-3. [**Challenge Mode Changer** ](#challenge-mode-changer)
-4. [**Discord Code Generator** ](#discord-code-generator)
-5. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
-6. [**Oak Items Unlimited** ](#oak-iems-unlimited)
-7. [**Omega Protein Gains** ](#omega-protein-gains)
-7. [**Overnight Berry Growth** ](#overnight-berry-growth)
-8. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
-9. [**Simple Time Changer** ](#custom-simple-time-changer)
-10. [**Simple Weather Changer** ](#simple-weather-changer)
+3. [**Auto Safari Zone** ](#auto-safari-zone)
+4. [**Catch Speed Adjuster** ](#catch-speed-adjuster)
+5. [**Challenge Mode Changer** ](#challenge-mode-changer)
+6. [**Debug Cheats Tools** ](#custom-debug-cheats-tools)
+7. [**Discord Code Generator** ](#discord-code-generator)
+8. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
+9. [**Oak Items Unlimited** ](#oak-items-unlimited)
+10. [**Omega Protein Gains** ](#omega-protein-gains)
+11. [**Overnight Berry Growth** ](#overnight-berry-growth)
+12. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
+13. [**Simple Time Changer** ](#custom-simple-time-changer)
+14. [**Simple Weather Changer** ](#simple-weather-changer)
+15. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
 
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
-- Note: All scripts here would be 100% compatible with one another!!!
+- Note: All scripts here are meant to be compatible with one another. Where two of them would
+-       genuinely fight over the same thing, the Automation script asks you which one wins.
 - Note: Feel free to open an issue if you find any bugs/issues as these aren't fully tested!!!
 - Note: in case it isn't mention below, all user set settings with these scripts are saved and persist even upon game close!!!
 ```
+
+<hr>
+
+<a name="automation"></a>
+## Automation (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/pokeclickerautomation.user.js">pokeclickerautomation.user.js</a>) (<a href="//github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/pokeclickerautomation.user.js">One-Click Install</a>)
+
+The largest script here, and the half of the fusion that does not come from the Ephenia project: Farigh's automation suite, bundled into a single file and taught to live alongside the other scripts.
+
+It adds an **Automation** card to the game screen. Every feature in it is **off by default** — nothing starts doing anything until you switch it on.
+
+### **Features**
+
+• <strong>Auto attack</strong> — clicks through route, gym, dungeon and temporary battles, at an interval you set, with live click statistics (tick efficiency, click attacks or DPS, how many clicks the current area needs).<br/>
+• <strong>Auto fight panels</strong> — gym, dungeon, Battle Frontier and Safari panels that appear on the screen they belong to.<br/>
+• <strong>Hatchery, Farming, Mining, Auto Shop, Auto Vitamins</strong> — each with its own advanced settings panel.<br/>
+• <strong>Oak items and Gems upgrades</strong> — bought automatically as they become affordable.<br/>
+• <strong>Focus on</strong> — pick one long-running goal and let it drive: Experience, Money, Dungeon Tokens, gems of any single type, Achievements, Pokérus cure, Quests, or Shadow purify. If the chosen goal runs out of things to do, it hands over to the fallbacks you picked instead of switching everything off, and takes over again when it can.<br/>
+• <strong>Battle Café</strong> — spins for the Alcremie forms you are missing and that the current time of day can actually give.<br/>
+• <strong>Save backups</strong> — desktop client only, since a web page cannot write files. On a schedule you choose, with a retention count.<br/>
+• <strong>Notifications</strong> — per feature, so you can hear from the hatchery without hearing from everything else.
+
+### **Living with the other scripts**
+
+Both projects automate overlapping things, and two auto-clickers running at once do not add up. Enabling a feature on either side that conflicts with the other asks you first, then switches the loser off cleanly — including when you click the Ephenia script's own button.
+
+The Ephenia scripts' main switches are also mirrored into an **Ephenia scripts** card, so you do not have to open the Underground to toggle the miner. The mirrors click the real buttons, so the original controls keep working and the conflict prompt still applies. Script settings stay in Settings → Scripts where they have always been; the only things actually moved are the weather and time dropdowns, which their scripts pin to a corner of the town map.
+
+### **Building it**
+
+`pokeclickerautomation.user.js` is generated. Edit the modules under `automation/` and run `node automation/build.mjs`; never edit the bundle by hand.
 
 <hr>
 
@@ -309,7 +375,7 @@ The Auto Farmer runs even while the farm window is closed. It also now saves you
 <a name="script-fixer-upper"></a>
 ## Script Fixer Upper (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/scriptfixerupper.user.js">scriptfixerupper.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/scriptfixerupper.user.js">One-Click Install</a>)
 
-This script resets the settings of all your other installed scripts. It is intended **only** for troubleshooting and fixing buggy behavior, as described [here](//github.com/Ephenia/Pokeclicker-Scripts/issues/214).
+This script resets the settings of all your other installed scripts. It is intended **only** for troubleshooting and fixing buggy behavior, as described [here](https://github.com/ephymew/Pokeclicker-Scripts/issues/214).
 
 When you open the game with this script installed, it will bring up a confirmation box asking if you are sure you want to proceed. Confirming will remove **all** non-game data from localStorage, including any data from other people's scripts. While this should not affect your save data, you should make backups first just to be safe.
 
@@ -382,6 +448,16 @@ Also, yes, changing these will give you the respective Challenge ribbons on your
 
 <hr>
   
+<a name="custom-debug-cheats-tools"></a>
+## [Custom] Debug Cheats Tools (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/debugcheatstools.user.js">debugcheatstools.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/debugcheatstools.user.js">One-Click Install</a>)
+This script adds a <strong>Debug Cheats</strong> entry at the top of the Start Menu, opening a panel that writes straight into your save.
+
+From it you can grant yourself any amount of each currency, gem, pokéball, berry, evolution item, vitamin and held item, and catch any pokémon from a filterable Pokédex list — clicking a pokémon catches it, clicking it again makes it shiny. A second tab lists your quest lines and their state, for reading only.
+
+There is no undo and nothing here is subtle. It exists for testing and for repairing a broken save; using it on a save you care about is entirely at your own risk. Back it up first.
+
+<hr>
+
 <a name="discord-code-generator"></a>
 ## [Custom] Discord Code Generator (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/discordcodegenerator.user.js">discordcodegenerator.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/discordcodegenerator.user.js">One-Click Install</a>)
 This script will let you generate infinite amounts of Discord codes for all of the exclusive Pokémon locked behind Pokéclicker's Discord bot:<br>
@@ -478,12 +554,25 @@ In addition it will also prevent the weather from changing and will remember you
 
 <hr>
 
+<a name="custom-simple-time-changer"></a>
 ## [Custom] Simple Time Changer (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/simpletimechanger.user.js">simpletimechanger.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/simpletimechanger.user.js">One-Click Install</a>)
 This script adds a dropdown next to the weather selector that forces the in-game hour, or leaves it following your computer clock.
 
 Everything that depends on the time of day follows it: the day cycle indicator, time-locked evolutions, and which Alcremie forms the Battle Cafe can give you. Only the hour is forced, so minutes and seconds keep running normally, and the setting persists across reloads.
 
 If the Automation script is installed, this dropdown and the weather one are moved together into a "Time and weather" section of its Ephenia scripts card, instead of sitting in a corner of the town map.
+
+<hr>
+
+<a name="custom-synthetic-shiny-synapse"></a>
+## [Custom] Synthetic Shiny Synapse (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/syntheticshinysynapse.user.js">syntheticshinysynapse.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/syntheticshinysynapse.user.js">One-Click Install</a>)
+This script adds a <strong>Shiny Modifier</strong> entry at the top of the Start Menu, opening a table of every way the game can roll a shiny — wild, dungeon, evolution stone, safari, gift/claimed, hatchery and wandering/farm pokémon — with the odds it uses for each.
+
+Each row can be given its own odds, or you can set a single global rate that overrides all of them at once. The table also shows what the shiny charm bonus turns each figure into, so you can see the number the game will actually roll against.
+
+<strong>Karma Mode</strong> replaces all of that with a pity counter: the odds improve by one on every failed roll and snap back to the game's own rate the moment a shiny appears, so a dry streak cannot last forever. While it is on, the manual rates are locked.
+
+<strong>DOM Updates</strong> refreshes the table live as rolls happen, which is useful for watching karma mode work and pointless otherwise.
 
 <hr>
 
