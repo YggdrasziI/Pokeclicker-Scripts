@@ -136,3 +136,13 @@ cd automation/test && npm test
 
 Then say explicitly that in-game verification is still pending: the option should
 appear in the right category, start Off, survive a reload, and show its tooltip.
+
+## Delivering
+
+Once the checks above pass, commit the change and push it. Work left in the
+working tree is not delivered: the desktop client and Tampermonkey both fetch
+from the GitHub `master` branch, so nothing reaches a user until it is pushed.
+Stage only the files the task touched, write the message in the style of
+`git log` (imperative subject, a short body saying what changed and why), and
+push to `origin master`. Only leave a change uncommitted when the user asks
+for that explicitly.

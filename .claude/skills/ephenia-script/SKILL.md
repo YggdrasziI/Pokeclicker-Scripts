@@ -132,3 +132,13 @@ There is no test harness for standalone scripts. The gate is manual:
 - Then say plainly that in-game verification is pending, and name the checks:
   the script loads without the `loadEpheniaScript` crash notification, its
   settings row appears under the Scripts tab, and its setting survives a reload.
+
+## Delivering
+
+Once the checks above pass, commit the change and push it. Work left in the
+working tree is not delivered: the desktop client and Tampermonkey both fetch
+from the GitHub `master` branch, so nothing reaches a user until it is pushed.
+Stage only the files the task touched, write the message in the style of
+`git log` (imperative subject, a short body saying what changed and why), and
+push to `origin master`. Only leave a change uncommitted when the user asks
+for that explicitly.

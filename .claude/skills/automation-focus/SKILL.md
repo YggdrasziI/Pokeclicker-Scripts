@@ -144,3 +144,13 @@ pending and name them: the topic appears in the dropdown at the right position, 
 hidden until `isUnlocked()` passes (a 5 s watcher reveals it), selecting it forces
 the feature off, and the setting survives a reload. For the blocked path, exercise
 a topic that genuinely runs out of work — Pokérus Cure once everything is cured.
+
+## Delivering
+
+Once the checks above pass, commit the change and push it. Work left in the
+working tree is not delivered: the desktop client and Tampermonkey both fetch
+from the GitHub `master` branch, so nothing reaches a user until it is pushed.
+Stage only the files the task touched, write the message in the style of
+`git log` (imperative subject, a short body saying what changed and why), and
+push to `origin master`. Only leave a change uncommitted when the user asks
+for that explicitly.

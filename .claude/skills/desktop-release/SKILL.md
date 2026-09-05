@@ -94,3 +94,13 @@ git diff --stat desktop/                                       # app.asar should
 Then say the runtime check is pending, and name it: launch the client, open
 Settings → Scripts, and confirm the log line `Found script files in <account>/Pokeclicker-Scripts/`
 plus the expected script list.
+
+## Delivering
+
+Once the checks above pass, commit the change and push it. Work left in the
+working tree is not delivered: the desktop client and Tampermonkey both fetch
+from the GitHub `master` branch, so nothing reaches a user until it is pushed.
+Stage only the files the task touched, write the message in the style of
+`git log` (imperative subject, a short body saying what changed and why), and
+push to `origin master`. Only leave a change uncommitted when the user asks
+for that explicitly.
