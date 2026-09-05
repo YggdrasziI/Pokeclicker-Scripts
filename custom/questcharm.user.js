@@ -5,7 +5,7 @@
 // @description   Adds a thirteenth Oak Item, the Quest Charm, that multiplies the Quest Points you gain from quests (×1.25 to ×1.50 across its levels, like the Amulet Coin does for money). Unlocked on reaching Johto, levelled by claiming quests.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.0
+// @version       1.0.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -86,6 +86,13 @@ function initQuestCharmOverrides() {
         }
         return calcBonusOld.call(this, amount, ...args);
     };
+
+    // The Oak Item grids break their rows every 4 items, and a Bootstrap .col alone
+    // on its row takes the full width, so the 13th tile came out four times too big.
+    // Pinning every tile to a quarter row changes nothing for the full rows.
+    const style = document.createElement('style');
+    style.textContent = '#oakItemsModal ul.row > li.col { flex: 0 0 25%; max-width: 25%; }';
+    document.head.appendChild(style);
 
     // The Oak Item templates build the image path from the enum key. Image error
     // events do not bubble, so catch them in the capture phase and swap the icon.
