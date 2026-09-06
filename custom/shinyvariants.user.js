@@ -5,7 +5,7 @@
 // @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex and the party list, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.3.1
+// @version       1.3.2
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -705,7 +705,9 @@ class ShinyVariants {
             if (json?.id != null) {
                 const mirrored = ShinyVariants.mirrorEntry(this.id);
                 const state = ShinyVariants.stateOf(this);
-                const legacyShown = json.svd != null ? Number(json.svd) + 1 : undefined;
+                // The first versions wrote svd: 0 for every Pokémon with a palette; only
+                // a non-zero value was a palette picked on purpose
+                const legacyShown = json.svd ? Number(json.svd) + 1 : undefined;
                 state.mask(Number(json.sv ?? mirrored?.[0] ?? 0) || 0);
                 state.shown(Number(json.svp ?? legacyShown ?? mirrored?.[1] ?? 0) || 0);
             }
