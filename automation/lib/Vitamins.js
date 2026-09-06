@@ -2,8 +2,9 @@
  * @class The AutomationVitamins regroups the 'Auto Vitamins' functionalities
  *
  * Vitamins are handed out to bring the whole party up to a target, rather than pouring everything
- * into whichever pokémon happens to come first. The pokémon furthest from the target are served
- * first, so a short stock spreads instead of maxing out a handful of them.
+ * into whichever pokémon happens to come first. The party is served in the order of a chosen
+ * attribute, the highest Egg Steps first by default, since those are the pokémon a Carbos
+ * shortens the most; among equals, the pokémon furthest from the target comes first.
  *
  * @note The menu is hidden until the player can actually buy a vitamin
  */
@@ -11,6 +12,8 @@ class AutomationVitamins
 {
     static Settings = {
                           FeatureEnabled: "Vitamins-Enabled",
+                          PrioritizedSorting: "Vitamins-PrioritizedSorting",
+                          PrioritizedSortingDescending: "Vitamins-PrioritizedSortingDescending",
                           // One target per vitamin type, in the GameConstants.VitaminType order
                           Target: function(vitaminName) { return `Vitamins-${vitaminName}-Target`; }
                       };
@@ -24,6 +27,10 @@ class AutomationVitamins
     {
         if (initStep == Automation.InitSteps.BuildMenu)
         {
+            // Highest Egg Steps first: the slowest breeders are the ones a vitamin helps the most
+            Automation.Utils.LocalStorage.setDefaultValue(this.Settings.PrioritizedSorting, SortOptions.eggCycles);
+            Automation.Utils.LocalStorage.setDefaultValue(this.Settings.PrioritizedSortingDescending, true);
+
             this.__internal__buildMenu();
         }
         else if (initStep == Automation.InitSteps.Finalize)
@@ -58,8 +65,9 @@ class AutomationVitamins
 
         const tooltip = "Hands out vitamins until every pokémon reaches the targets below"
                       + Automation.Menu.TooltipSeparator
-                      + "The pokémon furthest from a target are served first, so a short\n"
-                      + "stock spreads over the party instead of maxing out a few of them\n"
+                      + "The party is served in the order of the 'Prioritize' attribute below,\n"
+                      + "the highest Egg Steps first by default. Among equals, the pokémon\n"
+                      + "furthest from the target comes first\n"
                       + "A target of 0 leaves that vitamin alone. Nothing is ever removed"
                       + Automation.Menu.TooltipSeparator
                       + "⚠️ The game caps the total vitamins per pokémon at\n"
@@ -76,6 +84,8 @@ class AutomationVitamins
         settingTitle.style.marginBottom = "10px";
         settingPanel.appendChild(settingTitle);
 
+        settingPanel.appendChild(this.__internal__buildSortingSelectorList());
+
         for (const vitaminName of this.__internal__getVitaminNames())
         {
             this.__internal__addTargetSetting(settingPanel, vitaminName);
@@ -85,6 +95,92 @@ class AutomationVitamins
         {
             this.__internal__setVitaminUnlockWatcher();
         }
+    }
+
+    /**
+     * @brief Builds the priority selector drop-down list, with its sort direction button
+     *
+     * Same widget as the hatchery's 'Sorting on attribute' row, over the game's own party
+     * sort attributes.
+     *
+     * @returns the created element
+     */
+    static __internal__buildSortingSelectorList()
+    {
+        const container = document.createElement("div");
+        container.style.paddingLeft = "10px";
+        container.style.paddingRight = "10px";
+
+        // Set the tooltip
+        const baseTooltip = "Which pokémon get their vitamins first when the stock runs short"
+                          + Automation.Menu.TooltipSeparator
+                          + "It uses the same attributes as the sorting in the Day Care.\n"
+                          + "Egg Steps, highest first, by default: a Carbos shortens the\n"
+                          + "slowest breeders the most. Among equals, the pokémon furthest\n"
+                          + "from the target comes first";
+
+        const isDescending = Automation.Utils.LocalStorage.getValue(this.Settings.PrioritizedSortingDescending) === "true";
+        const tooltip = baseTooltip
+                      + Automation.Menu.TooltipSeparator
+                      + "Sorting direction: " + (isDescending ? "Descending (highest value first)" : "Ascending (lowest value first)");
+        container.classList.add("hasAutomationTooltip");
+        container.setAttribute("automation-tooltip-text", tooltip);
+
+        // Add the label
+        container.appendChild(document.createTextNode("Prioritize on attribute:"));
+
+        // Add the drop-down list
+        const selectElem = Automation.Menu.createDropDownListElement("selectedSorting-Vitamins");
+        selectElem.style.position = "relative";
+        selectElem.style.bottom = "2px";
+        selectElem.style.width = "85px";
+        selectElem.style.marginLeft = "4px";
+        selectElem.style.paddingLeft = "3px";
+        selectElem.style.borderTopRightRadius = "0px";
+        selectElem.style.borderBottomRightRadius = "0px";
+        container.appendChild(selectElem);
+
+        const previouslySelectedType = Automation.Utils.LocalStorage.getValue(this.Settings.PrioritizedSorting);
+
+        // Populate the list
+        for (const sortType in SortOptionConfigs)
+        {
+            const opt = document.createElement("option");
+            opt.textContent = SortOptionConfigs[sortType].text;
+            opt.value = sortType;
+            opt.id = `selectedSorting-Vitamins-${sortType}`;
+
+            // Restore the previously selected item
+            if (sortType == previouslySelectedType)
+            {
+                opt.selected = true;
+            }
+
+            selectElem.options.add(opt);
+        }
+
+        // Update the local storage if the value is changed by the user
+        selectElem.onchange = function()
+            {
+                Automation.Utils.LocalStorage.setValue(this.Settings.PrioritizedSorting, selectElem.value);
+            }.bind(this);
+
+        // Add the sort direction button
+        const sortDirectionElem = Automation.Menu.createSortDirectionButtonElement(this.Settings.PrioritizedSortingDescending);
+        // Update the tooltip on sort change
+        sortDirectionElem.input.addEventListener("click", function()
+            {
+                const isDescending = sortDirectionElem.input.checked;
+                const newTooltip = baseTooltip
+                                 + Automation.Menu.TooltipSeparator
+                                 + "Sorting direction: " + (isDescending ? "Descending (highest value first)" : "Ascending (lowest value first)");
+                container.setAttribute("automation-tooltip-text", newTooltip);
+            }, false);
+        sortDirectionElem.container.style.borderTopRightRadius = "5px";
+        sortDirectionElem.container.style.borderBottomRightRadius = "5px";
+        container.appendChild(sortDirectionElem.container);
+
+        return container;
     }
 
     /**
@@ -223,9 +319,11 @@ class AutomationVitamins
                       && (pokemon.vitaminsUsed[vitaminType]() < target)
                       && (pokemon.vitaminUsesRemaining() > 0));
 
-        // Furthest from the target first, so a short stock levels the party instead of maxing
-        // out whichever pokémon happens to come first in the party order
-        candidates.sort((a, b) => a.vitaminsUsed[vitaminType]() - b.vitaminsUsed[vitaminType]());
+        // The chosen attribute first, then furthest from the target, so a short stock goes to
+        // the pokémon the player cares about instead of whichever comes first in the party order
+        const compareByAttribute = this.__internal__getAttributeComparator();
+        candidates.sort((a, b) => compareByAttribute(a, b)
+                                || (a.vitaminsUsed[vitaminType]() - b.vitaminsUsed[vitaminType]()));
 
         let usedTotal = 0;
 
@@ -256,6 +354,35 @@ class AutomationVitamins
             Automation.Notifications.sendNotif(
                 `Gave ${usedTotal.toLocaleString('en-US')} ${vitaminName} to ${candidates.length} pokémon`, "Vitamins");
         }
+    }
+
+    /**
+     * @brief Builds the comparator for the 'Prioritize on attribute' setting
+     *
+     * Attribute values are compared as-is, so names sort as well as numbers, and the
+     * direction setting flips the result. An unknown attribute compares everything equal,
+     * which leaves the furthest-from-target tie-break in charge.
+     *
+     * @returns The comparator function
+     */
+    static __internal__getAttributeComparator()
+    {
+        const sortAttribute = parseInt(Automation.Utils.LocalStorage.getValue(this.Settings.PrioritizedSorting));
+        const isDescending = Automation.Utils.LocalStorage.getValue(this.Settings.PrioritizedSortingDescending) === "true";
+        const getValue = SortOptionConfigs[sortAttribute]?.getValue;
+
+        if (typeof getValue !== "function")
+        {
+            return () => 0;
+        }
+
+        return function(a, b)
+            {
+                const aValue = getValue(a);
+                const bValue = getValue(b);
+                const result = (aValue > bValue) ? 1 : ((aValue < bValue) ? -1 : 0);
+                return isDescending ? -result : result;
+            };
     }
 
     /**

@@ -156,6 +156,15 @@ for (const id of ['SaveBackup-Enabled', 'SaveBackup-IntervalMinutes', 'SaveBacku
     console.log(`  ${el ? 'ok  ' : 'FAIL'}  ${id}${el ? ' (in card: ' + (el.closest('.automationCardBody') !== null) + ')' : ''}`);
 }
 
+// Vitamins go to the party in the order of a chosen attribute, the hatchery's widget reused.
+console.log('');
+console.log('Auto Vitamins priority:');
+for (const id of ['selectedSorting-Vitamins', 'Automation-Vitamins-PrioritizedSortingDescending']) {
+    const el = d.getElementById(id);
+    if (!el) failures++;
+    console.log(`  ${el ? 'ok  ' : 'FAIL'}  ${id}${el ? ' (in card: ' + (el.closest('.automationCardBody') !== null) + ')' : ''}`);
+}
+
 // A focus topic that runs out of work used to switch the whole feature off. It now hands over to
 // the next topic of this chain, and takes over again once its block expires.
 console.log('');
