@@ -92,13 +92,20 @@ in a *URL* is ours to change; these identifiers are not.
 ```bash
 node automation/build.mjs                      # regenerate pokeclickerautomation.user.js
 cd automation/test && npm install && npm test  # menu / init / bridges, under jsdom
+node tools/realgame/start.mjs <script> [...]   # start the client's real game build with scripts, under jsdom
 ```
 
 The tests load the **built bundle**, not the sources. Build first or you are
 testing the previous version.
 
-There is no root `package.json`, no linter, and no CI. The build and those three
-tests are the whole automated gate.
+`tools/realgame/start.mjs` loads the build the desktop client downloaded
+(`%APPDATA%\pokeclicker-desktop\pokeclicker-master\docs`, the `master` branch, not
+the `develop` source), injects the named scripts and runs the game's start
+sequence; `--scenario=<file>` runs in-page checks afterwards. See
+`tools/realgame/README.md`. It cannot draw, fetch assets or play sounds.
+
+There is no root `package.json`, no linter, and no CI. The build, those three
+tests and that start check are the whole automated gate.
 
 ## Verification
 
@@ -106,6 +113,9 @@ tests are the whole automated gate.
 - After touching `desktop/app_src/src/`, repack `desktop/app.asar` — see the
   `desktop-release` skill. An unrepacked change ships nothing.
 - If a check fails, fix the cause. Do not weaken or delete the check.
-- Nothing here can be verified in-game from the terminal. For any user-visible
-  change, say plainly that in-game verification is still pending rather than
-  implying it was done.
+- After touching a standalone script, run `node tools/realgame/start.mjs <script>`
+  (with a scenario when the change has state to check). The client runs the built
+  `master` game, so a signature read in the `develop` clone still needs this check.
+- What the game draws cannot be verified from the terminal. For any visual change,
+  say plainly that in-game verification is still pending rather than implying it
+  was done.

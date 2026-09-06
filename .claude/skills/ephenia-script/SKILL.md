@@ -124,14 +124,19 @@ Automation bridges. Account names inside *URLs* are ours to change; these are no
 
 ## Validation
 
-There is no test harness for standalone scripts. The gate is manual:
+There is no unit test harness for standalone scripts, but the real game can be
+started with the script from the terminal:
 
 - Syntax check what you can: `node --check <file>.user.js`.
 - Confirm the registration name matches the filename.
 - Confirm the two raw URLs contain the correct path, including `custom/`.
-- Then say plainly that in-game verification is pending, and name the checks:
-  the script loads without the `loadEpheniaScript` crash notification, its
-  settings row appears under the Scripts tab, and its setting survives a reload.
+- `node tools/realgame/start.mjs <scriptname>` loads the build the desktop client
+  runs under jsdom, injects the script and runs the game's start sequence; it fails
+  when the game cannot start or the priority function throws. `--scenario=<file>`
+  runs in-page checks afterwards (see `tools/realgame/README.md`). Nothing draws
+  there, so sprites and layout still need the game itself.
+- Then say plainly which in-game checks remain: the settings row appears under the
+  Scripts tab, its setting survives a reload, and whatever the script draws.
 
 ## Delivering
 
