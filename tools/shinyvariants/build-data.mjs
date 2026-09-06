@@ -268,6 +268,49 @@ function spriteColors(spriteId) {
     return spriteCache.get(spriteId);
 }
 
+// --- Star icons ---------------------------------------------------------------------------
+
+// PokéRogue's star icons are white pixels with alpha shading, tinted at run time.
+// They become SVG paths filled with currentColor: one path per alpha level, one
+// horizontal run of pixels per subpath, so the script tints them with CSS.
+function iconPaths(image, frame) {
+    const runs = new Map();
+    for (let y = 0; y < frame.h; y++) {
+        let x = 0;
+        while (x < frame.w) {
+            const alpha = image.data[((frame.y + y) * image.width + frame.x + x) * 4 + 3];
+            if (alpha === 0) {
+                x++;
+                continue;
+            }
+            let length = 1;
+            while (x + length < frame.w && image.data[((frame.y + y) * image.width + frame.x + x + length) * 4 + 3] === alpha) {
+                length++;
+            }
+            if (!runs.has(alpha)) {
+                runs.set(alpha, []);
+            }
+            runs.get(alpha).push(`M${x} ${y}h${length}v1h-${length}z`);
+            x += length;
+        }
+    }
+    return {
+        w: frame.w,
+        h: frame.h,
+        paths: [...runs.entries()].map(([alpha, subpaths]) => [Number((alpha / 255).toFixed(2)), subpaths.join('')]),
+    };
+}
+
+function loadIcons() {
+    const uiDir = path.join(options.assets, 'images/ui');
+    const atlas = JSON.parse(readFileSync(path.join(uiDir, 'shiny_icons.json'), 'utf8'));
+    const sheet = decodePng(readFileSync(path.join(uiDir, 'shiny_icons.png')));
+    const frames = atlas.textures[0].frames;
+    const page = ['0', '1', '2'].map((name) => iconPaths(sheet, frames.find((f) => f.filename === name).frame));
+    const small = decodePng(readFileSync(path.join(uiDir, 'shiny_small.png')));
+    return { page, small: iconPaths(small, { x: 0, y: 0, w: small.width, h: small.height }) };
+}
+
 // --- Main ---------------------------------------------------------------------------------
 
 function generation(id) {
@@ -402,7 +445,7 @@ function main() {
     } catch {
         source += ' (unknown revision)';
     }
-    const data = { v: 1, src: source, tol: TOLERANCE, p: palettes };
+    const data = { v: 1, src: source, tol: TOLERANCE, icons: loadIcons(), p: palettes };
     const serialized = JSON.stringify(data);
 
     console.log(`Masterlist keys: ${Object.keys(masterlist).length}, skipped on purpose: ${skipped}, unmapped: ${unmapped.length}`);
