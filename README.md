@@ -96,9 +96,10 @@ The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//gi
 11. [**Omega Protein Gains** ](#omega-protein-gains)
 12. [**Overnight Berry Growth** ](#overnight-berry-growth)
 13. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
-14. [**Simple Time Changer** ](#custom-simple-time-changer)
-15. [**Simple Weather Changer** ](#simple-weather-changer)
-16. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
+14. [**Shiny Variants** ](#custom-shiny-variants)
+15. [**Simple Time Changer** ](#custom-simple-time-changer)
+16. [**Simple Weather Changer** ](#simple-weather-changer)
+17. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
 
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
@@ -585,6 +586,18 @@ This script allows berries to grow while the game is closed, simulating their gr
 This script makes Pokérus spread inside the Hatchery without needing your Starter Pokémon inside for this to be accomplished.
 
 This script will run and work automatically without needing to do anything else.
+
+<hr>
+
+<a name="custom-shiny-variants"></a>
+## [Custom] Shiny Variants (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/shinyvariants.user.js">shinyvariants.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/shinyvariants.user.js">One-Click Install</a>)
+This script brings PokéRogue's shiny variants to PokéClicker. Every shiny comes in three palettes, <strong>Standard</strong> (gold star), <strong>Rare</strong> (cyan star) and <strong>Epic</strong> (red star). Each shiny caught or hatched rolls one of them with PokéRogue's odds (6 in 10 standard, 3 in 10 rare, 1 in 10 epic) and unlocks it for that Pokémon, so catching a shiny you already own can still unlock a new palette. A wild shiny already shows the palette it will give you.
+
+The unlocked palettes appear as three coloured stars in the Pokédex and in the party list, greyed out while locked. The Pokémon's statistics window (click it in the party list or the Pokédex) has a <strong>Shiny Palette</strong> row with a button to switch between the unlocked ones; the sprite follows everywhere it is drawn.
+
+The sprites are recoloured in the browser with PokéRogue's own colour tables, which fit the PokéClicker artwork for most of generations 1 to 8, forms, Mega Evolutions and Gigantamax included. A Pokémon whose artwork differs (most of generation 9, and the variants PokéRogue draws by hand) still unlocks and shows its stars, but keeps the standard shiny sprite; the palette button then says so.
+
+The unlocked palettes are saved with the game save (two extra keys per Pokémon that the unmodified game ignores), and mirrored in the browser storage per save file so a session played without the script loses nothing. Three settings in the <strong>Scripts</strong> tab of the settings window turn the recolouring, the stars and the wild Pokémon preview on or off.
 
 <hr>
 
