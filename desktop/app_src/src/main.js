@@ -35,7 +35,7 @@ const MOD_EXPECTED_CLIENT_VERSION = '1.2.0';
 // Used for update checking as the real client version gets overridden by the mod
 const MOD_EXPECTED_ELECTRON_VERSION = '^21.3.1';
 // VERY IMPORTANT: update this in desktopupdatechecker.js as well!
-const POKECLICKER_SCRIPTS_DESKTOP_VERSION = '2.1.0';
+const POKECLICKER_SCRIPTS_DESKTOP_VERSION = '2.2.0';
 
 console.info("Data directory:", dataDir);
 
@@ -928,6 +928,7 @@ function injectDesktopScriptsModifications(gameWindow) {
       });`);
     }
 
+    injectSaveBackupSidecars(); // SAVE BACKUP ADDITION
     runScript(`${__dirname}/scripthandler.js`);
     ensureScriptsDirsExist();
 
@@ -1016,20 +1017,81 @@ function injectDesktopScriptsModifications(gameWindow) {
       return;
     }
 
-    if (!backup || !backup.contents || !backup.filename) {
+    if (backup && backup.contents && backup.filename) {
+      if (writeSaveBackupFile(backup.filename, backup.contents)) {
+        pruneSaveBackups(backup.retention);
+      }
+    }
+
+    await writeSidecarBackups();
+  }
+
+  // Other scripts keep their own data next to the save backups, so that the save itself stays
+  // vanilla: each one registers a function on window.DesktopSaveBackupProviders that returns
+  // { filename, contents } when something changed, or null. The files are small and named per
+  // save, so they overwrite themselves and never go through the retention pruning.
+  async function writeSidecarBackups() {
+    let sidecars;
+    try {
+      sidecars = await gameWindow.webContents.executeJavaScript(
+        '(window.DesktopSaveBackupProviders || []).map((provider) => { try { return provider(); } catch (err) { return null; } })');
+    } catch (err) {
       return;
     }
 
+    if (!Array.isArray(sidecars)) {
+      return;
+    }
+
+    sidecars.forEach((sidecar) => {
+      if (!sidecar || !sidecar.contents || typeof sidecar.filename !== 'string') {
+        return;
+      }
+      // A page-provided name must stay inside the folder
+      if (path.basename(sidecar.filename) !== sidecar.filename) {
+        logInGameWindow(`Refused to write a save backup outside its folder: '${sidecar.filename}'`, 'error');
+        return;
+      }
+      writeSaveBackupFile(sidecar.filename, sidecar.contents);
+    });
+  }
+
+  function writeSaveBackupFile(filename, contents) {
     try {
       if (!fs.existsSync(saveBackupsDir)) {
         fs.mkdirSync(saveBackupsDir, { recursive: true });
       }
-      fs.writeFileSync(path.join(saveBackupsDir, backup.filename), backup.contents, 'utf-8');
-      logInGameWindow(`Wrote save backup '${backup.filename}'`, 'debug');
-      pruneSaveBackups(backup.retention);
+      fs.writeFileSync(path.join(saveBackupsDir, filename), contents, 'utf-8');
+      logInGameWindow(`Wrote save backup '${filename}'`, 'debug');
+      return true;
     } catch (err) {
       logInGameWindow(`Could not write the save backup:\n${err}`, 'error');
+      return false;
     }
+  }
+
+  // The reverse trip: the page cannot read files either, so the sidecar files are handed over
+  // before any script runs, as window.DesktopSaveBackupFiles = { filename: contents }. A script
+  // restores from them when the browser storage holds nothing for the save, which is what
+  // happens after a backup is imported into a fresh install.
+  function injectSaveBackupSidecars() {
+    const files = {};
+    try {
+      if (fs.existsSync(saveBackupsDir)) {
+        fs.readdirSync(saveBackupsDir)
+          .filter((file) => file.endsWith('.json'))
+          .forEach((file) => {
+            files[file] = fs.readFileSync(path.join(saveBackupsDir, file), 'utf-8');
+          });
+      }
+    } catch (err) {
+      logInGameWindow(`Could not read the save backup sidecar files:\n${err}`, 'debug');
+    }
+
+    gameWindow.webContents.executeJavaScript(`window.DesktopSaveBackupFiles = ${JSON.stringify(files)};0`)
+      .catch((err) => {
+        logInGameWindow(`Could not hand over the save backup sidecar files:\n${err}`, 'error');
+      });
   }
 
   // Keeps the newest `retention` files, so the folder cannot grow without bound

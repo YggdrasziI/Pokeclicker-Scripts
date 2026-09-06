@@ -542,7 +542,7 @@ This script adds three Oak Items to the game's own Oak Items window. Each one mu
 | 4 | ×1.75 | 5,000 | 500,000,000 |
 | 5 | ×2.00 | 25,000 | – |
 
-The items are stored in your save under their own keys, which the unmodified game simply ignores, so a save touched by this script still loads without it. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
+The charm progress is kept outside the game save, per save file, in the browser storage, so your save and your backups stay exactly what the unmodified game would write, and a save touched by this script still loads without it. In the desktop client the progress is also mirrored to a `<trainer> [<save key>] oak-charms.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save, such as after importing a backup into a fresh install. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
 
 Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; and a max-level charm counts toward the "max level Oak Item" achievements.
 

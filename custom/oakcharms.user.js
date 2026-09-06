@@ -5,7 +5,7 @@
 // @description   Adds three Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.1.0
+// @version       1.2.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -73,6 +73,87 @@ function oakCharmItem(charm) {
     return App.game.oakItems.itemList[OakItemType[charm.key]];
 }
 
+// The charm progress (level, exp, equipped) lives outside the game save, so a save
+// file or a backup never carries anything the unmodified game would not write.
+// It is kept per save file in the browser storage, like the game's own save, and
+// the desktop client mirrors it to a small file next to its save backups.
+let charmsLoaded = false;
+let lastCharmsHandedOver = null;
+
+function charmProgressKey() {
+    return `oakCharms-${Save.key}`;
+}
+
+function isCharmProgress(value) {
+    return value !== null && typeof value === 'object'
+        && oakCharms.some((charm) => value[charm.key] !== undefined);
+}
+
+function loadCharmProgress() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(charmProgressKey()));
+        return isCharmProgress(stored) ? stored : null;
+    } catch {
+        return null;
+    }
+}
+
+function storeCharmProgress(charms) {
+    localStorage.setItem(charmProgressKey(), JSON.stringify(charms));
+}
+
+function currentProfileName() {
+    try {
+        return JSON.parse(localStorage.getItem(`save${Save.key}`))?.profile?.name ?? null;
+    } catch {
+        return null;
+    }
+}
+
+// The desktop client hands over the files found in its save-backups folder as
+// DesktopSaveBackupFiles. Only used when this browser profile holds nothing for the
+// save, which is what happens after importing a backup into a fresh install: the
+// file for the same save key wins, then one for the same trainer name.
+function restoreCharmProgressFromClient() {
+    const files = Object.values(window.DesktopSaveBackupFiles ?? {}).flatMap((contents) => {
+        try {
+            const parsed = JSON.parse(contents);
+            return (parsed?.format === 1 && isCharmProgress(parsed.charms)) ? [parsed] : [];
+        } catch {
+            return [];
+        }
+    });
+    const profile = currentProfileName();
+    const match = files.find((file) => file.saveKey === Save.key)
+        ?? files.find((file) => profile !== null && file.profile === profile);
+    return match?.charms ?? null;
+}
+
+// Polled by the desktop client's main process, which owns the filesystem. Returns
+// null while nothing changed, so the poll costs nothing between charm level-ups.
+function collectOakCharmsBackup() {
+    if (!charmsLoaded || !App.game?.oakItems) {
+        return null;
+    }
+    const charms = {};
+    oakCharms.forEach((charm) => {
+        charms[charm.key] = oakCharmItem(charm).toJSON();
+    });
+    const serialized = JSON.stringify(charms);
+    if (serialized === lastCharmsHandedOver) {
+        return null;
+    }
+    lastCharmsHandedOver = serialized;
+
+    const profile = App.game.profile.name() || 'Trainer';
+    // Keep it filesystem-safe: the trainer name is free text
+    const safe = (text) => String(text).replace(/[^\w \-.]/g, '_');
+    return {
+        filename: `${safe(profile)} [${safe(Save.key || 'default')}] oak-charms.json`,
+        contents: JSON.stringify({ format: 1, saveKey: Save.key, profile, charms }, null, 2),
+    };
+}
+
 // Runs on document ready, before the game builds its Oak Item list and applies
 // its Knockout bindings. Everything that changes what the game *constructs*
 // has to happen here.
@@ -126,6 +207,44 @@ function initOakCharmsOverrides() {
                 this.itemList[OakItemType[charm.key]] = new OakCharm(charm);
             }
         });
+        return result;
+    };
+
+    // The game serializes every item of the list, charms included. Take them back out
+    // so the save stays vanilla, and refresh the side store instead: toJSON runs at
+    // every save tick, on download and for backups, which is exactly the cadence wanted.
+    const toJSONOld = OakItems.prototype.toJSON;
+    OakItems.prototype.toJSON = function (...args) {
+        const save = toJSONOld.apply(this, args);
+        const charms = {};
+        oakCharms.forEach((charm) => {
+            charms[charm.key] = save[charm.key];
+            delete save[charm.key];
+        });
+        // Game.load() may call toJSON before fromJSON on a brand-new save; never let
+        // the defaults overwrite a store that has not been read yet
+        if (charmsLoaded) {
+            storeCharmProgress(charms);
+        }
+        return save;
+    };
+
+    // The original still applies charm keys found in a save written by an older
+    // version of this script, so an upgrade loses nothing; the side store then wins.
+    const fromJSONOld = OakItems.prototype.fromJSON;
+    OakItems.prototype.fromJSON = function (json, ...args) {
+        const result = fromJSONOld.call(this, json, ...args);
+        const stored = loadCharmProgress() ?? restoreCharmProgressFromClient();
+        if (stored) {
+            oakCharms.forEach((charm) => {
+                const item = this.itemList[OakItemType[charm.key]];
+                if (item && stored[charm.key]) {
+                    item.fromJSON(stored[charm.key]);
+                }
+            });
+            this.maxLevelOakItems(this.itemList.filter((item) => item.isMaxLevel()).length);
+        }
+        charmsLoaded = true;
         return result;
     };
 
@@ -183,6 +302,12 @@ function initOakCharmsOverrides() {
 function initOakCharms() {
     if (oakCharms.some((charm) => oakCharmItem(charm) === undefined)) {
         throw new Error('The Oak Charms were not added to the game; the script probably loaded after the game started.');
+    }
+
+    // Only the desktop client can write files; it polls this list from its main process
+    if (App.isUsingClient) {
+        window.DesktopSaveBackupProviders = window.DesktopSaveBackupProviders ?? [];
+        window.DesktopSaveBackupProviders.push(collectOakCharmsBackup);
     }
 }
 
