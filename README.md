@@ -623,6 +623,8 @@ The stars are PokéRogue's own. In the Pokédex and in the party list, one small
 
 The sprites are recoloured in the browser with PokéRogue's own colour tables, which fit the PokéClicker artwork for most of generations 1 to 8, forms, Mega Evolutions and Gigantamax included. A Pokémon whose artwork differs (most of generation 9, and the variants PokéRogue draws by hand) still unlocks and shows its stars, but keeps the standard shiny sprite; the palette button then says so.
 
+The Pokédex's <strong>Caught Status</strong> filter gains <strong>Caught Rare Shiny</strong> and <strong>Caught Epic Shiny</strong>, and the Hatchery's <strong>Shiny Status</strong> filter gains <strong>Rare Shiny</strong> and <strong>Epic Shiny</strong>, next to the game's own entries.
+
 With the <strong>Custom Achievements</strong> script installed, the Rare and Epic palettes get the same achievements as the game's shinies: the twelve tiers from the first one to 1,000 unique Pokémon, and Trainer, Ace and Master for each region, all in a <strong>Shiny Variants</strong> category with a 100% achievement bonus of its own (the game's own achievements keep theirs untouched).
 
 The unlocked palettes are saved with the game save (two extra keys per Pokémon that the unmodified game ignores), and mirrored in the browser storage per save file so a session played without the script loses nothing. Three settings in the <strong>Scripts</strong> tab of the settings window turn the recolouring, the stars and the wild Pokémon preview on or off.

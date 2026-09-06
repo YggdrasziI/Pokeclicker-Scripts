@@ -5,7 +5,7 @@
 // @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex and the party list, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.2.0
+// @version       1.3.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -673,11 +673,61 @@ class ShinyVariants {
         };
 
         this.injectStars();
+        this.installFilters();
 
         // Achievements for the two extra palettes, picked up by the Custom Achievements
         // script when it is installed, whichever of the two scripts loads first
         windowObject.CustomAchievementsQueue = windowObject.CustomAchievementsQueue ?? [];
         windowObject.CustomAchievementsQueue.push(() => ShinyVariants.achievementDefinitions());
+    }
+
+    // Rare and Epic entries in the Pokédex "Caught Status" and the Hatchery "Shiny
+    // Status" filters, next to the game's Shiny ones
+    static installFilters() {
+        // Pokédex: the game's list ignores a status it does not know, so the extra
+        // statuses only narrow its result down to the Pokémon holding the palette
+        const dexFilter = Settings.getSetting('pokedexCaughtFilter');
+        const dexStatuses = { 'caught-shiny-rare': 1, 'caught-shiny-epic': 2 };
+        dexFilter.options.push(new SettingOption('Caught Rare Shiny', 'caught-shiny-rare'), new SettingOption('Caught Epic Shiny', 'caught-shiny-epic'));
+        const getListOld = PokedexHelper.getList;
+        PokedexHelper.getList = function (...args) {
+            const list = getListOld.apply(this, args);
+            const variant = dexStatuses[dexFilter.observableValue()];
+            if (!variant) {
+                return list;
+            }
+            return list.filter((pokemon) => {
+                const partyPokemon = App.game.party.getPokemon(pokemon.id);
+                return !!partyPokemon?.shiny && (ShinyVariants.unlockedMask(partyPokemon) & (1 << variant));
+            });
+        };
+
+        // Hatchery: the game compares the status to the shiny flag itself, so the
+        // game reads Rare (2) and Epic (3) as Shiny (1) while the select keeps the
+        // real value, and the list is narrowed down to the palette afterwards
+        const hatcheryFilter = Settings.getSetting('breedingShinyFilter');
+        hatcheryFilter.options.push(new SettingOption('Rare Shiny', 2), new SettingOption('Epic Shiny', 3));
+        const rawValue = hatcheryFilter.observableValue;
+        hatcheryFilter.rawObservableValue = rawValue;
+        hatcheryFilter.observableValue = ko.pureComputed({
+            read: () => Math.min(rawValue(), 1),
+            write: (value) => rawValue(value),
+        });
+        const select = document.getElementById('breeding-filter-shiny-status');
+        if (select) {
+            select.setAttribute('data-bind', select.getAttribute('data-bind').replace('value: breedingShinyFilter.observableValue', 'value: breedingShinyFilter.rawObservableValue'));
+        } else {
+            console.warn('Shiny Variants: Hatchery shiny filter not found, its select will show Shiny for the new statuses');
+        }
+        const hatcheryListOld = BreedingController.hatcheryFilteredList;
+        BreedingController.hatcheryFilteredList = ko.pureComputed(() => {
+            const list = hatcheryListOld();
+            const variant = rawValue() - 1;
+            if (variant < 1) {
+                return list;
+            }
+            return list.filter((pokemon) => ShinyVariants.unlockedMask(pokemon) & (1 << variant));
+        });
     }
 
     // The stars go into the game's own templates before it applies its Knockout
