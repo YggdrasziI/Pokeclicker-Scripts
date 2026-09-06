@@ -5,7 +5,7 @@
 // @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex and the party list, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.3.3
+// @version       1.3.4
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -31,7 +31,7 @@ const SHINY_VARIANT_DATA = {"v":1,"src":"pokerogue-assets 35c1ee672","tol":3,"ic
 
 class ShinyVariants {
     // Same tints as PokéRogue: standard (gold), rare (cyan), epic (red)
-    static VERSION = '1.3.3';
+    static VERSION = '1.3.4';
     static VARIANT_NAMES = ['Standard', 'Rare', 'Epic'];
     static VARIANT_COLORS = ['#f8c020', '#20f8f0', '#e81048'];
     static SETTING_KEYS = {
@@ -504,25 +504,42 @@ class ShinyVariants {
         return `shinyVariants-${Save.key}`;
     }
 
-    static mirrorEntry(pokemonId) {
-        if (!this.mirror || this.mirror.saveKey !== Save.key) {
-            let entries = {};
-            try {
-                const stored = JSON.parse(localStorage.getItem(this.mirrorKey()));
-                if (stored?.v === 2) {
-                    entries = stored.e ?? {};
-                } else if (stored) {
-                    // Version 1 mirrors stored the displayed palette itself
-                    Object.entries(stored).forEach(([id, [mask, shown]]) => {
-                        entries[id] = [mask, shown ? shown + 1 : 0];
-                    });
-                }
-            } catch {
-                entries = {};
-            }
-            this.mirror = { saveKey: Save.key, entries, serialized: null };
+    static MIRROR_VERSION = 3;
+
+    static loadMirror() {
+        if (this.mirror?.saveKey === Save.key) {
+            return this.mirror;
         }
-        return this.mirror.entries[pokemonId];
+        let entries = {};
+        let version = this.MIRROR_VERSION;
+        try {
+            const stored = JSON.parse(localStorage.getItem(this.mirrorKey()));
+            if (stored?.v >= 2) {
+                entries = stored.e ?? {};
+                version = stored.v;
+            } else if (stored) {
+                // Version 1 mirrors stored the displayed palette itself
+                Object.entries(stored).forEach(([id, [mask, shown]]) => {
+                    entries[id] = [mask, shown ? shown + 1 : 0];
+                });
+                version = 1;
+            }
+        } catch {
+            entries = {};
+        }
+        this.mirror = { saveKey: Save.key, entries, version, serialized: null };
+        return this.mirror;
+    }
+
+    static mirrorEntry(pokemonId) {
+        return this.loadMirror().entries[pokemonId];
+    }
+
+    // Version 1.3.1 turned the svd: 0 of the first saves into a Standard palette
+    // picked by hand (svp: 1) and saved it that way; a save last written by it
+    // (mirror version 2) gets those picks dropped, the highest palette shows again
+    static repairPick(shown) {
+        return this.loadMirror().version < 3 && shown === 1 ? 0 : shown;
     }
 
     static saveEntry(pokemon) {
@@ -547,12 +564,12 @@ class ShinyVariants {
                 entries[pokemon.id] = entry;
             }
         });
-        const serialized = JSON.stringify({ v: 2, e: entries });
+        const serialized = JSON.stringify({ v: this.MIRROR_VERSION, e: entries });
         if (this.mirror?.saveKey === Save.key && this.mirror.serialized === serialized) {
             return;
         }
         localStorage.setItem(this.mirrorKey(), serialized);
-        this.mirror = { saveKey: Save.key, entries, serialized };
+        this.mirror = { saveKey: Save.key, entries, version: this.MIRROR_VERSION, serialized };
     }
 
     // ---------------------------------------------------------------------------------
@@ -733,7 +750,7 @@ class ShinyVariants {
                 // a non-zero value was a palette picked on purpose
                 const legacyShown = json.svd ? Number(json.svd) + 1 : undefined;
                 state.mask(Number(json.sv ?? mirrored?.[0] ?? 0) || 0);
-                state.shown(Number(json.svp ?? legacyShown ?? mirrored?.[1] ?? 0) || 0);
+                state.shown(ShinyVariants.repairPick(Number(json.svp ?? legacyShown ?? mirrored?.[1] ?? 0) || 0));
             }
             return result;
         };
