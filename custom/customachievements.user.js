@@ -5,7 +5,7 @@
 // @description   Lets other scripts add achievements to the game's own Achievements window, in their own categories with their own achievement bonus, without touching the game's achievements. Ships no achievement by itself: scripts such as Shiny Variants register theirs through it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.0
+// @version       1.0.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -131,6 +131,9 @@ class CustomAchievements {
     }
 
     static addDefinitions(definitions) {
+        if (!definitions.length) {
+            return;
+        }
         definitions.flatMap((entry) => {
             const resolved = typeof entry === 'function' ? entry() : entry;
             return Array.isArray(resolved) ? resolved : [resolved];
@@ -206,24 +209,26 @@ class CustomAchievements {
             }
         };
 
-        // The game builds its list in AchievementHandler.initialize, before it loads the
-        // save (which restores the unlocked ones by name) and computes the bonuses
+        // The game builds its list in AchievementHandler.initialize, then loads the
+        // save (which restores the unlocked ones by name), checks the achievements
+        // and computes the bonuses. Only add here: evaluating any achievement before
+        // the save is loaded throws in the game's own requirements.
         const initializeOld = AchievementHandler.initialize;
         AchievementHandler.initialize = function (...args) {
             const result = initializeOld.apply(this, args);
-            CustomAchievements.gameReady = true;
-            const queued = CustomAchievements.queue().splice(0);
-            CustomAchievements.addDefinitions(queued);
-            CustomAchievements.applyBonusSetting();
+            CustomAchievements.addDefinitions(CustomAchievements.queue().splice(0));
             return result;
         };
         AchievementHandler.customAchievementsPatched = true;
     }
 
+    // Runs once the game has loaded: from now on registrations apply immediately
     static initSettings() {
         if (!AchievementHandler.customAchievementsPatched) {
             throw new Error('The Custom Achievements patches were not installed; the script probably loaded after the game started.');
         }
+        this.gameReady = true;
+        this.addDefinitions(this.queue().splice(0));
         const settingsBody = createScriptSettingsContainer('Custom Achievements');
         const bonusRow = document.createElement('tr');
         bonusRow.innerHTML = '<td class="p-2" colspan="2"><label class="m-0" for="checkbox-customAchievements-bonus">Custom categories grant their achievement bonus</label>'
