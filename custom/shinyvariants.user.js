@@ -5,7 +5,7 @@
 // @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex and the party list, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.3.2
+// @version       1.3.3
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -31,6 +31,7 @@ const SHINY_VARIANT_DATA = {"v":1,"src":"pokerogue-assets 35c1ee672","tol":3,"ic
 
 class ShinyVariants {
     // Same tints as PokéRogue: standard (gold), rare (cyan), epic (red)
+    static VERSION = '1.3.3';
     static VARIANT_NAMES = ['Standard', 'Rare', 'Epic'];
     static VARIANT_COLORS = ['#f8c020', '#20f8f0', '#e81048'];
     static SETTING_KEYS = {
@@ -100,6 +101,16 @@ class ShinyVariants {
                 this.settings[name](event.target.checked);
             });
         });
+        // What the save holds, refreshed each time the settings window opens
+        const diagnostics = document.createElement('tr');
+        diagnostics.innerHTML = '<td class="p-2 text-muted small" colspan="2"></td>';
+        settingsBody.appendChild(diagnostics);
+        const refreshDiagnostics = () => {
+            diagnostics.firstChild.textContent = `Shiny Variants ${this.VERSION}. ${this.diagnostics()}`;
+        };
+        refreshDiagnostics();
+        $('#settingsModal').on('shown.bs.modal', refreshDiagnostics);
+
         const coverage = document.createElement('tr');
         coverage.innerHTML = `<td class="p-2 text-muted small" colspan="2">Palettes from ${SHINY_VARIANT_DATA.src}, `
             + `${Object.keys(SHINY_VARIANT_DATA.p).filter((id) => !id.endsWith('-f')).length} Pokémon covered. `
@@ -111,6 +122,19 @@ class ShinyVariants {
         this.recolorStatus.subscribe((text) => {
             status.textContent = text;
         });
+    }
+
+    // One line on the party's palettes, for the settings tab
+    static diagnostics() {
+        const party = App.game?.party?.caughtPokemon ?? [];
+        const shinies = party.filter((pokemon) => pokemon.shiny);
+        const counts = [1, 2].map((variant) => {
+            const owners = shinies.filter((pokemon) => this.unlockedMask(pokemon) & (1 << variant));
+            const drawable = owners.filter((pokemon) => this.hasPalette(pokemon.id, variant)).length;
+            return `${owners.length} with ${this.VARIANT_NAMES[variant]} (${drawable} with a palette for it)`;
+        });
+        const picked = shinies.filter((pokemon) => this.stateOf(pokemon).shown() > 0).length;
+        return `${shinies.length} shiny Pokémon: ${counts.join(', ')}, ${picked} with a palette picked by hand.`;
     }
 
     // ---------------------------------------------------------------------------------

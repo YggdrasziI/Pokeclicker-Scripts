@@ -5,7 +5,7 @@
 // @description   Lets other scripts add achievements to the game's own Achievements window, in their own categories with their own achievement bonus, without touching the game's achievements. Ships no achievement by itself: scripts such as Shiny Variants register theirs through it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.1
+// @version       1.0.2
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -45,6 +45,7 @@
 // CustomAchievements.register(definition) does the same, and also works once the
 // game runs.
 class CustomAchievements {
+    static VERSION = '1.0.2';
     static SETTING_BONUS = 'customAchievementsBonus';
 
     static categories = new Map();
@@ -245,7 +246,7 @@ class CustomAchievements {
             const count = this.achievements.filter((a) => a.category === category).length;
             return `${displayName} (${count}, ${bonus}% bonus)`;
         });
-        summary.innerHTML = `<td class="p-2 text-muted small" colspan="2">${this.achievements.length} custom achievement(s)`
+        summary.innerHTML = `<td class="p-2 text-muted small" colspan="2">Custom Achievements ${this.VERSION}. ${this.achievements.length} custom achievement(s)`
             + `${categories.length ? ` in ${categories.join(', ')}` : ''}. Scripts register theirs through window.CustomAchievementsQueue.</td>`;
         settingsBody.appendChild(summary);
     }
