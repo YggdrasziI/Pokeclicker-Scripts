@@ -5,7 +5,7 @@
 // @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex and the party list, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.3.0
+// @version       1.3.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -50,6 +50,8 @@ class ShinyVariants {
     // Cleared when the canvas cannot read the sprites (tainted canvas): the
     // standard shiny sprites are shown for the rest of the session
     static recolorAvailable = true;
+    // What the settings tab says about the recolouring, updated by the builds
+    static recolorStatus = null;
     // Copy of the per-Pokémon data outside the game save, see storeMirror
     static mirror = null;
     // The enemy being caught, set around Battle.catchPokemon
@@ -66,6 +68,7 @@ class ShinyVariants {
     // ---------------------------------------------------------------------------------
 
     static loadSettings() {
+        this.recolorStatus = ko.observable('no sprite requested yet');
         Object.entries(this.SETTING_KEYS).forEach(([name, key]) => {
             const stored = localStorage.getItem(key);
             const observable = ko.observable(stored === null ? true : stored === 'true');
@@ -100,8 +103,14 @@ class ShinyVariants {
         const coverage = document.createElement('tr');
         coverage.innerHTML = `<td class="p-2 text-muted small" colspan="2">Palettes from ${SHINY_VARIANT_DATA.src}, `
             + `${Object.keys(SHINY_VARIANT_DATA.p).filter((id) => !id.endsWith('-f')).length} Pokémon covered. `
-            + 'A Pokémon without a palette still unlocks its variants, only its sprite stays the standard shiny one.</td>';
+            + 'A Pokémon without a palette still unlocks its variants, only its sprite stays the standard shiny one.<br>'
+            + 'Sprite recolouring: <span></span></td>';
         settingsBody.appendChild(coverage);
+        const status = coverage.querySelector('span');
+        status.textContent = this.recolorStatus();
+        this.recolorStatus.subscribe((text) => {
+            status.textContent = text;
+        });
     }
 
     // ---------------------------------------------------------------------------------
@@ -185,21 +194,39 @@ class ShinyVariants {
         if (!this.builds.has(key)) {
             this.builds.set(key, this.buildVariantImage(key, basePath, palette).catch((error) => {
                 console.warn(`Shiny Variants: could not build the sprite ${key}`, error);
+                if (!this.blobUrls.size) {
+                    this.recolorStatus(`failed on ${key}: ${error.message}`);
+                }
                 return null;
             }));
         }
         return this.builds.get(key);
     }
 
-    static async buildVariantImage(key, basePath, palette) {
+    // The sprite as something a canvas can draw and read back: fetched as a blob
+    // and turned into a bitmap, its pixels stay readable whatever origin the page
+    // runs from (the desktop client runs it from file://)
+    static async loadSprite(basePath) {
+        if (typeof createImageBitmap === 'function') {
+            const response = await fetch(basePath);
+            if (!response.ok) {
+                throw new Error(`${response.status} ${response.statusText} loading ${basePath}`);
+            }
+            return createImageBitmap(await response.blob());
+        }
         const image = new Image();
         image.src = basePath;
         await image.decode();
+        return image;
+    }
+
+    static async buildVariantImage(key, basePath, palette) {
+        const sprite = await this.loadSprite(basePath);
         const canvas = document.createElement('canvas');
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight;
+        canvas.width = sprite.naturalWidth ?? sprite.width;
+        canvas.height = sprite.naturalHeight ?? sprite.height;
         const context = canvas.getContext('2d');
-        context.drawImage(image, 0, 0);
+        context.drawImage(sprite, 0, 0);
         let imageData;
         try {
             imageData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -209,6 +236,7 @@ class ShinyVariants {
                 console.warn('Shiny Variants: the sprites cannot be recoloured in this browser, showing the standard shiny sprites', error);
             }
             this.recolorAvailable = false;
+            this.recolorStatus(`unavailable: ${error.message}`);
             return null;
         }
         this.recolorPixels(imageData.data, palette, SHINY_VARIANT_DATA.tol);
@@ -216,6 +244,7 @@ class ShinyVariants {
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
         const url = URL.createObjectURL(blob);
         this.blobUrls.set(key, url);
+        this.recolorStatus(`working (${this.blobUrls.size} sprite${this.blobUrls.size > 1 ? 's' : ''} recoloured this session)`);
         const version = this.versionFor(key);
         version(version() + 1);
         return url;
@@ -269,7 +298,8 @@ class ShinyVariants {
     // Per-Pokémon state
     // ---------------------------------------------------------------------------------
 
-    // mask: bit v set when palette v is unlocked; shown: the palette displayed.
+    // mask: bit v set when palette v is unlocked; shown: 0 when the highest unlocked
+    // palette is displayed, palette + 1 once one was picked in the statistics window.
     // A shiny with an empty mask is one caught before this script: standard palette.
     static stateOf(pokemon) {
         if (!pokemon.shinyVariantState) {
@@ -291,18 +321,20 @@ class ShinyVariants {
         return [0, 1, 2].filter((variant) => mask & (1 << variant)).length;
     }
 
-    // The palette to draw for a party Pokémon: the chosen one, or the first unlocked
+    // The palette to draw for a party Pokémon: the one chosen in its statistics
+    // window (shown = palette + 1) while it is unlocked, otherwise the highest
+    // unlocked one, which is what PokéRogue shows by default
     static shownVariant(pokemonId) {
         const pokemon = App.game?.party.getPokemon(pokemonId);
         if (!pokemon?.shiny) {
             return 0;
         }
         const mask = this.unlockedMask(pokemon);
-        const shown = this.stateOf(pokemon).shown();
-        if (mask & (1 << shown)) {
-            return shown;
+        const chosen = this.stateOf(pokemon).shown() - 1;
+        if (chosen >= 0 && (mask & (1 << chosen))) {
+            return chosen;
         }
-        return [0, 1, 2].find((variant) => mask & (1 << variant)) ?? 0;
+        return [2, 1, 0].find((variant) => mask & (1 << variant)) ?? 0;
     }
 
     static cycle(pokemonId) {
@@ -315,7 +347,7 @@ class ShinyVariants {
         for (let step = 1; step <= 3; step++) {
             const next = (current + step) % 3;
             if (mask & (1 << next)) {
-                this.stateOf(pokemon).shown(next);
+                this.stateOf(pokemon).shown(next + 1);
                 return;
             }
         }
@@ -335,7 +367,8 @@ class ShinyVariants {
         const bit = 1 << variant;
         state.mask(before | bit);
         if (!hadShiny) {
-            state.shown(variant);
+            // No choice made yet: the highest unlocked palette shows
+            state.shown(0);
         }
         // The game already announces the first shiny; the other unlocks are ours
         if (!(before & bit) && (hadShiny || variant > 0)) {
@@ -451,7 +484,15 @@ class ShinyVariants {
         if (!this.mirror || this.mirror.saveKey !== Save.key) {
             let entries = {};
             try {
-                entries = JSON.parse(localStorage.getItem(this.mirrorKey())) ?? {};
+                const stored = JSON.parse(localStorage.getItem(this.mirrorKey()));
+                if (stored?.v === 2) {
+                    entries = stored.e ?? {};
+                } else if (stored) {
+                    // Version 1 mirrors stored the displayed palette itself
+                    Object.entries(stored).forEach(([id, [mask, shown]]) => {
+                        entries[id] = [mask, shown ? shown + 1 : 0];
+                    });
+                }
             } catch {
                 entries = {};
             }
@@ -482,7 +523,7 @@ class ShinyVariants {
                 entries[pokemon.id] = entry;
             }
         });
-        const serialized = JSON.stringify(entries);
+        const serialized = JSON.stringify({ v: 2, e: entries });
         if (this.mirror?.saveKey === Save.key && this.mirror.serialized === serialized) {
             return;
         }
@@ -643,14 +684,18 @@ class ShinyVariants {
 
         // Two extra keys per Pokémon in the game save, unknown to the game's own
         // fromJSON (which ignores them) and added after its toJSON (which only
-        // strips the keys it knows): sv the unlocked mask, svd the palette shown
+        // strips the keys it knows): sv the unlocked mask, svp the palette picked
+        // (palette + 1; absent while the highest unlocked one shows). svd was the
+        // picked palette itself in the first versions of the script.
         const toJSONOld = PartyPokemon.prototype.toJSON;
         PartyPokemon.prototype.toJSON = function (...args) {
             const output = toJSONOld.apply(this, args);
             const entry = ShinyVariants.saveEntry(this);
             if (entry) {
                 output.sv = entry[0];
-                output.svd = entry[1];
+                if (entry[1]) {
+                    output.svp = entry[1];
+                }
             }
             return output;
         };
@@ -660,8 +705,9 @@ class ShinyVariants {
             if (json?.id != null) {
                 const mirrored = ShinyVariants.mirrorEntry(this.id);
                 const state = ShinyVariants.stateOf(this);
+                const legacyShown = json.svd != null ? Number(json.svd) + 1 : undefined;
                 state.mask(Number(json.sv ?? mirrored?.[0] ?? 0) || 0);
-                state.shown(Number(json.svd ?? mirrored?.[1] ?? 0) || 0);
+                state.shown(Number(json.svp ?? legacyShown ?? mirrored?.[1] ?? 0) || 0);
             }
             return result;
         };
