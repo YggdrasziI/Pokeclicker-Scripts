@@ -88,18 +88,19 @@ The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//gi
 3. [**Auto Safari Zone** ](#auto-safari-zone)
 4. [**Catch Speed Adjuster** ](#catch-speed-adjuster)
 5. [**Challenge Mode Changer** ](#challenge-mode-changer)
-6. [**Debug Cheats Tools** ](#custom-debug-cheats-tools)
-7. [**Discord Code Generator** ](#discord-code-generator)
-8. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
-9. [**Oak Charms** ](#custom-oak-charms)
-10. [**Oak Items Unlimited** ](#oak-items-unlimited)
-11. [**Omega Protein Gains** ](#omega-protein-gains)
-12. [**Overnight Berry Growth** ](#overnight-berry-growth)
-13. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
-14. [**Shiny Variants** ](#custom-shiny-variants)
-15. [**Simple Time Changer** ](#custom-simple-time-changer)
-16. [**Simple Weather Changer** ](#simple-weather-changer)
-17. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
+6. [**Custom Achievements** ](#custom-custom-achievements)
+7. [**Debug Cheats Tools** ](#custom-debug-cheats-tools)
+8. [**Discord Code Generator** ](#discord-code-generator)
+9. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
+10. [**Oak Charms** ](#custom-oak-charms)
+11. [**Oak Items Unlimited** ](#oak-items-unlimited)
+12. [**Omega Protein Gains** ](#omega-protein-gains)
+13. [**Overnight Berry Growth** ](#overnight-berry-growth)
+14. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
+15. [**Shiny Variants** ](#custom-shiny-variants)
+16. [**Simple Time Changer** ](#custom-simple-time-changer)
+17. [**Simple Weather Changer** ](#simple-weather-changer)
+18. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
 
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
@@ -450,6 +451,31 @@ Also, yes, changing these will give you the respective Challenge ribbons on your
 
 <hr>
   
+<a name="custom-custom-achievements"></a>
+## [Custom] Custom Achievements (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/customachievements.user.js">customachievements.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/customachievements.user.js">One-Click Install</a>)
+This script lets other scripts add achievements to the game's own Achievements window. Each script declares its achievements in a category of its own, with its own achievement bonus, so the game's achievements and their bonus stay exactly as they are. The custom categories show up in the window's Category filter, the achievements chain in the achievement tracker like the game's tiers do, and the ones you unlock are remembered by name in the game save, which the unmodified game simply ignores.
+
+The script ships no achievement by itself: <strong>Shiny Variants</strong> registers its Rare and Epic shiny achievements through it. A single setting in the <strong>Scripts</strong> tab turns the bonus of the custom categories on or off.
+
+To add achievements from another script, push definitions on <code>window.CustomAchievementsQueue</code> (the order the scripts load in does not matter):
+
+```js
+(window.CustomAchievementsQueue = window.CustomAchievementsQueue ?? []).push(() => [
+    {
+        name: 'Berry Baron',
+        description: 'Harvest 1,000 berries.',
+        progress: () => App.game.statistics.totalBerriesHarvested(),
+        amount: 1000,
+        bonus: 0.5,
+        category: { name: 'farmingExtras', displayName: 'Farming Extras', bonus: 25 },
+    },
+]);
+```
+
+<code>bonus</code> is the achievement's weight inside its category, like the game's own; <code>category</code> is either a new category (name, display name and its bonus percentage) or the name of one of the game's (<code>'kanto'</code>, <code>'global'</code>...). Optional fields: <code>hint</code>, <code>type</code> (for the Type filter), <code>series</code> (tiers that share it chain in the tracker), <code>achievable</code> (hidden while false) and <code>requirement</code> (any of the game's requirement objects, instead of <code>progress</code>/<code>amount</code>). <code>CustomAchievements.register(definition)</code> does the same and also works while the game runs.
+
+<hr>
+
 <a name="custom-debug-cheats-tools"></a>
 ## [Custom] Debug Cheats Tools (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/debugcheatstools.user.js">debugcheatstools.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/debugcheatstools.user.js">One-Click Install</a>)
 This script adds a <strong>Debug Cheats</strong> entry at the top of the Start Menu, opening a panel that writes straight into your save.
@@ -596,6 +622,8 @@ This script brings PokéRogue's shiny variants to PokéClicker. Every shiny come
 The stars are PokéRogue's own. In the Pokédex and in the party list, one small star per unlocked palette stacks up in its colour, the way PokéRogue's starter grid shows them (the party list's ✨ gives way to them). The Pokémon's statistics window (click it in the party list or the Pokédex) shows PokéRogue's three palette icons, black while locked, grey once unlocked and coloured for the one displayed, next to a <strong>Shiny Palette</strong> button that switches between the unlocked ones; the sprite follows everywhere it is drawn.
 
 The sprites are recoloured in the browser with PokéRogue's own colour tables, which fit the PokéClicker artwork for most of generations 1 to 8, forms, Mega Evolutions and Gigantamax included. A Pokémon whose artwork differs (most of generation 9, and the variants PokéRogue draws by hand) still unlocks and shows its stars, but keeps the standard shiny sprite; the palette button then says so.
+
+With the <strong>Custom Achievements</strong> script installed, the Rare and Epic palettes get the same achievements as the game's shinies: the twelve tiers from the first one to 1,000 unique Pokémon, and Trainer, Ace and Master for each region, all in a <strong>Shiny Variants</strong> category with a 100% achievement bonus of its own (the game's own achievements keep theirs untouched).
 
 The unlocked palettes are saved with the game save (two extra keys per Pokémon that the unmodified game ignores), and mirrored in the browser storage per save file so a session played without the script loses nothing. Three settings in the <strong>Scripts</strong> tab of the settings window turn the recolouring, the stars and the wild Pokémon preview on or off.
 

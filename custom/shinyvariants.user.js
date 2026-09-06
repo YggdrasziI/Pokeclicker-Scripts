@@ -5,7 +5,7 @@
 // @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex and the party list, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.1.0
+// @version       1.2.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -54,6 +54,8 @@ class ShinyVariants {
     static mirror = null;
     // The enemy being caught, set around Battle.catchPokemon
     static catchContext = null;
+    // Computed counts of Pokémon with a palette unlocked, for the achievements
+    static counts = new Map();
 
     static windowObject() {
         return !App.isUsingClient ? unsafeWindow : window;
@@ -354,6 +356,87 @@ class ShinyVariants {
     }
 
     // ---------------------------------------------------------------------------------
+    // Achievements, through the Custom Achievements script when it is installed
+    // ---------------------------------------------------------------------------------
+
+    // Party Pokémon with the palette unlocked, one computed per palette and region so
+    // the achievements share the work; region null counts every Pokémon
+    static countUnlocked(variant, region = null) {
+        const key = `${variant}:${region ?? 'all'}`;
+        if (!this.counts.has(key)) {
+            this.counts.set(key, ko.pureComputed(() => {
+                const bit = 1 << variant;
+                const owners = App.game.party.caughtPokemon.filter((pokemon) => pokemon.id > 0
+                    && (this.unlockedMask(pokemon) & bit)
+                    && (region === null || PokemonHelper.calcNativeRegion(pokemon.name) === region));
+                // Regions count species, like the game's own Shiny Trainer achievements
+                return region === null ? owners.length : new Set(owners.map((pokemon) => Math.floor(pokemon.id))).size;
+            }));
+        }
+        return this.counts.get(key)();
+    }
+
+    // Mirrors the game's shiny achievements for each of the two extra palettes
+    static achievementDefinitions() {
+        const tiers = [
+            [1, 0.03], [10, 0.06], [20, 0.09], [30, 0.12], [40, 0.15], [50, 0.30],
+            [75, 0.45], [100, 0.60], [151, 1.00], [250, 1.20], [500, 1.30], [1000, 1.50],
+        ];
+        const names = {
+            1: [
+                'A Different Kind of Shiny', 'Blue Is the New Gold', 'Cool Colours Club', 'Not Just a Trick of the Light',
+                'Second Wardrobe Collector', 'Sapphire Sparkles', 'The Odds Just Got Longer', 'One Hundred Shades Rarer',
+                'One Hundred Fifty-One Ways to Say Rare', 'Cyan Cyclone', 'Rarer Than Rare', 'Rare Is the New Normal',
+            ],
+            2: [
+                'Painting the Town Red', 'Ten Times the Legend', 'Crimson Collection', 'Epic Is an Understatement',
+                'Forty Shades of Wow', 'Red Carpet Roster', 'Seventy-Five Jackpots', 'A Hundred Miracles',
+                'One Hundred Fifty-One Legends', 'Ruby Rush', 'Statistically Impossible', 'Epic Is the New Normal',
+            ],
+        };
+        const category = { name: 'shinyVariants', displayName: 'Shiny Variants', bonus: 100 };
+        const type = GameConstants.AchievementType['Shiny Pokemon'];
+        const definitions = [];
+        [1, 2].forEach((variant) => {
+            const label = this.VARIANT_NAMES[variant];
+            tiers.forEach(([amount, bonus], index) => {
+                definitions.push({
+                    name: names[variant][index],
+                    description: `Capture ${amount.toLocaleString('en-US')} unique ${label} Shiny Pokémon.`,
+                    progress: () => this.countUnlocked(variant),
+                    amount,
+                    bonus,
+                    category,
+                    type,
+                    series: `shinyVariant:${variant}`,
+                    hint: `${amount.toLocaleString('en-US')} ${label} Shiny Pokémon need to be obtained.`,
+                });
+            });
+            GameHelper.enumNumbers(GameConstants.Region).filter((region) => region >= GameConstants.Region.kanto && region < GameConstants.Region.final).forEach((region) => {
+                const regionName = GameConstants.camelCaseToString(GameConstants.Region[region]);
+                const unique = PokemonHelper.calcUniquePokemonsByRegion(region);
+                [['Trainer', Math.floor(unique * 0.1), 3], ['Ace', Math.floor(unique * 0.5), 6], ['Master', Math.floor(unique), 9]].forEach(([rank, amount, bonus]) => {
+                    definitions.push({
+                        name: `${regionName} ${label} Shiny ${rank}`,
+                        description: rank === 'Master'
+                            ? `Complete the ${regionName} ${label} Shiny Pokédex!`
+                            : `Catch ${amount} unique ${label} Shiny Pokémon native to the ${regionName} region.`,
+                        progress: () => this.countUnlocked(variant, region),
+                        amount,
+                        bonus,
+                        category,
+                        type,
+                        series: `shinyVariant:${variant}:${region}`,
+                        hint: `${amount} unique ${label} Shiny Pokémon native to ${regionName} need to be caught.`,
+                        achievable: () => player.highestRegion() >= region,
+                    });
+                });
+            });
+        });
+        return definitions;
+    }
+
+    // ---------------------------------------------------------------------------------
     // Persistence
     // ---------------------------------------------------------------------------------
 
@@ -590,6 +673,11 @@ class ShinyVariants {
         };
 
         this.injectStars();
+
+        // Achievements for the two extra palettes, picked up by the Custom Achievements
+        // script when it is installed, whichever of the two scripts loads first
+        windowObject.CustomAchievementsQueue = windowObject.CustomAchievementsQueue ?? [];
+        windowObject.CustomAchievementsQueue.push(() => ShinyVariants.achievementDefinitions());
     }
 
     // The stars go into the game's own templates before it applies its Knockout
