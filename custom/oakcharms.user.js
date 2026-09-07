@@ -29,7 +29,7 @@ const oakCharms = [
         key: 'Quest_Charm',
         displayName: 'Quest Charm',
         description: 'Gain more Quest Points from quests',
-        bonusList: [1.25, 1.30, 1.35, 1.40, 1.45, 1.50],
+        bonusList: [1.15, 1.25, 1.5, 1.75, 2.00, 2.25],
         expList: [10, 100, 250, 500, 1000],
         costList: [1000000, 2500000, 5000000, 10000000, 20000000],
         currency: 'questPoint',
