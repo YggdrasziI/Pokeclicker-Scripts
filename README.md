@@ -93,14 +93,15 @@ The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//gi
 8. [**Discord Code Generator** ](#discord-code-generator)
 9. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
 10. [**Oak Charms** ](#custom-oak-charms)
-11. [**Oak Items Unlimited** ](#oak-items-unlimited)
-12. [**Omega Protein Gains** ](#omega-protein-gains)
-13. [**Overnight Berry Growth** ](#overnight-berry-growth)
-14. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
-15. [**Shiny Variants** ](#custom-shiny-variants)
-16. [**Simple Time Changer** ](#custom-simple-time-changer)
-17. [**Simple Weather Changer** ](#simple-weather-changer)
-18. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
+11. [**Oak Items Overload** ](#custom-oak-items-overload)
+12. [**Oak Items Unlimited** ](#oak-items-unlimited)
+13. [**Omega Protein Gains** ](#omega-protein-gains)
+14. [**Overnight Berry Growth** ](#overnight-berry-growth)
+15. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
+16. [**Shiny Variants** ](#custom-shiny-variants)
+17. [**Simple Time Changer** ](#custom-simple-time-changer)
+18. [**Simple Weather Changer** ](#simple-weather-changer)
+19. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
 
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
@@ -572,6 +573,33 @@ This script adds three Oak Items to the game's own Oak Items window. Each one mu
 The charm progress is kept outside the game save, per save file, in the browser storage, so your save and your backups stay exactly what the unmodified game would write, and a save touched by this script still loads without it. In the desktop client the progress is also mirrored to a `<trainer> [<save key>] oak-charms.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save, such as after importing a backup into a fresh install. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
 
 Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; and a max-level charm counts toward the "max level Oak Item" achievements.
+
+<hr>
+
+<a name="custom-oak-items-overload"></a>
+## [Custom] Oak Items Overload (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakitemsoverload.user.js">oakitemsoverload.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakitemsoverload.user.js">One-Click Install</a>)
+This script lets Oak Items be upgraded past their maximum level, from 5 to 10, through the game's own Oak Items window: once an item reaches level 5 its progress bar keeps filling, and the usual Upgrade button buys the next level. The overloaded levels cost far more than the game's own and need far more experience.
+
+Each overloaded level costs the item's last regular upgrade times 10, 50, 250, 1,000 then 5,000, in the same currency: a regular Oak Item, whose level 5 costs 1,000,000 Pokédollars, costs 10M, 50M, 250M, 1B then 5B. The experience needed doubles at every level, on the item's own scale.
+
+| Item | Level 5 (game) | 6 | 7 | 8 | 9 | 10 |
+|:-----|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
+| Magic Ball | 10% | 12% | 14% | 16% | 18% | 20% |
+| Amulet Coin | ×1.50 | ×1.60 | ×1.70 | ×1.80 | ×1.90 | ×2.00 |
+| Rocky Helmet | ×1.50 | ×1.60 | ×1.70 | ×1.80 | ×1.90 | ×2.00 |
+| Sprayduck | ×1.50 | ×1.60 | ×1.70 | ×1.80 | ×1.90 | ×2.00 |
+| Shiny Charm | ×2.00 | ×2.20 | ×2.40 | ×2.60 | ×2.80 | ×3.00 |
+| Magma Stone | ×2.00 | ×2.40 | ×2.80 | ×3.20 | ×3.60 | ×4.00 |
+| Cell Battery | ×2.00 | ×2.30 | ×2.60 | ×2.90 | ×3.20 | ×3.50 |
+| Explosive Charge | 10 | 11 | 12 | 13 | 14 | 15 |
+| Treasure Scanner | 24% | 26% | 28% | 30% | 32% | 35% |
+| Quest Charm | ×2.25 | ×2.50 | ×2.75 | ×3.00 | ×3.25 | ×3.50 |
+| Farm Charm | ×1.50 | ×1.70 | ×1.90 | ×2.10 | ×2.30 | ×2.50 |
+| Battle Charm | ×2.00 | ×2.30 | ×2.60 | ×2.90 | ×3.20 | ×3.50 |
+
+The EXP Share, Squirtbottle and Sprinklotad keep the game's maximum. The three charms only exist with the Oak Charms script, which can be loaded before or after this one.
+
+The overloaded levels are kept outside the game save, per save file, in the browser storage: the save itself keeps level 5, so your save and your backups stay exactly what the unmodified game would write, and the game without this script simply shows the item at level 5. In the desktop client the levels are also mirrored to a `<trainer> [<save key>] oak-items-overload.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save. An overloaded level is only restored over a save standing at level 5; an item that was reset below that in the meantime keeps its lower level. An item at level 5 or above still counts toward the "max level Oak Item" achievements.
 
 <hr>
 
