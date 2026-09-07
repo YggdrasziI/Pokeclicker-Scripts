@@ -22,8 +22,9 @@ try {
     check('experience doubles per level', coin.expList.length === 10 && coin.expList[5] === 20000 && coin.expList[9] === 320000);
     check('Magic Ball reaches 20%', item('Magic_Ball').bonusList[10] === 20 && item('Magic_Ball').maxLevel === 10);
     check('Cell Battery experience follows its own list', item('Cell_Battery').expList[5] === 300 && item('Cell_Battery').expList[9] === 4800);
-    check('EXP Share keeps the game maximum', item('Exp_Share').maxLevel === 5 && item('Exp_Share').overloadBaseMaxLevel === undefined);
-    check('Squirtbottle keeps the game maximum', item('Squirtbottle').maxLevel === 5);
+    check('EXP Share reaches 1.75x', item('Exp_Share').maxLevel === 10 && item('Exp_Share').bonusList[10] === 1.75);
+    check('Squirtbottle keeps the game maximum', item('Squirtbottle').maxLevel === 5 && item('Squirtbottle').overloadBaseMaxLevel === undefined);
+    check('Sprinklotad keeps the game maximum', item('Sprinklotad').maxLevel === 5);
     if (OakItemType.Quest_Charm !== undefined) {
         check('Quest Charm reaches 3.5x', item('Quest_Charm').maxLevel === 10 && item('Quest_Charm').bonusList[10] === 3.5);
         check('Battle Charm costs scale from its own last cost', item('Battle_Charm').costList[9].amount === 500000000 * 5000);

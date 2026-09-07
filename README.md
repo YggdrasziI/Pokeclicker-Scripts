@@ -587,6 +587,7 @@ Each overloaded level costs the item's last regular upgrade times 10, 50, 250, 1
 | Magic Ball | 10% | 12% | 14% | 16% | 18% | 20% |
 | Amulet Coin | ×1.50 | ×1.60 | ×1.70 | ×1.80 | ×1.90 | ×2.00 |
 | Rocky Helmet | ×1.50 | ×1.60 | ×1.70 | ×1.80 | ×1.90 | ×2.00 |
+| EXP Share | ×1.30 | ×1.39 | ×1.48 | ×1.57 | ×1.66 | ×1.75 |
 | Sprayduck | ×1.50 | ×1.60 | ×1.70 | ×1.80 | ×1.90 | ×2.00 |
 | Shiny Charm | ×2.00 | ×2.20 | ×2.40 | ×2.60 | ×2.80 | ×3.00 |
 | Magma Stone | ×2.00 | ×2.40 | ×2.80 | ×3.20 | ×3.60 | ×4.00 |
@@ -597,7 +598,7 @@ Each overloaded level costs the item's last regular upgrade times 10, 50, 250, 1
 | Farm Charm | ×1.50 | ×1.70 | ×1.90 | ×2.10 | ×2.30 | ×2.50 |
 | Battle Charm | ×2.00 | ×2.30 | ×2.60 | ×2.90 | ×3.20 | ×3.50 |
 
-The EXP Share, Squirtbottle and Sprinklotad keep the game's maximum. The three charms only exist with the Oak Charms script, which can be loaded before or after this one.
+The Squirtbottle and Sprinklotad keep the game's maximum. The three charms only exist with the Oak Charms script, which can be loaded before or after this one.
 
 The overloaded levels are kept outside the game save, per save file, in the browser storage: the save itself keeps level 5, so your save and your backups stay exactly what the unmodified game would write, and the game without this script simply shows the item at level 5. In the desktop client the levels are also mirrored to a `<trainer> [<save key>] oak-items-overload.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save. An overloaded level is only restored over a save standing at level 5; an item that was reset below that in the meantime keeps its lower level. An item at level 5 or above still counts toward the "max level Oak Item" achievements.
 
