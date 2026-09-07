@@ -27,10 +27,14 @@ try {
         roamers.__internal__followUpTopics.every((t) => focus.__internal__functionalities.some((f) => f.id === t.id)));
 
     // Target selection on a fresh save: Mew is missing in Kanto's first group
-    const missing = roamers.__internal__getMissingRoamers(GameConstants.Region.kanto, 0);
+    const missing = roamers.__internal__getMissingRoamers(GameConstants.Region.kanto, 0, false);
     check('Mew is missing on a fresh save', missing.some((r) => r.pokemon.name === 'Mew'), missing.map((r) => r.pokemon.name).join(','));
     const target = roamers.__internal__findNextTarget();
     check('a Kanto target is found', target !== null && target.region === GameConstants.Region.kanto && target.group === 0);
+    check('the first pass hunts uncaught roamers', target !== null && target.untilShinyCaught === false);
+    storage.setValue(roamers.__internal__advancedSettings.HuntShinies, true);
+    check('shiny mode still starts with the uncaught pass', roamers.__internal__findNextTarget()?.untilShinyCaught === false);
+    storage.setValue(roamers.__internal__advancedSettings.HuntShinies, false);
     const boosted = RoamingPokemonList.getIncreasedChanceRouteBySubRegionGroup(GameConstants.Region.kanto, 0)();
     const reachable = Routes.getRoutesByRegion(GameConstants.Region.kanto)
         .filter((r) => RoamingPokemonList.findGroup(GameConstants.Region.kanto, r.subRegion ?? 0) === 0 && r.isUnlocked());
@@ -59,12 +63,13 @@ try {
     for (const roamer of missing) {
         App.game.party.gainPokemonByName(roamer.pokemon.name, false, true);
     }
-    check('catching them closes the group', roamers.__internal__getMissingRoamers(GameConstants.Region.kanto, 0).length === 0);
+    check('catching them closes the group', roamers.__internal__getMissingRoamers(GameConstants.Region.kanto, 0, false).length === 0);
     check('no target left', roamers.__internal__findNextTarget() === null);
 
-    // In shiny mode, they are missing again until their shiny form is caught
+    // In shiny mode, the second pass takes over: they are missing again until their shiny form is caught
     storage.setValue(roamers.__internal__advancedSettings.HuntShinies, true);
-    check('shiny mode reopens the group', roamers.__internal__getMissingRoamers(GameConstants.Region.kanto, 0).some((r) => r.pokemon.name === 'Mew'));
+    check('shiny mode reopens the group', roamers.__internal__getMissingRoamers(GameConstants.Region.kanto, 0, true).some((r) => r.pokemon.name === 'Mew'));
+    check('the second pass hunts shinies', roamers.__internal__findNextTarget()?.untilShinyCaught === true);
     for (const roamer of missing) {
         App.game.party.gainPokemonByName(roamer.pokemon.name, true, true);
     }

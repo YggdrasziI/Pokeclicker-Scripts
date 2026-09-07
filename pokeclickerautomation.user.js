@@ -2934,7 +2934,8 @@ class AutomationFocusRoamers
                        + Automation.Menu.TooltipSeparator
                        + "Each region has a route where roamers show up three times more often.\n"
                        + "This focus stays on that route until every roamer of the region is\n"
-                       + "caught, then moves on to the next region.\n"
+                       + "caught, then moves on to the next region. Once every region is done,\n"
+                       + "it can go round again for the shiny forms.\n"
                        + "The 'Roamers' settings tab says what to do once none is missing.",
                 run: function() { this.__internal__start(); }.bind(this),
                 stop: function() { this.__internal__stop(); }.bind(this),
@@ -2954,10 +2955,11 @@ class AutomationFocusRoamers
         Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.HuntShinies, false);
 
         // Shiny hunting setting
-        const shinyTooltip = "A roamer keeps being hunted until its shiny form is caught"
+        const shinyTooltip = "Once every roamer of every region has been caught,\n"
+                           + "go round again until their shiny forms are caught too"
                            + Automation.Menu.TooltipSeparator
-                           + "If this option is disabled, a roamer is done with\n"
-                           + "as soon as it has been caught once.";
+                           + "If this option is disabled, the hunt is over\n"
+                           + "as soon as every roamer has been caught once.";
         Automation.Menu.addLabeledAdvancedSettingsToggleButton("Hunt roamers until their shiny form is caught",
                                                                this.__internal__advancedSettings.HuntShinies,
                                                                shinyTooltip,
@@ -3083,7 +3085,7 @@ class AutomationFocusRoamers
         }
 
         // Only catch the roamers that are still missing, the player's own filters handle the rest
-        Automation.Utils.Pokeball.onlyCatchMissingRoamersWith(selectedPokeball, this.__internal__isShinyHuntingEnabled());
+        Automation.Utils.Pokeball.onlyCatchMissingRoamersWith(selectedPokeball, target.untilShinyCaught);
 
         // Move to the best route of the group
         Automation.Utils.Route.moveToRoute(target.route.number, target.route.region);
@@ -3092,11 +3094,41 @@ class AutomationFocusRoamers
     /**
      * @brief Finds the next roamer group to hunt in, and the route to do it on
      *
-     * Regions are considered in order, so the target only changes once a group is completed.
+     * The hunt is done in passes: every roamer of every region once, then, if the shiny
+     * hunting setting is enabled, every one of them again until its shiny form is caught.
      *
-     * @returns The { region, group, route } to hunt on, or null if no reachable roamer is missing
+     * @returns The { region, group, route, untilShinyCaught } to hunt on,
+     *          or null if no reachable roamer is missing
      */
     static __internal__findNextTarget()
+    {
+        const passes = this.__internal__isShinyHuntingEnabled() ? [ false, true ] : [ false ];
+
+        for (const untilShinyCaught of passes)
+        {
+            const target = this.__internal__findNextTargetForPass(untilShinyCaught);
+
+            if (target !== null)
+            {
+                return target;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @brief Finds the next roamer group to hunt in for the given pass, and the route to do it on
+     *
+     * Regions are considered in order, so the target only changes once a group is completed.
+     *
+     * @param {boolean} untilShinyCaught: Whether a roamer is missing until its shiny form is caught,
+     *                                    rather than until it is caught once
+     *
+     * @returns The { region, group, route, untilShinyCaught } to hunt on,
+     *          or null if no reachable roamer is missing for this pass
+     */
+    static __internal__findNextTargetForPass(untilShinyCaught)
     {
         const highestRegion = Math.min(player.highestRegion(), GameConstants.MAX_AVAILABLE_REGION);
 
@@ -3111,7 +3143,7 @@ class AutomationFocusRoamers
 
             for (const group of groups.keys())
             {
-                if (this.__internal__getMissingRoamers(region, group).length == 0)
+                if (this.__internal__getMissingRoamers(region, group, untilShinyCaught).length == 0)
                 {
                     continue;
                 }
@@ -3124,7 +3156,7 @@ class AutomationFocusRoamers
                     continue;
                 }
 
-                return { region, group, route };
+                return { region, group, route, untilShinyCaught };
             }
         }
 
@@ -3136,13 +3168,13 @@ class AutomationFocusRoamers
      *
      * @param {number} region: The region of the group
      * @param {number} group: The roamer group index within the region
+     * @param {boolean} untilShinyCaught: Whether a roamer is missing until its shiny form is caught,
+     *                                    rather than until it is caught once
      *
      * @returns The list of missing RoamingPokemon
      */
-    static __internal__getMissingRoamers(region, group)
+    static __internal__getMissingRoamers(region, group, untilShinyCaught)
     {
-        const untilShinyCaught = this.__internal__isShinyHuntingEnabled();
-
         return RoamingPokemonList.getSubRegionalGroupRoamers(region, group).filter(
             (roamer) => !App.game.party.alreadyCaughtPokemonByName(roamer.pokemon.name, untilShinyCaught));
     }
