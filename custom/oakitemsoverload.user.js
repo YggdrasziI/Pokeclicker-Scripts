@@ -5,7 +5,7 @@
 // @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are kept outside the game save, so the save stays exactly what the unmodified game would write.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.1
+// @version       1.0.2
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -42,8 +42,9 @@ const overloadedOakItems = {
 // currency: 1,000,000 for a regular Oak Item becomes 10M, 50M, 250M, 1B then 5B.
 const overloadCostFactors = [10, 50, 250, 1000, 5000];
 
-// The experience needed for each overloaded level doubles the previous requirement
-const overloadExpFactor = 2;
+// The experience needed for an overloaded level is the item's last regular requirement
+// times this: 10,000 for a regular Oak Item becomes 30k, 100k, 300k, 1M then 3M.
+const overloadExpFactors = [3, 10, 30, 100, 300];
 
 // The Oak Charms script keeps the level of its own items outside the save already;
 // only the game's items need their overloaded levels taken out of it.
@@ -69,8 +70,7 @@ function overloadOakItem(item, bonusList) {
     item.bonusList = item.bonusList.concat(bonusList);
     item.costList = item.costList.concat(
         AmountFactory.createArray(overloadCostFactors.map((factor) => lastCost.amount * factor), lastCost.currency));
-    item.expList = item.expList.concat(
-        bonusList.map((_, index) => lastExp * Math.pow(overloadExpFactor, index + 1)));
+    item.expList = item.expList.concat(overloadExpFactors.map((factor) => lastExp * factor));
     item.maxLevel = baseMaxLevel + bonusList.length;
 }
 

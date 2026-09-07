@@ -580,7 +580,7 @@ Known quirks: the quest completion message and its logbook entry print the base 
 ## [Custom] Oak Items Overload (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakitemsoverload.user.js">oakitemsoverload.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakitemsoverload.user.js">One-Click Install</a>)
 This script lets Oak Items be upgraded past their maximum level, from 5 to 10, through the game's own Oak Items window: once an item reaches level 5 its progress bar keeps filling, and the usual Upgrade button buys the next level. The overloaded levels cost far more than the game's own and need far more experience.
 
-Each overloaded level costs the item's last regular upgrade times 10, 50, 250, 1,000 then 5,000, in the same currency: a regular Oak Item, whose level 5 costs 1,000,000 Pokédollars, costs 10M, 50M, 250M, 1B then 5B. The experience needed doubles at every level, on the item's own scale.
+Each overloaded level costs the item's last regular upgrade times 10, 50, 250, 1,000 then 5,000, in the same currency: a regular Oak Item, whose level 5 costs 1,000,000 Pokédollars, costs 10M, 50M, 250M, 1B then 5B. The experience needed is the item's last regular requirement times 3, 10, 30, 100 then 300, on the item's own scale: a regular Oak Item, which needs 10,000 experience in total for level 5, needs 30,000, 100,000, 300,000, 1,000,000 then 3,000,000 in total.
 
 | Item | Level 5 (game) | 6 | 7 | 8 | 9 | 10 |
 |:-----|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
