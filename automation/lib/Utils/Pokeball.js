@@ -65,6 +65,28 @@ class AutomationUtilsPokeball
     }
 
     /**
+     * @brief Sets the pokéball to use only to catch roaming pokémons that are still missing
+     *
+     * @param pokeballType: The pokéball type to use
+     * @param {boolean} untilShinyCaught: Consider a roamer missing until its shiny form is caught
+     */
+    static onlyCatchMissingRoamersWith(pokeballType, untilShinyCaught)
+    {
+        this.__internal__resetFilter(pokeballType);
+
+        // Only consider roaming encounters
+        this.__internal__automationFilter.options.encounterType = pokeballFilterOptions.encounterType.createSetting();
+        this.__internal__automationFilter.options.encounterType.observableValue(EncounterType.roamer);
+
+        // That were not caught yet
+        const caughtOption = untilShinyCaught ? "caughtShiny" : "caught";
+        this.__internal__automationFilter.options[caughtOption] = pokeballFilterOptions[caughtOption].createSetting();
+        this.__internal__automationFilter.options[caughtOption].observableValue(false);
+
+        this.enableAutomationFilter();
+    }
+
+    /**
      * @brief Restricts the pokemon filter to Shadow pokémons
      *
      * @param includeAlreadyCaught: Already caught shadow pokémons will be considered as well

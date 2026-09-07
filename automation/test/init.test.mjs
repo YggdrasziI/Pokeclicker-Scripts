@@ -201,6 +201,14 @@ new vm.Script(`
     focus.__internal__blockedTopics.set('Wanted',
         { reason: 'test', blockedAt: Date.now() - focus.__internal__blockedTopicRetryDelayMs - 1 });
     globalThis.__fallback.recovered = focus.__internal__findBestAvailableTopic()?.id;
+
+    // A topic can declare its own fallbacks, tried before the general chain
+    focus.__internal__blockedTopics.clear();
+    focus.__internal__blockedTopics.set('Wanted', { reason: 'test', blockedAt: Date.now() });
+    focus.__internal__functionalities[0].fallbackTopics = () => ['Locked', 'Second'];
+    globalThis.__fallback.ownFallback = focus.__internal__findBestAvailableTopic()?.id;
+    focus.__internal__blockedTopics.set('Second', { reason: 'test', blockedAt: Date.now() });
+    globalThis.__fallback.ownFallbackExhausted = focus.__internal__findBestAvailableTopic()?.id;
 })();`, { filename: 'fallback.js' }).runInContext(ctx);
 
 const fb = ctx.__fallback;
@@ -209,6 +217,8 @@ fchk('a locked fallback is skipped', fb.skipsLocked === 'First');
 fchk('the chain is followed in order', fb.second === 'Second');
 fchk('an exhausted chain reports nothing', fb.exhausted === null);
 fchk('an expired block returns the chosen topic', fb.recovered === 'Wanted');
+fchk('a topic-declared fallback comes before the general chain', fb.ownFallback === 'Second');
+fchk('the general chain follows the topic-declared fallbacks', fb.ownFallbackExhausted === 'First');
 
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} failure(s).`);
 process.exit(failures === 0 ? 0 : 1);

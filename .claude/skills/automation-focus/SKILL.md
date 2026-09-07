@@ -18,6 +18,8 @@ A focus topic is a **plain object literal** pushed into
     run: function() {...}.bind(this),
     stop: function() {...},       // optional
     isUnlocked: function() {...}, // optional; absent means always visible
+    fallbackTopics: function() {...}, // optional; topic ids tried right after this topic once it
+                                      // reports itself blocked, before the user's general chain
     refreshRateAsMs: 3000         // or Automation.Focus.__noFunctionalityRefresh (-1)
 }
 ```
@@ -50,7 +52,9 @@ heading option.
 1. `automation/lib/Focus/<Topic>.js`, one class `AutomationFocus<Topic>`.
    `ShadowPurification.js` (305 lines, no settings) is the smallest complete
    example; `PokerusCure.js` is the one to copy when the topic needs precomputed
-   route/dungeon data and advanced settings.
+   route/dungeon data and advanced settings; `Roamers.js` is the one with a
+   settings tab that feeds `fallbackTopics` (per-topic "once done, focus on"
+   toggles, keys `Focus-Roamers-Then<TopicId>`).
 2. `automation/build.mjs` — add it to `SOURCES` **before `lib/Focus.js`**.
    `Focus.js` has static field initializers naming these classes, so a later
    position is a load-time crash.
@@ -87,11 +91,12 @@ behaviour:
 
 1. **Hand over** — `Automation.Focus.__reportBlocked("why")`. This is what a topic
    that has run out of work should do. The topic is marked blocked, the feature
-   moves to the next entry of the user's fallback chain, and the topic gets its
-   turn back once the block expires (`__internal__blockedTopicRetryDelayMs`, 15
+   moves to the next entry of the chain — the chosen topic's own `fallbackTopics()`
+   first, then the user's general fallback chain — and the topic gets its turn
+   back once the block expires (`__internal__blockedTopicRetryDelayMs`, 15
    minutes) or the feature is restarted. Call sites: `Focus.js`
    (`__ensurePlayerHasEnoughBalls`), `Achievements.js`, `PokerusCure.js`,
-   `ShadowPurification.js`.
+   `ShadowPurification.js`, `Roamers.js`.
 2. **Kill the whole feature** — still correct for a condition no other topic could
    survive either. `__ensureNoInstanceIsInProgress` is the one remaining case:
    being inside an instance blocks every topic, so cycling the chain would
@@ -138,6 +143,11 @@ expiring. It does that by planting fake functionalities and calling
 `__internal__findBestAvailableTopic` directly, since driving a real topic into a
 blocked state needs a working game behind it. Extend that block rather than
 inventing a new harness.
+
+`tools/realgame/scenarios/automation-roamers.js` runs the Roamers topic against the
+client's real game build (`node tools/realgame/start.mjs pokeclickerautomation
+--scenario=<it>`): target route, catch filter, completion, follow-up chain. Copy it
+for a topic whose selection logic can be checked without a running battle.
 
 Nothing else about focus behaviour is covered, so state the in-game checks as
 pending and name them: the topic appears in the dropdown at the right position, is

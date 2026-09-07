@@ -22,6 +22,7 @@ const SOURCES = [
     'lib/Focus/Quests.js',
     'lib/Focus/PokerusCure.js',
     'lib/Focus/ShadowPurification.js',
+    'lib/Focus/Roamers.js',
     'lib/Utils/Battle.js',
     'lib/Utils/Gym.js',
     'lib/Utils/LocalStorage.js',

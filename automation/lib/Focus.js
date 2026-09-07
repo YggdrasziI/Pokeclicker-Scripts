@@ -8,6 +8,7 @@ class AutomationFocus
     static Quests = AutomationFocusQuests;
     static PokerusCure = AutomationFocusPokerusCure;
     static ShadowPurification = AutomationFocusShadowPurification;
+    static Roamers = AutomationFocusRoamers;
 
     static Settings = {
                           FeatureEnabled: "Focus-Enabled",
@@ -404,6 +405,13 @@ class AutomationFocus
 
         const pokerusCureTabContainer = Automation.Menu.addTabElement(focusSettingPanel, "Pokérus Cure", focusSettingsTabsGroup);
         this.PokerusCure.__buildAdvancedSettings(pokerusCureTabContainer);
+
+        /**********************\
+        |*  Roamers settings  *|
+        \**********************/
+
+        const roamersTabContainer = Automation.Menu.addTabElement(focusSettingPanel, "Roamers", focusSettingsTabsGroup);
+        this.Roamers.__buildAdvancedSettings(roamersTabContainer);
     }
 
     /**
@@ -661,14 +669,18 @@ class AutomationFocus
     /**
      * @brief Picks the first topic of the chain that is neither blocked nor locked
      *
-     * The chain is the chosen topic first, then the user-ordered fallbacks. The chosen topic
-     * always comes first, so the moment its block expires it takes over again.
+     * The chain is the chosen topic first, then the fallbacks the chosen topic declares itself
+     * (its `fallbackTopics` member, if any), then the user-ordered general fallbacks. The chosen
+     * topic always comes first, so the moment its block expires it takes over again.
      *
      * @returns The functionality to run, or null if every one of them is unavailable
      */
     static __internal__findBestAvailableTopic()
     {
-        const orderedIds = [ this.__internal__wantedTopicId, ...this.__internal__getFallbackOrder() ];
+        const wantedFunctionality = this.__internal__functionalities.find((candidate) => candidate.id === this.__internal__wantedTopicId);
+        const topicFallbacks = (wantedFunctionality?.fallbackTopics !== undefined) ? wantedFunctionality.fallbackTopics() : [];
+
+        const orderedIds = [ this.__internal__wantedTopicId, ...topicFallbacks, ...this.__internal__getFallbackOrder() ];
 
         for (const topicId of orderedIds)
         {
@@ -790,6 +802,7 @@ class AutomationFocus
         this.Achievements.__registerFunctionalities(this.__internal__functionalities);
         this.PokerusCure.__registerFunctionalities(this.__internal__functionalities);
         this.ShadowPurification.__registerFunctionalities(this.__internal__functionalities);
+        this.Roamers.__registerFunctionalities(this.__internal__functionalities);
 
         this.__internal__addGemsFocusFunctionalities();
     }
