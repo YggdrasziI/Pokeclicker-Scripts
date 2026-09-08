@@ -101,7 +101,8 @@ testing the previous version.
 `tools/realgame/start.mjs` loads the build the desktop client downloaded
 (`%APPDATA%\pokeclicker-desktop\pokeclicker-master\docs`, the `master` branch, not
 the `develop` source), injects the named scripts and runs the game's start
-sequence; `--scenario=<file>` runs in-page checks afterwards. See
+sequence; `--scenario=<file>` runs in-page checks afterwards and `--save=<file>`
+starts from a save file (a game export or an Automation backup). See
 `tools/realgame/README.md`. It cannot draw, fetch assets or play sounds.
 
 There is no root `package.json`, no linter, and no CI. The build, those three

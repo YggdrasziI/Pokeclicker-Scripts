@@ -5,6 +5,7 @@
 //   node tools/realgame/start.mjs                              # the game alone
 //   node tools/realgame/start.mjs shinyvariants customachievements
 //   node tools/realgame/start.mjs shinyvariants --scenario=path/to/scenario.js
+//   node tools/realgame/start.mjs pokeclickerautomation --save=path/to/backup.txt
 //
 // Scripts are named by their file without .user.js, looked up in custom/ then at
 // the root. A scenario is a plain script run in the page once the game started; it
@@ -12,7 +13,9 @@
 //
 // The game build is the one the desktop client downloaded, under its data folder
 // (%APPDATA%/pokeclicker-desktop/pokeclicker-master/docs); --docs=<dir> points at
-// another build. jsdom comes from automation/test (run npm install there first).
+// another build. --save=<file> starts from a save file instead of a fresh game: a
+// game export or an Automation backup, the base64 the game's own "load from file"
+// reads. jsdom comes from automation/test (run npm install there first).
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -25,10 +28,11 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const options = {
     docs: path.join(process.env.APPDATA ?? '', 'pokeclicker-desktop', 'pokeclicker-master', 'docs'),
     scenario: null,
+    save: null,
 };
 const scripts = [];
 for (const arg of process.argv.slice(2)) {
-    const match = /^--(docs|scenario)=(.+)$/.exec(arg);
+    const match = /^--(docs|scenario|save)=(.+)$/.exec(arg);
     if (match) {
         options[match[1]] = match[2];
     } else if (arg.startsWith('--')) {
@@ -132,6 +136,31 @@ if (pageErrors.length) {
     console.log(`errors in the priority functions:\n${pageErrors.map((e) => String(e.detail?.stack ?? e.message ?? e).slice(0, 800)).join('\n')}`);
     pageErrors.length = 0;
     ok = false;
+}
+
+// A save file is what the game's Save.loadFromFile stores before reloading the page:
+// the three localStorage entries the Game constructor and initialize() read
+if (options.save) {
+    const contents = readFileSync(options.save, 'utf8').trim();
+    ok = run(`
+try {
+    let decoded;
+    try { decoded = SaveSelector.atob(${JSON.stringify(contents)}); } catch (e) { decoded = null; }
+    const json = JSON.parse(decoded || ${JSON.stringify(contents)});
+    if (!json.player || !json.save) {
+        throw new Error('not a save file: no player or save entry');
+    }
+    localStorage.setItem('player', JSON.stringify(json.player));
+    localStorage.setItem('save', JSON.stringify(json.save));
+    if (json.settings) {
+        localStorage.setItem('settings', JSON.stringify(json.settings));
+    }
+    console.log('save loaded: ' + (json.save.profile?.name ?? 'unnamed') + ', region ' + json.player.highestRegion);
+} catch (error) {
+    console.log('SAVE LOAD FAILED: ' + (error.stack || error));
+    throw error;
+}
+`, 'save') && ok;
 }
 
 // App.start once the assets are loaded, without Preload

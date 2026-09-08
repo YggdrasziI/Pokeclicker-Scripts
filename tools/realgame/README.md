@@ -8,6 +8,7 @@ closest thing to launching the client, from the terminal, in a few seconds.
 node tools/realgame/start.mjs                                   # the game alone
 node tools/realgame/start.mjs shinyvariants customachievements  # with scripts
 node tools/realgame/start.mjs shinyvariants --scenario=tools/realgame/scenarios/shinyvariants-save.js
+node tools/realgame/start.mjs enhancedautoclicker --save=path/to/backup.txt   # from a save file
 ```
 
 It exits with 1 and prints the stack when the game cannot start, when a script's
@@ -19,6 +20,10 @@ priority function throws, or when the scenario fails.
 - **Scripts** are named by their file without `.user.js`, looked up in `custom/` then
   at the root. Their desktop enable flag is set, so they register as they would in
   the client.
+- **A save** (`--save=<file>`) starts the game from a save file instead of a fresh
+  game: a game export or an Automation backup (the desktop client keeps those under
+  `%APPDATA%pokeclicker-desktopsave-backups`), the base64 the game's own
+  "load from file" reads. Nothing is written back to the file.
 - **A scenario** is a plain script run in the page once the game has started, with
   the game's globals in scope. It sets `window.__scenario` to `true` or `false`;
   `scenarios/` holds the existing ones.
