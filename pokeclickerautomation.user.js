@@ -15934,15 +15934,18 @@ class AutomationShop
         titleDiv.style.marginBottom = "10px";
         shoppingSettingPanel.appendChild(titleDiv);
 
-        // Tabs are mostly one per currency, but evolution stones are sold for quest points, just
-        // like eggs, so those two need an extra filter to tell them apart
+        // Tabs are mostly one per currency, but evolution stones and the Beast Ball are sold for
+        // quest points, just like eggs, so those need an extra filter to tell them apart
         const isStone = (item) => Automation.Utils.isInstanceOf(item, "EvolutionStone");
+        const isBall = (item) => Automation.Utils.isInstanceOf(item, "PokeballItem");
 
         let isAnyItemHidden = this.__internal__buildShopItemListMenu(shoppingSettingPanel, "Pokédollars", GameConstants.Currency.money);
         isAnyItemHidden |= this.__internal__buildShopItemListMenu(
-            shoppingSettingPanel, "Eggs", GameConstants.Currency.questPoint, (item) => !isStone(item));
+            shoppingSettingPanel, "Eggs", GameConstants.Currency.questPoint, (item) => !isStone(item) && !isBall(item));
         isAnyItemHidden |= this.__internal__buildShopItemListMenu(
             shoppingSettingPanel, "Evolution items", GameConstants.Currency.questPoint, isStone);
+        isAnyItemHidden |= this.__internal__buildShopItemListMenu(
+            shoppingSettingPanel, "Beast Balls", GameConstants.Currency.questPoint, isBall);
         isAnyItemHidden |= this.__internal__buildShopItemListMenu(shoppingSettingPanel, "Farm tools", GameConstants.Currency.farmPoint);
 
         // Set an unlock watcher if needed
@@ -16401,6 +16404,9 @@ class AutomationShop
                     // Evolution items
                     //   - Evolution stones
                     //
+                    // Beast Balls
+                    //   - The Beast Ball, sold for quest points
+                    //
                     // Farm tools
                     //   - Mulch
                     //   - Shovels
@@ -16421,9 +16427,14 @@ class AutomationShop
                         continue;
                     }
 
-                    // Skip any balls that are not sold in pokédollars for now (as they would be in out of contect of the tab)
+                    // Balls go to the Pokédollars tab, or to the quest points one for the Beast Ball,
+                    // which is only sold that way. The other currencies have no tab, and a ball
+                    // sold both ways (the Master Ball) keeps its Pokédollars entry: every variant
+                    // shares the ball's name, so a second one would merge into the first
                     if (Automation.Utils.isInstanceOf(item, "PokeballItem")
-                        && (item.currency != GameConstants.Currency.money))
+                        && (item.currency != GameConstants.Currency.money)
+                        && ((item.currency != GameConstants.Currency.questPoint)
+                            || (ItemList[item.name].currency != GameConstants.Currency.questPoint)))
                     {
                         continue;
                     }
@@ -16586,6 +16597,13 @@ class AutomationShop
 
                 // Stop buying at a stock of 10'000 by default
                 Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.TargetAmount(itemData.item.name), 10000);
+            }
+            else if ((itemData.item.currency == GameConstants.Currency.questPoint)
+                     && Automation.Utils.isInstanceOf(itemData.item, "PokeballItem"))
+            {
+                // Beast Balls: buy 10 at a time, up to a stock of 100, by default
+                Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.BuyAmount(itemData.item.name), 10);
+                Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.TargetAmount(itemData.item.name), 100);
             }
             else if (itemData.item.currency == GameConstants.Currency.questPoint)
             {
