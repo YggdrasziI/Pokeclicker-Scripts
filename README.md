@@ -256,6 +256,8 @@ I think this would cover mostly everything, but if there are any other questions
 
 I think the rest of the buttons there are self-explanatory, and you guys can have fun testing that stuff out and playing around with it.
 
+Next to the Catch Filter switch, the **Empty filter → game filters** button decides what happens when the Catch Filter is on but nothing is filtered at all (no Pokémon in your list and no type enabled). Off, the script catches nothing until you filter something. On, the game's own Pokéball filters pick the ball as if the script were off, so a cleared list never stops your catches; as soon as you filter a Pokémon or enable a type, the script takes over again.
+
 <hr>
 
 <a name="enhanced-auto-clicker"></a>

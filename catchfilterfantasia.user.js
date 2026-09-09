@@ -5,7 +5,7 @@
 // @description   An experimental catch filter that aims to help you have much better control and will completely change how you capture Pokémon.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.9.3
+// @version       1.10.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -20,6 +20,7 @@
 
 const ballNames = ['None', 'Pokeball', 'Greatball', 'Ultraball', 'Masterball', 'Fastball', 'Quickball', 'Timerball', 'Duskball', 'Luxuryball', 'Diveball', 'Lureball', 'Nestball', 'Repeatball', 'Beastball'];
 var filterState;
+var filterFallback;
 var filterTypes;
 var filterBallPref;
 var catchFilter;
@@ -77,6 +78,7 @@ function initCatchFilter() {
 
     const modalBody = document.querySelector('[id=filterModal] div div [class=modal-body]');
     modalBody.innerHTML = `<button id="catch-filter" class="btn btn-${filterColor ? 'success' : 'danger'}" style="margin-left:20px;">Catch Filter ${filterState ? '[ON]' : '[OFF]'}</button>
+    <button id="catch-filter-fallback" class="btn btn-${filterFallback ? 'success' : 'danger'}" style="margin-left:20px;" title="When no Pokémon and no type is filtered, the game's own Pokéball filters pick the ball instead of catching nothing">Empty filter → game filters ${filterFallback ? '[ON]' : '[OFF]'}</button>
     <hr>
     <div id="filter-btn-cont"></div>
     <hr>
@@ -113,6 +115,7 @@ function initCatchFilter() {
     document.getElementById('unfilter-all').addEventListener('click', () => { unfilterAllPoke(); });
     document.getElementById('reset-ball-filter').addEventListener('click', () => { resetBallFilterAll(); });
     document.getElementById('catch-filter').addEventListener('click', (event) => { toggleCatchFilter(event); });
+    document.getElementById('catch-filter-fallback').addEventListener('click', (event) => { toggleCatchFilterFallback(event); });
     document.getElementById('filter-search').addEventListener('input', (event) => { filterPokeSearch(event); });
 
     overloadPokeballMethod();
@@ -325,6 +328,14 @@ function toggleCatchFilter(event) {
     localStorage.setItem('filterState', filterState);
 }
 
+function toggleCatchFilterFallback(event) {
+    const elem = event.target;
+    filterFallback = !filterFallback;
+    elem.setAttribute('class', `btn btn-${filterFallback ? 'success' : 'danger'}`);
+    elem.innerText = `Empty filter → game filters ${filterFallback ? "[ON]" : "[OFF]"}`;
+    localStorage.setItem('filterFallback', filterFallback);
+}
+
 function filterPokeSearch(event) {
     document.getElementById('filter-results').innerHTML = '';
     let pokeStr;
@@ -415,12 +426,14 @@ function overloadPokeballMethod() {
         const overrideBallS = ballPrefS !== GameConstants.Pokeball.None;
 
         const isAllowed = catchFilter.includes(id) || filterTypes[type1] || filterTypes[type2]
+        // Nothing filtered at all: with the fallback on, the game's own filters decide instead of catching nothing
+        const fallbackToGame = filterFallback && catchFilter.length == 0 && !filterTypes.includes(true);
 
         if (filterState && isAllowed && isShiny && overrideBallS && hasBall(ballPrefS)) {
             return ballPrefS;
         } else if (filterState && isAllowed && !isShiny && overrideBallN && hasBall(ballPrefN)) {
             return ballPrefN;
-        } else if (filterState && !isAllowed) {
+        } else if (filterState && !isAllowed && !fallbackToGame) {
             return GameConstants.Pokeball.None;
         } else {
             return App.game.pokeballs.oldCalculatePokeballToUse(id, isShiny, isShadow, encounterType);
@@ -437,6 +450,9 @@ function overloadPokeballMethod() {
 if (!localStorage.getItem('filterState')) {
     localStorage.setItem('filterState', false);
 }
+if (!localStorage.getItem('filterFallback')) {
+    localStorage.setItem('filterFallback', false);
+}
 if (!localStorage.getItem('filterTypes')) {
     const typeArray = new Array(18).fill(false, 0, 18);
     localStorage.setItem('filterTypes', JSON.stringify(typeArray));
@@ -449,6 +465,7 @@ if (!localStorage.getItem('catchFilter')) {
     localStorage.setItem('catchFilter', JSON.stringify([]));
 }
 filterState = JSON.parse(localStorage.getItem('filterState'));
+filterFallback = JSON.parse(localStorage.getItem('filterFallback'));
 filterTypes = JSON.parse(localStorage.getItem('filterTypes'));
 catchFilter = JSON.parse(localStorage.getItem('catchFilter'));
 filterBallPref = JSON.parse(localStorage.getItem('filterBallPref'));
