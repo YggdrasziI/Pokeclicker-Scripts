@@ -5,7 +5,7 @@
 // @description   An experimental catch filter that aims to help you have much better control and will completely change how you capture Pokémon.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.10.0
+// @version       1.11.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -78,7 +78,7 @@ function initCatchFilter() {
 
     const modalBody = document.querySelector('[id=filterModal] div div [class=modal-body]');
     modalBody.innerHTML = `<button id="catch-filter" class="btn btn-${filterColor ? 'success' : 'danger'}" style="margin-left:20px;">Catch Filter ${filterState ? '[ON]' : '[OFF]'}</button>
-    <button id="catch-filter-fallback" class="btn btn-${filterFallback ? 'success' : 'danger'}" style="margin-left:20px;" title="When no Pokémon and no type is filtered, the game's own Pokéball filters pick the ball instead of catching nothing">Empty filter → game filters ${filterFallback ? '[ON]' : '[OFF]'}</button>
+    <button id="catch-filter-fallback" class="btn btn-${filterFallback ? 'success' : 'danger'}" style="margin-left:20px;" title="Pokémon outside your filter (not listed, no type on) follow the game's own Pokéball filters instead of being ignored">Unfiltered Pokémon → game filters ${filterFallback ? '[ON]' : '[OFF]'}</button>
     <hr>
     <div id="filter-btn-cont"></div>
     <hr>
@@ -332,7 +332,7 @@ function toggleCatchFilterFallback(event) {
     const elem = event.target;
     filterFallback = !filterFallback;
     elem.setAttribute('class', `btn btn-${filterFallback ? 'success' : 'danger'}`);
-    elem.innerText = `Empty filter → game filters ${filterFallback ? "[ON]" : "[OFF]"}`;
+    elem.innerText = `Unfiltered Pokémon → game filters ${filterFallback ? "[ON]" : "[OFF]"}`;
     localStorage.setItem('filterFallback', filterFallback);
 }
 
@@ -426,14 +426,13 @@ function overloadPokeballMethod() {
         const overrideBallS = ballPrefS !== GameConstants.Pokeball.None;
 
         const isAllowed = catchFilter.includes(id) || filterTypes[type1] || filterTypes[type2]
-        // Nothing filtered at all: with the fallback on, the game's own filters decide instead of catching nothing
-        const fallbackToGame = filterFallback && catchFilter.length == 0 && !filterTypes.includes(true);
 
         if (filterState && isAllowed && isShiny && overrideBallS && hasBall(ballPrefS)) {
             return ballPrefS;
         } else if (filterState && isAllowed && !isShiny && overrideBallN && hasBall(ballPrefN)) {
             return ballPrefN;
-        } else if (filterState && !isAllowed && !fallbackToGame) {
+        } else if (filterState && !isAllowed && !filterFallback) {
+            // Outside the filter: ignored, unless the fallback hands it to the game's own filters
             return GameConstants.Pokeball.None;
         } else {
             return App.game.pokeballs.oldCalculatePokeballToUse(id, isShiny, isShadow, encounterType);

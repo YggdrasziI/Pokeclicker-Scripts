@@ -256,7 +256,7 @@ I think this would cover mostly everything, but if there are any other questions
 
 I think the rest of the buttons there are self-explanatory, and you guys can have fun testing that stuff out and playing around with it.
 
-Next to the Catch Filter switch, the **Empty filter → game filters** button decides what happens when the Catch Filter is on but nothing is filtered at all (no Pokémon in your list and no type enabled). Off, the script catches nothing until you filter something. On, the game's own Pokéball filters pick the ball as if the script were off, so a cleared list never stops your catches; as soon as you filter a Pokémon or enable a type, the script takes over again.
+Next to the Catch Filter switch, the **Unfiltered Pokémon → game filters** button decides what happens to the Pokémon your filter does not cover, the ones neither in your list nor of an enabled type. Off, they are ignored and never caught, which is the original behaviour. On, they follow the game's own Pokéball filters as if the script were off, while the Pokémon you did filter keep the balls you chose for them. For instance, with only Hoopa filtered and set to a Master Ball for both its normal and shiny forms, Hoopa gets the Master Ball and everything else is caught the way the game's filters say, instead of not at all.
 
 <hr>
 

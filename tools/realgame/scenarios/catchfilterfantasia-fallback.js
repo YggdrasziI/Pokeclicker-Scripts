@@ -1,7 +1,7 @@
-// Scenario for tools/realgame/start.mjs, with catchfilterfantasia: when the script's
-// Catch Filter is on but nothing is filtered (no Pokémon, no type), the "Empty filter
-// → game filters" option lets the game's own Pokéball filters pick the ball instead of
-// catching nothing. A filtered Pokémon or an enabled type switches the fallback off again.
+// Scenario for tools/realgame/start.mjs, with catchfilterfantasia: the "Unfiltered
+// Pokémon → game filters" option hands the Pokémon the script's filter does not cover
+// (not listed, no type on) to the game's own Pokéball filters instead of ignoring them,
+// while the filtered Pokémon keep the balls chosen for them.
 try {
     const out = [];
     const check = (label, condition, detail) => {
@@ -11,54 +11,63 @@ try {
         }
     };
     const NONE = GameConstants.Pokeball.None;
+    const MASTER = GameConstants.Pokeball.Masterball;
     const pick = (id, shiny = false) => App.game.pokeballs.calculatePokeballToUse(id, shiny, false, EncounterType.route);
     const vanilla = (id, shiny = false) => App.game.pokeballs.oldCalculatePokeballToUse(id, shiny, false, EncounterType.route);
+    const indexOf = (id) => pokemonList.findIndex(p => p.id == id);
+    const bulbasaur = 1;
+    const charmander = 4;
+    const hoopa = 720;
 
     // Setup: the game's own filters give a Pokéball to an uncaught Pokémon
     App.game.pokeballs.gainPokeballs(GameConstants.Pokeball.Pokeball, 50, false);
-    const bulbasaur = 1;
-    check('the game filters would use a Pokéball', vanilla(bulbasaur) === GameConstants.Pokeball.Pokeball, vanilla(bulbasaur));
+    App.game.pokeballs.gainPokeballs(MASTER, 5, false);
+    check('the game filters would use a Pokéball', vanilla(bulbasaur) === GameConstants.Pokeball.Pokeball && vanilla(hoopa) === GameConstants.Pokeball.Pokeball, vanilla(bulbasaur));
 
     const fallbackBtn = document.getElementById('catch-filter-fallback');
     check('fallback button in the filter modal', !!fallbackBtn && fallbackBtn.textContent.endsWith('[OFF]'), fallbackBtn?.textContent);
     check('fallback off by default', filterFallback === false && localStorage.getItem('filterFallback') === 'false');
 
-    // Filter on, nothing filtered, fallback off: nothing is caught (previous behaviour)
+    // Hoopa alone in the filter, Master Ball for both forms, fallback off: everything else is ignored
     filterState = true;
-    catchFilter = [];
     filterTypes.fill(false);
-    check('empty filter without fallback catches nothing', pick(bulbasaur) === NONE && pick(bulbasaur, true) === NONE);
+    catchFilter = [hoopa];
+    filterBallPref[indexOf(hoopa)] = { normal: MASTER + 1, shiny: MASTER + 1 };
+    check('Hoopa gets the Master Ball', pick(hoopa) === MASTER && pick(hoopa, true) === MASTER, pick(hoopa));
+    check('without fallback, an unfiltered Pokémon is not caught', pick(bulbasaur) === NONE && pick(bulbasaur, true) === NONE);
 
-    // Fallback on: the game filters decide
+    // Fallback on: the unfiltered Pokémon follow the game filters, Hoopa keeps its ball
     fallbackBtn.click();
     check('button toggled on', filterFallback === true && localStorage.getItem('filterFallback') === 'true' && fallbackBtn.innerText.endsWith('[ON]'), fallbackBtn.innerText);
     check('button turned green', fallbackBtn.className === 'btn btn-success');
-    check('empty filter with fallback uses the game filters', pick(bulbasaur) === vanilla(bulbasaur) && pick(bulbasaur, true) === vanilla(bulbasaur, true), pick(bulbasaur));
+    check('Hoopa still gets the Master Ball', pick(hoopa) === MASTER && pick(hoopa, true) === MASTER);
+    check('with fallback, an unfiltered Pokémon follows the game filters', pick(bulbasaur) === vanilla(bulbasaur) && pick(bulbasaur, true) === vanilla(bulbasaur, true), pick(bulbasaur));
 
-    // A filtered Pokémon makes the script's filter non-empty again
-    catchFilter = [4];
-    check('another filtered Pokémon: unfiltered one is not caught', pick(bulbasaur) === NONE);
-    check('filtered Pokémon without ball preference uses the game filters', pick(4) === vanilla(4));
-    filterBallPref[pokemonList.findIndex(p => p.id == 4)] = { normal: 2, shiny: 0 };
-    App.game.pokeballs.gainPokeballs(GameConstants.Pokeball.Greatball, 5, false);
-    check('filtered Pokémon with ball preference keeps it', pick(4) === GameConstants.Pokeball.Greatball);
-    catchFilter = [];
-
-    // An enabled type does too
+    // A type on: Pokémon of that type are the script's, without a ball choice they follow the game filters
     filterTypes[PokemonType.Fire] = true;
-    check('a type on: Pokémon of another type is not caught', pick(bulbasaur) === NONE);
-    check('a type on: Pokémon of that type uses the game filters', pick(4) === GameConstants.Pokeball.Greatball);
+    check('a Fire Pokémon without ball choice follows the game filters', pick(charmander) === vanilla(charmander));
+    filterBallPref[indexOf(charmander)] = { normal: GameConstants.Pokeball.Greatball + 1, shiny: 0 };
+    App.game.pokeballs.gainPokeballs(GameConstants.Pokeball.Greatball, 5, false);
+    check('a Fire Pokémon with a ball choice keeps it', pick(charmander) === GameConstants.Pokeball.Greatball);
+    check('a Pokémon of another type follows the game filters', pick(bulbasaur) === vanilla(bulbasaur));
+    fallbackBtn.click();
+    check('button toggled off', filterFallback === false && localStorage.getItem('filterFallback') === 'false' && fallbackBtn.className === 'btn btn-danger');
+    check('without fallback, a Pokémon of another type is not caught', pick(bulbasaur) === NONE);
+    check('the Fire Pokémon keeps its ball either way', pick(charmander) === GameConstants.Pokeball.Greatball);
     filterTypes.fill(false);
+    fallbackBtn.click();
+
+    // An empty filter with the fallback: everything follows the game filters
+    catchFilter = [];
+    check('empty filter with fallback follows the game filters', pick(bulbasaur) === vanilla(bulbasaur) && pick(hoopa) === vanilla(hoopa));
+    fallbackBtn.click();
+    check('empty filter without fallback catches nothing', pick(bulbasaur) === NONE && pick(hoopa) === NONE);
 
     // Filter off: the game filters, whatever the option
     filterState = false;
-    check('filter off leaves the game filters alone', pick(bulbasaur) === vanilla(bulbasaur));
-
-    // Back off
+    check('filter off leaves the game filters alone', pick(bulbasaur) === vanilla(bulbasaur) && pick(hoopa) === vanilla(hoopa));
     fallbackBtn.click();
-    check('button toggled off', filterFallback === false && localStorage.getItem('filterFallback') === 'false' && fallbackBtn.className === 'btn btn-danger');
-    filterState = true;
-    check('empty filter without fallback catches nothing again', pick(bulbasaur) === NONE);
+    check('filter off with fallback leaves the game filters alone', filterFallback === true && pick(hoopa) === vanilla(hoopa));
 
     console.log(out.join('\n'));
     window.__scenario = !window.__scenarioFailed;
