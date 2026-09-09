@@ -537,18 +537,23 @@ There may be some other cool or neat custom events added in with this as well.
 
 <a name="custom-oak-charms"></a>
 ## [Custom] Oak Charms (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakcharms.user.js">oakcharms.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakcharms.user.js">One-Click Install</a>)
-This script adds three Oak Items to the game's own Oak Items window. Each one multiplies a currency the way the Amulet Coin multiplies Pokédollars, takes one of your Oak Item slots like any other item, and shows up with that currency's icon since the game has no sprite for it. All three level up from the Oak Items window for a Pokédollar upgrade cost, once they have earned enough experience by being used.
+This script adds three Oak Items to the game's own Oak Items window. Each one multiplies a currency the way the Amulet Coin multiplies Pokédollars, takes one of your Oak Item slots like any other item, and shows up with that currency's icon since the game has no sprite for it. All three level up from the Oak Items window, from level 0 to 10, for a Pokédollar upgrade cost, once they have earned enough experience by being used. The first five levels are on the scale of the game's own Oak Items; levels 6 to 10 are on the far steeper scale of the Oak Items Overload script, each costing the level 5 upgrade times 10, 50, 250, 1,000 then 5,000 and needing its experience times 3, 10, 30, 100 then 300.
 
 <strong>Quest Charm</strong> multiplies the Quest Points you gain from quests. It unlocks when you reach Johto, and gains 1 experience each time it multiplies a quest reward.
 
 | Level | Bonus | Quests claimed (total) | Upgrade cost |
 |:-----:|:-----:|:----------------------:|:------------:|
-| 0 | ×1.25 | – | 1,000,000 |
-| 1 | ×1.30 | 10 | 2,500,000 |
-| 2 | ×1.35 | 100 | 5,000,000 |
-| 3 | ×1.40 | 250 | 10,000,000 |
-| 4 | ×1.45 | 500 | 20,000,000 |
-| 5 | ×1.50 | 1,000 | – |
+| 0 | ×1.15 | – | 1,000,000 |
+| 1 | ×1.25 | 10 | 2,500,000 |
+| 2 | ×1.50 | 100 | 5,000,000 |
+| 3 | ×1.75 | 250 | 10,000,000 |
+| 4 | ×2.00 | 500 | 20,000,000 |
+| 5 | ×2.25 | 1,000 | 200,000,000 |
+| 6 | ×2.50 | 3,000 | 1,000,000,000 |
+| 7 | ×2.75 | 10,000 | 5,000,000,000 |
+| 8 | ×3.00 | 30,000 | 20,000,000,000 |
+| 9 | ×3.25 | 100,000 | 100,000,000,000 |
+| 10 | ×3.50 | 300,000 | – |
 
 <strong>Farm Charm</strong> multiplies the Farm Points you gain from harvesting berries and from wandering Pokémon. It unlocks once you have unlocked 5 berries, and gains 1 experience per Farm Point received while equipped.
 
@@ -559,7 +564,12 @@ This script adds three Oak Items to the game's own Oak Items window. Each one mu
 | 2 | ×1.35 | 10,000 | 375,000 |
 | 3 | ×1.40 | 25,000 | 750,000 |
 | 4 | ×1.45 | 100,000 | 1,500,000 |
-| 5 | ×1.50 | 250,000 | – |
+| 5 | ×1.50 | 250,000 | 15,000,000 |
+| 6 | ×1.70 | 750,000 | 75,000,000 |
+| 7 | ×1.90 | 2,500,000 | 375,000,000 |
+| 8 | ×2.10 | 7,500,000 | 1,500,000,000 |
+| 9 | ×2.30 | 25,000,000 | 7,500,000,000 |
+| 10 | ×2.50 | 75,000,000 | – |
 
 <strong>Battle Charm</strong> multiplies the Battle Points awarded at the end of a Battle Frontier run. It unlocks once you own Deoxys, the stage 100 reward of the Battle Frontier, and gains 1 experience per Battle Frontier stage completed while equipped.
 
@@ -570,7 +580,12 @@ This script adds three Oak Items to the game's own Oak Items window. Each one mu
 | 2 | ×1.50 | 1,000 | 50,000,000 |
 | 3 | ×1.60 | 2,500 | 100,000,000 |
 | 4 | ×1.75 | 5,000 | 500,000,000 |
-| 5 | ×2.00 | 25,000 | – |
+| 5 | ×2.00 | 25,000 | 5,000,000,000 |
+| 6 | ×2.30 | 75,000 | 25,000,000,000 |
+| 7 | ×2.60 | 250,000 | 125,000,000,000 |
+| 8 | ×2.90 | 750,000 | 500,000,000,000 |
+| 9 | ×3.20 | 2,500,000 | 2,500,000,000,000 |
+| 10 | ×3.50 | 7,500,000 | – |
 
 The charm progress is kept outside the game save, per save file, in the browser storage, so your save and your backups stay exactly what the unmodified game would write, and a save touched by this script still loads without it. In the desktop client the progress is also mirrored to a `<trainer> [<save key>] oak-charms.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save, such as after importing a backup into a fresh install. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
 
@@ -596,11 +611,8 @@ Each overloaded level costs the item's last regular upgrade times 10, 50, 250, 1
 | Cell Battery | ×2.00 | ×2.30 | ×2.60 | ×2.90 | ×3.20 | ×3.50 |
 | Explosive Charge | 10 | 11 | 12 | 13 | 14 | 15 |
 | Treasure Scanner | 24% | 26% | 28% | 30% | 32% | 35% |
-| Quest Charm | ×2.25 | ×2.50 | ×2.75 | ×3.00 | ×3.25 | ×3.50 |
-| Farm Charm | ×1.50 | ×1.70 | ×1.90 | ×2.10 | ×2.30 | ×2.50 |
-| Battle Charm | ×2.00 | ×2.30 | ×2.60 | ×2.90 | ×3.20 | ×3.50 |
 
-The Squirtbottle and Sprinklotad keep the game's maximum. The three charms only exist with the Oak Charms script, which can be loaded before or after this one.
+The Squirtbottle and Sprinklotad keep the game's maximum. The Oak Charms have their own ten levels, on the same scale, in their own script.
 
 The overloaded levels are kept outside the game save, per save file, in the browser storage: the save itself keeps level 5, so your save and your backups stay exactly what the unmodified game would write, and the game without this script simply shows the item at level 5. In the desktop client the levels are also mirrored to a `<trainer> [<save key>] oak-items-overload.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save. An overloaded level is only restored over a save standing at level 5; an item that was reset below that in the meantime keeps its lower level. An item at level 5 or above still counts toward the "max level Oak Item" achievements.
 

@@ -5,7 +5,7 @@
 // @description   Adds three Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.2.0
+// @version       1.3.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -20,7 +20,10 @@
 
 // One entry per added Oak Item. The order is the order of their enum values and
 // of their tiles, and 'key' is the name they are saved under: never reorder or
-// rename an entry once released.
+// rename an entry once released. Each charm has ten levels: the first five on the
+// scale of the game's own Oak Items, the last five far steeper, on the scale of
+// the Oak Items Overload script (each costs the level 5 upgrade times 10, 50, 250,
+// 1,000 then 5,000, and needs its experience times 3, 10, 30, 100 then 300).
 //   currency:  the wallet currency the charm multiplies
 //   expOnGain: exp granted when that currency is gained (base amount, bonus applied)
 //   icon:      replaces the missing assets/images/oakitems/<key>.png
@@ -29,9 +32,9 @@ const oakCharms = [
         key: 'Quest_Charm',
         displayName: 'Quest Charm',
         description: 'Gain more Quest Points from quests',
-        bonusList: [1.15, 1.25, 1.5, 1.75, 2.00, 2.25],
-        expList: [10, 100, 250, 500, 1000],
-        costList: [1000000, 2500000, 5000000, 10000000, 20000000],
+        bonusList: [1.15, 1.25, 1.5, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 3.25, 3.50],
+        expList: [10, 100, 250, 500, 1000, 3000, 10000, 30000, 100000, 300000],
+        costList: [1000000, 2500000, 5000000, 10000000, 20000000, 200000000, 1000000000, 5000000000, 20000000000, 100000000000],
         currency: 'questPoint',
         // One exp per quest reward, whatever its size
         expOnGain: () => 1,
@@ -43,9 +46,9 @@ const oakCharms = [
         key: 'Farm_Charm',
         displayName: 'Farm Charm',
         description: 'Gain more Farm Points from harvesting',
-        bonusList: [1.25, 1.30, 1.35, 1.40, 1.45, 1.50],
-        expList: [1000, 10000, 25000, 100000, 250000],
-        costList: [75000, 150000, 375000, 750000, 1500000],
+        bonusList: [1.25, 1.30, 1.35, 1.40, 1.45, 1.50, 1.70, 1.90, 2.10, 2.30, 2.50],
+        expList: [1000, 10000, 25000, 100000, 250000, 750000, 2500000, 7500000, 25000000, 75000000],
+        costList: [75000, 150000, 375000, 750000, 1500000, 15000000, 75000000, 375000000, 1500000000, 7500000000],
         currency: 'farmPoint',
         // One exp per Farm Point actually received
         expOnGain: (base, bonus) => Math.floor(base * bonus),
@@ -57,9 +60,9 @@ const oakCharms = [
         key: 'Battle_Charm',
         displayName: 'Battle Charm',
         description: 'Gain more Battle Points from the Battle Frontier',
-        bonusList: [1.25, 1.35, 1.50, 1.60, 1.75, 2.00],
-        expList: [500, 1000, 2500, 5000, 25000],
-        costList: [10000000, 25000000, 50000000, 100000000, 500000000],
+        bonusList: [1.25, 1.35, 1.50, 1.60, 1.75, 2.00, 2.30, 2.60, 2.90, 3.20, 3.50],
+        expList: [500, 1000, 2500, 5000, 25000, 75000, 250000, 750000, 2500000, 7500000],
+        costList: [10000000, 25000000, 50000000, 100000000, 500000000, 5000000000, 25000000000, 125000000000, 500000000000, 2500000000000],
         currency: 'battlePoint',
         // Exp comes from stages completed instead, see the BattleFrontierRunner hook
         expOnGain: () => 0,
@@ -179,7 +182,7 @@ function initOakCharmsOverrides() {
     class OakCharm extends OakItem {
         constructor(charm) {
             super(OakItemType[charm.key], charm.displayName, charm.description, true, charm.bonusList, 1, 0, 1,
-                charm.expList, 5, AmountFactory.createArray(charm.costList, GameConstants.Currency.money));
+                charm.expList, charm.costList.length, AmountFactory.createArray(charm.costList, GameConstants.Currency.money));
             this.charm = charm;
         }
 

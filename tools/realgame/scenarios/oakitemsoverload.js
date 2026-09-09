@@ -1,7 +1,8 @@
 // Scenario for tools/realgame/start.mjs, with oakitemsoverload (and optionally oakcharms,
-// in either order): the listed Oak Items go to level 10 with the extra bonuses, costs
-// and experience; the others keep the game's maximum; an overloaded level is bought
-// through the game's own upgrade path, kept out of the save, and restored on reload.
+// in either order, which keep their own ten levels): the listed Oak Items go to level 10
+// with the extra bonuses, costs and experience; the others keep the game's maximum; an
+// overloaded level is bought through the game's own upgrade path, kept out of the save,
+// and restored on reload.
 try {
     const out = [];
     const check = (label, condition, detail) => {
@@ -26,8 +27,7 @@ try {
     check('Squirtbottle keeps the game maximum', item('Squirtbottle').maxLevel === 5 && item('Squirtbottle').overloadBaseMaxLevel === undefined);
     check('Sprinklotad keeps the game maximum', item('Sprinklotad').maxLevel === 5);
     if (OakItemType.Quest_Charm !== undefined) {
-        check('Quest Charm reaches 3.5x', item('Quest_Charm').maxLevel === 10 && item('Quest_Charm').bonusList[10] === 3.5);
-        check('Battle Charm costs scale from its own last cost', item('Battle_Charm').costList[9].amount === 500000000 * 5000);
+        check('the Oak Charms are left to their own script', item('Quest_Charm').overloadBaseMaxLevel === undefined && item('Quest_Charm').maxLevel === 10);
     } else {
         out.push('     (Oak Charms not loaded, charms skipped)');
     }
@@ -48,12 +48,6 @@ try {
     check('level 10 is the end', coin.isMaxLevel() && coin.calculateBonus() === 2.0);
     coin.fromJSON({ level: 6, exp: 30000, isActive: true });
 
-    // A charm's overloaded level travels through the Oak Charms store, whatever the load order
-    if (OakItemType.Quest_Charm !== undefined) {
-        item('Quest_Charm').fromJSON({ level: 7, exp: 4000, isActive: false });
-        check('Quest Charm set to level 7', item('Quest_Charm').level === 7);
-    }
-
     // The save keeps the game's maximum; the side store keeps the real level
     const save = App.game.oakItems.toJSON();
     check('save holds level 5 with its full experience', save.Amulet_Coin.level === 5 && save.Amulet_Coin.exp === 10000);
@@ -70,10 +64,7 @@ try {
     App.game.initialize();
     const reloaded = item('Amulet_Coin');
     check('level 6 restored after reload', reloaded.level === 6 && reloaded.maxLevel === 10 && reloaded.calculateBonusIfActive() === 1.6);
-    check('still counted as max level', App.game.oakItems.maxLevelOakItems() === (OakItemType.Quest_Charm !== undefined ? 2 : 1));
-    if (OakItemType.Quest_Charm !== undefined) {
-        check('Quest Charm level 7 restored after reload', item('Quest_Charm').level === 7 && item('Quest_Charm').calculateBonusIfActive() === 2.75);
-    }
+    check('still counted as max level', App.game.oakItems.maxLevelOakItems() === 1);
 
     // A save levelled down below the maximum is left alone
     localStorage.setItem(`oakItemsOverload-${Save.key}`, JSON.stringify({ Amulet_Coin: { level: 8, exp: 80000 } }));

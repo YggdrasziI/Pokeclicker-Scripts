@@ -5,7 +5,7 @@
 // @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are kept outside the game save, so the save stays exactly what the unmodified game would write.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.2
+// @version       1.1.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -20,8 +20,7 @@
 
 // The overloaded levels come right after the game's own maximum (level 5), one bonus
 // per level. Keys are OakItemType names; an item missing from this table keeps the
-// game's maximum. The three charms only exist with the Oak Charms script and are
-// skipped without it.
+// game's maximum.
 const overloadedOakItems = {
     Magic_Ball: [12, 14, 16, 18, 20],
     Amulet_Coin: [1.60, 1.70, 1.80, 1.90, 2.00],
@@ -33,9 +32,6 @@ const overloadedOakItems = {
     Cell_Battery: [2.30, 2.60, 2.90, 3.20, 3.50],
     Explosive_Charge: [11, 12, 13, 14, 15],
     Treasure_Scanner: [26, 28, 30, 32, 35],
-    Quest_Charm: [2.50, 2.75, 3.00, 3.25, 3.50],
-    Farm_Charm: [1.70, 1.90, 2.10, 2.30, 2.50],
-    Battle_Charm: [2.30, 2.60, 2.90, 3.20, 3.50],
 };
 
 // An overloaded level costs the item's last regular upgrade times this, in the same
@@ -45,10 +41,6 @@ const overloadCostFactors = [10, 50, 250, 1000, 5000];
 // The experience needed for an overloaded level is the item's last regular requirement
 // times this: 10,000 for a regular Oak Item becomes 30k, 100k, 300k, 1M then 3M.
 const overloadExpFactors = [3, 10, 30, 100, 300];
-
-// The Oak Charms script keeps the level of its own items outside the save already;
-// only the game's items need their overloaded levels taken out of it.
-const oakCharmKeys = ['Quest_Charm', 'Farm_Charm', 'Battle_Charm'];
 
 function overloadedItemsOf(oakItems) {
     return Object.keys(overloadedOakItems)
@@ -165,7 +157,7 @@ function collectOverloadedLevels(oakItems) {
     const levels = {};
     overloadedItemsOf(oakItems).forEach((item) => {
         const key = OakItemType[item.name];
-        if (!oakCharmKeys.includes(key) && item.level > item.overloadBaseMaxLevel) {
+        if (item.level > item.overloadBaseMaxLevel) {
             levels[key] = { level: item.level, exp: item.toJSON().exp };
         }
     });
@@ -185,8 +177,7 @@ function initOakItemsOverloadOverrides() {
     }
     OakItems.prototype.overloadInstalled = true;
 
-    // Extend the items right after the game builds its list. Items another script adds
-    // to the list afterwards (the Oak Charms) are picked up when the save is read.
+    // Extend the items right after the game builds its list, before the save is read.
     const initializeOld = OakItems.prototype.initialize;
     OakItems.prototype.initialize = function (...args) {
         const result = initializeOld.apply(this, args);
@@ -226,7 +217,6 @@ function initOakItemsOverloadOverrides() {
     // a save that was levelled down, or another save under the same key, is left alone.
     const fromJSONOld = OakItems.prototype.fromJSON;
     OakItems.prototype.fromJSON = function (json, ...args) {
-        overloadOakItems(this);
         const result = fromJSONOld.call(this, json, ...args);
         const stored = loadOverloadStore() ?? restoreOverloadFromClient();
         if (stored) {
