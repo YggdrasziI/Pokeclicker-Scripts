@@ -61,7 +61,7 @@ const oakCharms = [
         displayName: 'Battle Charm',
         description: 'Gain more Battle Points from the Battle Frontier',
         bonusList: [1.25, 1.35, 1.50, 1.60, 1.75, 2.00, 2.30, 2.60, 2.90, 3.20, 3.50],
-        expList: [500, 1000, 2500, 5000, 25000, 75000, 250000, 750000, 2500000, 7500000],
+        expList: [500, 1000, 2500, 5000, 7500, 10000, 12500, 17500, 20000, 25000],
         costList: [10000000, 25000000, 50000000, 100000000, 500000000, 5000000000, 25000000000, 125000000000, 500000000000, 2500000000000],
         currency: 'battlePoint',
         // Exp comes from stages completed instead, see the BattleFrontierRunner hook
