@@ -16189,7 +16189,9 @@ class AutomationShop
         shoppingSettingPanel.appendChild(titleDiv);
 
         // Tabs are mostly one per currency, but evolution stones and the Beast Ball are sold for
-        // quest points, just like eggs, so those need an extra filter to tell them apart
+        // quest points, just like eggs, so those need an extra filter to tell them apart.
+        // The Key Stone is sold for battle points, next to the Battle Frontier energy restores,
+        // which have no tab of their own, so it needs the same filter
         const isStone = (item) => Automation.Utils.isInstanceOf(item, "EvolutionStone");
         const isBall = (item) => Automation.Utils.isInstanceOf(item, "PokeballItem");
 
@@ -16200,6 +16202,8 @@ class AutomationShop
             shoppingSettingPanel, "Evolution items", GameConstants.Currency.questPoint, isStone);
         isAnyItemHidden |= this.__internal__buildShopItemListMenu(
             shoppingSettingPanel, "Beast Balls", GameConstants.Currency.questPoint, isBall);
+        isAnyItemHidden |= this.__internal__buildShopItemListMenu(
+            shoppingSettingPanel, "Key Stones", GameConstants.Currency.battlePoint, isStone);
         isAnyItemHidden |= this.__internal__buildShopItemListMenu(shoppingSettingPanel, "Farm tools", GameConstants.Currency.farmPoint);
 
         // Set an unlock watcher if needed
@@ -16661,6 +16665,9 @@ class AutomationShop
                     // Beast Balls
                     //   - The Beast Ball, sold for quest points
                     //
+                    // Key Stones
+                    //   - The Key Stone, sold for battle points
+                    //
                     // Farm tools
                     //   - Mulch
                     //   - Shovels
@@ -16693,11 +16700,12 @@ class AutomationShop
                         continue;
                     }
 
-                    // Same for the stones sold in another currency than quest points: a tab only has
-                    // one currency threshold, so the Key Stone (battle points) and the Peat Block
-                    // (diamonds) would be out of context there
+                    // Same for the stones sold in another currency than quest points or battle
+                    // points: a tab only has one currency threshold, so the Peat Block (diamonds)
+                    // would be out of context there
                     if (Automation.Utils.isInstanceOf(item, "EvolutionStone")
-                        && (item.currency != GameConstants.Currency.questPoint))
+                        && (item.currency != GameConstants.Currency.questPoint)
+                        && (item.currency != GameConstants.Currency.battlePoint))
                     {
                         continue;
                     }
@@ -16834,6 +16842,9 @@ class AutomationShop
         // Don't buy if the player has under 10'000 farm points by default
         Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.MinPlayerCurrency(GameConstants.Currency.farmPoint), 10000);
 
+        // Don't buy if the player has under 1'000 battle points by default
+        Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.MinPlayerCurrency(GameConstants.Currency.battlePoint), 1000);
+
         // Set default value for all buyable items
         for (const itemData of this.__internal__shopItems)
         {
@@ -16859,9 +16870,10 @@ class AutomationShop
                 Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.BuyAmount(itemData.item.name), 10);
                 Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.TargetAmount(itemData.item.name), 100);
             }
-            else if (itemData.item.currency == GameConstants.Currency.questPoint)
+            else if ((itemData.item.currency == GameConstants.Currency.questPoint)
+                     || Automation.Utils.isInstanceOf(itemData.item, "EvolutionStone"))
             {
-                // By 1 item at a time by default
+                // Eggs and stones, the Key Stone included: buy 1 item at a time by default
                 Automation.Utils.LocalStorage.setDefaultValue(this.__internal__advancedSettings.BuyAmount(itemData.item.name), 1);
 
                 // Stop buying at a stock of 1 by default
