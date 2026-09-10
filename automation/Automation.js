@@ -8,6 +8,7 @@ class Automation
     static BattleFrontier = AutomationBattleFrontier;
     static Dungeon = AutomationDungeon;
     static Gym = AutomationGym;
+    static MaxRaid = AutomationMaxRaid;
     static Safari = AutomationSafari;
 
     static Click = AutomationClick;
@@ -89,10 +90,11 @@ class Automation
                     // 'Trivia' panel
                     this.Trivia.initialize(initStep);
 
-                    // 'Gym', 'Dungeon' and 'Battle Frontier' instances panels
+                    // 'Gym', 'Dungeon', 'Battle Frontier' and 'Max Raid' instances panels
                     this.Gym.initialize(initStep);
                     this.Dungeon.initialize(initStep);
                     this.BattleFrontier.initialize(initStep);
+                    this.MaxRaid.initialize(initStep);
 
                     // Safari is left out on purpose: nothing else depends on it, and Ephenia's
                     // autosafarizone covers it with better pathfinding and uncaught/contagious hunting.

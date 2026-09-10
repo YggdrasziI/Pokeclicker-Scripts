@@ -73,7 +73,7 @@ const driver = `
     Automation.Menu.initialize(build);
     Automation.Menu.addMainAutomationPanel(build);
     for (const name of ['Click', 'Focus', 'Hatchery', 'Underground', 'Farm', 'Shop', 'Items',
-                        'Notifications', 'Trivia', 'Gym', 'Dungeon', 'BattleFrontier', 'BattleCafe']) {
+                        'Notifications', 'Trivia', 'Gym', 'Dungeon', 'BattleFrontier', 'BattleCafe', 'MaxRaid']) {
         Automation[name].initialize(build);
     }
 

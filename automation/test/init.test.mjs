@@ -24,7 +24,7 @@ const code = await readFile(BUNDLE, 'utf8');
 // being wired here shows up as a gap.
 const MODULES = ['Click', 'ClickStats', 'Focus', 'Hatchery', 'Underground', 'Farm', 'Shop', 'Items',
                  'Vitamins', 'Notifications', 'SaveBackup', 'Trivia', 'Gym', 'Dungeon',
-                 'BattleFrontier', 'BattleCafe'];
+                 'BattleFrontier', 'BattleCafe', 'MaxRaid'];
 
 const driver = `
 ;(() => {

@@ -33,6 +33,7 @@ const SOURCES = [
     'lib/Instances/BattleFrontier.js',
     'lib/Instances/Dungeon.js',
     'lib/Instances/Gym.js',
+    'lib/Instances/MaxRaid.js',
     'lib/Instances/Safari.js',
     'lib/Click.js',
     'lib/Farm.js',
@@ -54,7 +55,7 @@ const SOURCES = [
 ];
 
 const SCRIPT_NAME = 'pokeclickerautomation';
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 const HEADER = `// ==UserScript==
 // @name          [Pokeclicker] Automation

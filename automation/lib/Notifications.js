@@ -8,6 +8,7 @@ class AutomationNotifications
 
                           // Notification types
                           BattleCafe: "Notifications-BattleCafe",
+                          MaxRaid: "Notifications-MaxRaid",
                           Farming: "Notifications-Farming",
                           Hatchery: "Notifications-Hatchery",
                           Shop: "Notifications-Shop",
@@ -115,6 +116,9 @@ class AutomationNotifications
 
         let battleCafeLabel = 'Show Battle Café feature notifications';
         Automation.Menu.addLabeledAdvancedSettingsToggleButton(battleCafeLabel, this.Settings.BattleCafe, "", notificationsSettingPanel);
+
+        let maxRaidLabel = 'Show Max Raid feature notifications';
+        Automation.Menu.addLabeledAdvancedSettingsToggleButton(maxRaidLabel, this.Settings.MaxRaid, "", notificationsSettingPanel);
 
         let vitaminsLabel = 'Show Auto Vitamins feature notifications';
         Automation.Menu.addLabeledAdvancedSettingsToggleButton(vitaminsLabel, this.Settings.Vitamins, "", notificationsSettingPanel);
