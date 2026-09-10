@@ -5,7 +5,7 @@
 // @description   Removes the cap on the amount of Protein and Calcium that you can use on individual Pokémon, and raises the cap for Carbos.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.1.3
+// @version       1.2.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -22,6 +22,22 @@
 const maxCarbos = 70;
 
 function initOmegaProtein() {
+    if (PartyPokemon.omegaProteinInstalled) {
+        console.warn('Omega Protein Gains: already installed, skipping');
+        return;
+    }
+    PartyPokemon.omegaProteinInstalled = true;
+
+    // The game's cap, 5 vitamins per region reached, all types combined, comes from this one
+    // static: vitaminUsesRemaining() on every pokémon is maxVitaminUsesAllowed() minus the
+    // vitamins used. It is what hides a "maxed" pokémon in the vitamin window, greys its
+    // + button, and what the Automation's Auto Vitamins stops at. Lift it here too, or
+    // useVitamin below accepts vitamins that nothing else offers to give.
+    PartyPokemon.omegaProteinBaseMaxVitaminUsesAllowed = PartyPokemon.maxVitaminUsesAllowed;
+    PartyPokemon.maxVitaminUsesAllowed = function () {
+        return Infinity;
+    };
+
     // Override useVitamin() to allow adding as many vitamins as desired (except Carbos)
     PartyPokemon.prototype.useVitamin = function (vitamin, amount) {
         if (App.game.challenges.list.disableVitamins.active()) {

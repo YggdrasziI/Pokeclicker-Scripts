@@ -91,17 +91,19 @@ The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//gi
 6. [**Custom Achievements** ](#custom-custom-achievements)
 7. [**Debug Cheats Tools** ](#custom-debug-cheats-tools)
 8. [**Discord Code Generator** ](#discord-code-generator)
-9. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
-10. [**Oak Charms** ](#custom-oak-charms)
-11. [**Oak Items Overload** ](#custom-oak-items-overload)
-12. [**Oak Items Unlimited** ](#oak-items-unlimited)
-13. [**Omega Protein Gains** ](#omega-protein-gains)
-14. [**Overnight Berry Growth** ](#overnight-berry-growth)
-15. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
-16. [**Shiny Variants** ](#custom-shiny-variants)
-17. [**Simple Time Changer** ](#custom-simple-time-changer)
-18. [**Simple Weather Changer** ](#simple-weather-changer)
-19. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
+9. [**Infinite Battle Café** ](#infinite-battle-cafe)
+10. [**Infinite Max Raid** ](#infinite-max-raid)
+11. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
+12. [**Oak Charms** ](#custom-oak-charms)
+13. [**Oak Items Overload** ](#custom-oak-items-overload)
+14. [**Oak Items Unlimited** ](#oak-items-unlimited)
+15. [**Omega Protein Gains** ](#omega-protein-gains)
+16. [**Overnight Berry Growth** ](#overnight-berry-growth)
+17. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
+18. [**Shiny Variants** ](#custom-shiny-variants)
+19. [**Simple Time Changer** ](#custom-simple-time-changer)
+20. [**Simple Weather Changer** ](#simple-weather-changer)
+21. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
 
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
@@ -128,6 +130,7 @@ It adds an **Automation** card to the game screen. Every feature in it is **off 
 • <strong>Oak items and Gems upgrades</strong> — bought automatically as they become affordable.<br/>
 • <strong>Focus on</strong> — pick one long-running goal and let it drive: Experience, Money, Dungeon Tokens, gems of any single type, Achievements, Pokérus cure, Quests, or Shadow purify. If the chosen goal runs out of things to do, it hands over to the fallbacks you picked instead of switching everything off, and takes over again when it can.<br/>
 • <strong>Battle Café</strong> — spins for the Alcremie forms you are missing and that the current time of day can actually give.<br/>
+• <strong>Max Raid</strong> — in Galar, once the Lair of Giants questline has opened the dens, starts the Max Raid dens open today one after the other, moving you to the den's town first; every win is a Wishing Piece, and losing one turns it off. With the Infinite Max Raid script the open dens are cycled instead of closing after one win.<br/>
 • <strong>Save backups</strong> — desktop client only, since a web page cannot write files. On a schedule you choose, with a retention count.<br/>
 • <strong>Notifications</strong> — per feature, so you can hear from the hatchery without hearing from everything else.
 
@@ -517,6 +520,22 @@ Note that one of the codes refunds unused vitamins and asks you to confirm befor
 
 <hr>
   
+<a name="infinite-battle-cafe"></a>
+## [Custom] Infinite Battle Café (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/infinitebattlecafe.user.js">infinitebattlecafe.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/infinitebattlecafe.user.js">One-Click Install</a>)
+This script removes the Battle Café daily spin limit. The spin count never goes down: a spin is refunded as soon as it is taken, so you can spin for the Alcremie forms for as long as you have the berries. The daily spins still add up as usual, and the count shown in the café window simply stops moving. The save keeps the game's own spin count, so it loads fine without the script.<br>
+
+With the Automation script's Auto Spin on, the café keeps spinning for the forms you are missing until the berries run out.
+
+<hr>
+
+<a name="infinite-max-raid"></a>
+## [Custom] Infinite Max Raid (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/infinitemaxraid.user.js">infinitemaxraid.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/infinitemaxraid.user.js">One-Click Install</a>)
+This script keeps Galar's Max Raid dens open after a win, so a den drawn today can be raided for the whole day instead of once. Which ten of the thirty dens the game draws each day is unchanged. Every win still gives a Wishing Piece, and the win statistic is left alone, so the save stays what the unmodified game would write.<br>
+
+Pairs with the Automation script's Max Raid panel, which then cycles the open dens for as long as it is on.
+
+<hr>
+
 <a name="infinite-seasonal-events"></a>
 ## [Custom] Infinite Seasonal Events (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/infiniteseasonalevents.user.js">infiniteseasonalevents.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/infiniteseasonalevents.user.js">One-Click Install</a>)
 This script adds in a new settings option to the top of the Start Menu:<br>
@@ -636,7 +655,7 @@ This script removes the limit for the amount of Proteins that you're able to use
 
 ![image](https://i.imgur.com/2kXCzUA.png)
 
-I haven't tested the limits of how many Proteins you can give, but it should practically be infinite.
+The game caps the vitamins per Pokémon at 5 per region reached, all three types combined. The script lifts that cap (the Pokémon statistics window shows it as ∞): Protein and Calcium are unlimited, and Carbos is capped at 70, the amount that makes every non-Magikarp Pokémon hatch in 300 steps. The Automation script's Auto Vitamins reaches its targets past the game's cap as well; keep its Carbos target at 70 or below.
 
 <hr>
 
