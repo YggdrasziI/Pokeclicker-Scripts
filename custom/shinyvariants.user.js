@@ -5,7 +5,7 @@
 // @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex and the party list, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.3.4
+// @version       1.4.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -31,7 +31,7 @@ const SHINY_VARIANT_DATA = {"v":1,"src":"pokerogue-assets 35c1ee672","tol":3,"ic
 
 class ShinyVariants {
     // Same tints as PokéRogue: standard (gold), rare (cyan), epic (red)
-    static VERSION = '1.3.4';
+    static VERSION = '1.4.0';
     static VARIANT_NAMES = ['Standard', 'Rare', 'Epic'];
     static VARIANT_COLORS = ['#f8c020', '#20f8f0', '#e81048'];
     static SETTING_KEYS = {
@@ -770,36 +770,68 @@ class ShinyVariants {
         windowObject.CustomAchievementsQueue.push(() => ShinyVariants.achievementDefinitions());
     }
 
-    // Rare and Epic entries in the Pokédex "Caught Status" and the Hatchery "Shiny
-    // Status" filters, next to the game's Shiny ones
+    // Whether a caught Pokémon holds a palette; a shiny caught before the script
+    // holds the standard one only, a non-shiny holds none
+    static holdsVariant(partyPokemon, variant) {
+        return !!partyPokemon?.shiny && !!(this.unlockedMask(partyPokemon) & (1 << variant));
+    }
+
+    // Rare and Epic entries, and their "Not" counterparts to farm the missing
+    // palettes, in the Pokédex "Caught Status" and the Hatchery "Shiny Status"
+    // filters, next to the game's Shiny ones. Like the game's "Not Shiny", a "Not"
+    // status keeps every caught Pokémon without that palette, shiny or not.
     static installFilters() {
         // Pokédex: the game's list ignores a status it does not know, so the extra
-        // statuses only narrow its result down to the Pokémon holding the palette
+        // statuses only narrow its result down to the caught Pokémon holding, or
+        // missing, the palette
         const dexFilter = Settings.getSetting('pokedexCaughtFilter');
-        const dexStatuses = { 'caught-shiny-rare': 1, 'caught-shiny-epic': 2 };
-        dexFilter.options.push(new SettingOption('Caught Rare Shiny', 'caught-shiny-rare'), new SettingOption('Caught Epic Shiny', 'caught-shiny-epic'));
+        const dexStatuses = {
+            'caught-not-shiny-rare': { variant: 1, holds: false },
+            'caught-shiny-rare': { variant: 1, holds: true },
+            'caught-not-shiny-epic': { variant: 2, holds: false },
+            'caught-shiny-epic': { variant: 2, holds: true },
+        };
+        dexFilter.options.push(
+            new SettingOption('Caught Not Rare Shiny', 'caught-not-shiny-rare'),
+            new SettingOption('Caught Rare Shiny', 'caught-shiny-rare'),
+            new SettingOption('Caught Not Epic Shiny', 'caught-not-shiny-epic'),
+            new SettingOption('Caught Epic Shiny', 'caught-shiny-epic'),
+        );
         const getListOld = PokedexHelper.getList;
         PokedexHelper.getList = function (...args) {
             const list = getListOld.apply(this, args);
-            const variant = dexStatuses[dexFilter.observableValue()];
-            if (!variant) {
+            const status = dexStatuses[dexFilter.observableValue()];
+            if (!status) {
                 return list;
             }
             return list.filter((pokemon) => {
                 const partyPokemon = App.game.party.getPokemon(pokemon.id);
-                return !!partyPokemon?.shiny && (ShinyVariants.unlockedMask(partyPokemon) & (1 << variant));
+                return partyPokemon !== undefined && ShinyVariants.holdsVariant(partyPokemon, status.variant) === status.holds;
             });
         };
 
         // Hatchery: the game compares the status to the shiny flag itself, so the
-        // game reads Rare (2) and Epic (3) as Shiny (1) while the select keeps the
-        // real value, and the list is narrowed down to the palette afterwards
+        // game reads Rare (2) and Epic (3) as Shiny (1), and Not Rare (4) and Not
+        // Epic (5) as All (-1), while the select keeps the real value, and the list
+        // is narrowed down to the palette afterwards. The values are saved per save
+        // file: never renumber them.
         const hatcheryFilter = Settings.getSetting('breedingShinyFilter');
-        hatcheryFilter.options.push(new SettingOption('Rare Shiny', 2), new SettingOption('Epic Shiny', 3));
+        const hatcheryStatuses = {
+            2: { variant: 1, holds: true, gameStatus: 1 },
+            3: { variant: 2, holds: true, gameStatus: 1 },
+            4: { variant: 1, holds: false, gameStatus: -1 },
+            5: { variant: 2, holds: false, gameStatus: -1 },
+        };
+        hatcheryFilter.options.push(
+            new SettingOption('Not Rare Shiny', 4),
+            new SettingOption('Rare Shiny', 2),
+            new SettingOption('Not Epic Shiny', 5),
+            new SettingOption('Epic Shiny', 3),
+        );
         const rawValue = hatcheryFilter.observableValue;
         hatcheryFilter.rawObservableValue = rawValue;
         hatcheryFilter.observableValue = ko.pureComputed({
-            read: () => Math.min(rawValue(), 1),
+            read: () => hatcheryStatuses[rawValue()]?.gameStatus ?? rawValue(),
             write: (value) => rawValue(value),
         });
         const select = document.getElementById('breeding-filter-shiny-status');
@@ -811,11 +843,11 @@ class ShinyVariants {
         const hatcheryListOld = BreedingController.hatcheryFilteredList;
         BreedingController.hatcheryFilteredList = ko.pureComputed(() => {
             const list = hatcheryListOld();
-            const variant = rawValue() - 1;
-            if (variant < 1) {
+            const status = hatcheryStatuses[rawValue()];
+            if (!status) {
                 return list;
             }
-            return list.filter((pokemon) => ShinyVariants.unlockedMask(pokemon) & (1 << variant));
+            return list.filter((pokemon) => ShinyVariants.holdsVariant(pokemon, status.variant) === status.holds);
         });
     }
 
