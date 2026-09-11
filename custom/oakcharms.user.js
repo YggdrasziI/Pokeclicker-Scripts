@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Oak Charms
 // @namespace     Pokeclicker Scripts
 // @author        YggdrasziI
-// @description   Adds three Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money. Each unlocks on its own condition and levels up by using it.
+// @description   Adds four Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, and the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.3.0
+// @version       1.4.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -24,7 +24,8 @@
 // scale of the game's own Oak Items, the last five far steeper, on the scale of
 // the Oak Items Overload script (each costs the level 5 upgrade times 10, 50, 250,
 // 1,000 then 5,000, and needs its experience times 3, 10, 30, 100 then 300).
-//   currency:  the wallet currency the charm multiplies
+//   currency:  the wallet currency the charm multiplies, null for a charm applied
+//              and fed by its own hooks instead
 //   expOnGain: exp granted when that currency is gained (base amount, bonus applied)
 //   icon:      replaces the missing assets/images/oakitems/<key>.png
 const oakCharms = [
@@ -70,7 +71,25 @@ const oakCharms = [
         hint: 'Obtain Deoxys at stage 100 of the Battle Frontier',
         icon: 'assets/images/currency/battlePoint.svg',
     },
+    {
+        key: 'Dowsing_Charm',
+        displayName: 'Dowsing Charm',
+        description: 'Pokémon drop held items and dungeon chests multiply their loot more often',
+        // Level 10 is the Dowsing Machine's own x1.5
+        bonusList: [1.10, 1.14, 1.18, 1.22, 1.26, 1.30, 1.34, 1.38, 1.42, 1.46, 1.50],
+        expList: [25, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000],
+        costList: [100000, 250000, 500000, 1000000, 2500000, 25000000, 125000000, 625000000, 2500000000, 12500000000],
+        // Not a currency charm: exp comes from the held item and dungeon chest hooks
+        currency: null,
+        isUnlocked: () => player.highestRegion() >= GameConstants.Region.hoenn,
+        hint: 'Reach the Hoenn region',
+        icon: 'assets/images/items/battleItem/Dowsing_machine.png',
+    },
 ];
+
+// Exp a dungeon chest grants the Dowsing Charm, by the game's loot tier weight
+// (common 4, rare 3, epic 2, legendary 1, mythic 0): common chests give nothing
+const dowsingChestExp = { 3: 1, 2: 2, 1: 3, 0: 5 };
 
 function oakCharmItem(charm) {
     return App.game.oakItems.itemList[OakItemType[charm.key]];
@@ -210,6 +229,10 @@ function initOakCharmsOverrides() {
                 this.itemList[OakItemType[charm.key]] = new OakCharm(charm);
             }
         });
+        // The held item drop roll divides its odds by this multiplier, the way the
+        // Dowsing Machine registers its own x1.5. The game reads it without the
+        // "use" flag, so the roll grants no exp: the loot hooks below do.
+        this.multiplier.addBonus('rareItemDropRate', () => this.calculateBonus(OakItemType.Dowsing_Charm), 'Dowsing Charm');
         return result;
     };
 
@@ -258,7 +281,7 @@ function initOakCharmsOverrides() {
     // so flat rewards stay flat.
     const calcBonusOld = Wallet.prototype.calcBonus;
     Wallet.prototype.calcBonus = function (amount, ...args) {
-        const charm = oakCharms.find((c) => amount?.currency === GameConstants.Currency[c.currency]);
+        const charm = oakCharms.find((c) => c.currency && amount?.currency === GameConstants.Currency[c.currency]);
         if (charm && App.game?.oakItems) {
             const item = oakCharmItem(charm);
             const bonus = item.calculateBonus();
@@ -279,6 +302,63 @@ function initOakCharmsOverrides() {
             oakCharmItem(oakCharms.find((c) => c.key === 'Battle_Charm')).use();
         }
         return result;
+    };
+
+    const dowsingCharm = oakCharms.find((c) => c.key === 'Dowsing_Charm');
+
+    // The Dowsing Charm levels on held items dropped by defeated Pokémon, one exp each
+    const defeatOld = BattlePokemon.prototype.defeat;
+    BattlePokemon.prototype.defeat = function (...args) {
+        const result = defeatOld.apply(this, args);
+        if (this.heldItem && App.game?.oakItems) {
+            oakCharmItem(dowsingCharm).use();
+        }
+        return result;
+    };
+
+    // ...and on dungeon chests of the rare tier and above, more for the rarer tiers.
+    // gainLoot receives the chest's tier weight; it is only called from openChest.
+    const gainLootOld = DungeonRunner.gainLoot;
+    DungeonRunner.gainLoot = function (input, amount, weight, ...args) {
+        const result = gainLootOld.call(this, input, amount, weight, ...args);
+        const exp = dowsingChestExp[weight];
+        if (exp && App.game?.oakItems) {
+            oakCharmItem(dowsingCharm).use(undefined, exp);
+        }
+        return result;
+    };
+
+    // The chest's "more loot" roll is hard-coded in openChest: the game multiplies
+    // its chance by 1.5 while a Dowsing Machine runs, then rolls it with the first
+    // Rand.chance call of the function, before gainLoot. Scale that one roll by
+    // the charm bonus and leave the later rolls (a loot Pokémon's shiny and held
+    // item odds) alone. Rand.chance is a static inherited from SeededRand that
+    // relies on `this`, hence the plain functions and the own-property cleanup.
+    const openChestOld = DungeonRunner.openChest;
+    DungeonRunner.openChest = function (...args) {
+        const bonus = App.game?.oakItems ? oakCharmItem(dowsingCharm).calculateBonus() : 1;
+        if (!(bonus > 1)) {
+            return openChestOld.apply(this, args);
+        }
+        const chanceOld = Rand.chance;
+        const ownChance = Object.getOwnPropertyDescriptor(Rand, 'chance');
+        let firstRoll = true;
+        Rand.chance = function (chance, ...rest) {
+            if (firstRoll) {
+                firstRoll = false;
+                chance *= bonus;
+            }
+            return chanceOld.call(this, chance, ...rest);
+        };
+        try {
+            return openChestOld.apply(this, args);
+        } finally {
+            if (ownChance) {
+                Object.defineProperty(Rand, 'chance', ownChance);
+            } else {
+                delete Rand.chance;
+            }
+        }
     };
 
     // The Oak Item grids break their rows every 4 items, and a Bootstrap .col alone

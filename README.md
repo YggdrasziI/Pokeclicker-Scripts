@@ -556,7 +556,7 @@ There may be some other cool or neat custom events added in with this as well.
 
 <a name="custom-oak-charms"></a>
 ## [Custom] Oak Charms (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakcharms.user.js">oakcharms.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakcharms.user.js">One-Click Install</a>)
-This script adds three Oak Items to the game's own Oak Items window. Each one multiplies a currency the way the Amulet Coin multiplies Pokédollars, takes one of your Oak Item slots like any other item, and shows up with that currency's icon since the game has no sprite for it. All three level up from the Oak Items window, from level 0 to 10, for a Pokédollar upgrade cost, once they have earned enough experience by being used. The first five levels are on the scale of the game's own Oak Items; levels 6 to 10 are on the far steeper scale of the Oak Items Overload script, each costing the level 5 upgrade times 10, 50, 250, 1,000 then 5,000 and needing its experience times 3, 10, 30, 100 then 300.
+This script adds four Oak Items to the game's own Oak Items window. Three of them multiply a currency the way the Amulet Coin multiplies Pokédollars; the fourth, the Dowsing Charm, does what the Dowsing Machine does. Each takes one of your Oak Item slots like any other item, and shows up with a borrowed icon since the game has no sprite for it. All four level up from the Oak Items window, from level 0 to 10, for a Pokédollar upgrade cost, once they have earned enough experience by being used. The first five levels are on the scale of the game's own Oak Items; levels 6 to 10 are on the far steeper scale of the Oak Items Overload script, each costing the level 5 upgrade times 10, 50, 250, 1,000 then 5,000. The experience each level needs is listed below.
 
 <strong>Quest Charm</strong> multiplies the Quest Points you gain from quests. It unlocks when you reach Johto, and gains 1 experience each time it multiplies a quest reward.
 
@@ -599,16 +599,32 @@ This script adds three Oak Items to the game's own Oak Items window. Each one mu
 | 2 | ×1.50 | 1,000 | 50,000,000 |
 | 3 | ×1.60 | 2,500 | 100,000,000 |
 | 4 | ×1.75 | 5,000 | 500,000,000 |
-| 5 | ×2.00 | 25,000 | 5,000,000,000 |
-| 6 | ×2.30 | 75,000 | 25,000,000,000 |
-| 7 | ×2.60 | 250,000 | 125,000,000,000 |
-| 8 | ×2.90 | 750,000 | 500,000,000,000 |
-| 9 | ×3.20 | 2,500,000 | 2,500,000,000,000 |
-| 10 | ×3.50 | 7,500,000 | – |
+| 5 | ×2.00 | 7,500 | 5,000,000,000 |
+| 6 | ×2.30 | 10,000 | 25,000,000,000 |
+| 7 | ×2.60 | 12,500 | 125,000,000,000 |
+| 8 | ×2.90 | 17,500 | 500,000,000,000 |
+| 9 | ×3.20 | 20,000 | 2,500,000,000,000 |
+| 10 | ×3.50 | 25,000 | – |
+
+<strong>Dowsing Charm</strong> does what the Dowsing Machine does, permanently: defeated Pokémon drop their held items more often, and dungeon chests multiply their loot more often. Level 10 is the Dowsing Machine's own ×1.50, and the two stack while the item is active. It unlocks when you reach Hoenn, shows up with the Dowsing Machine's sprite, and gains experience from rare finds while equipped: 1 per held item dropped by a defeated Pokémon, and 1, 2, 3 or 5 per dungeon chest of the rare, epic, legendary or mythic tier. Common chests give nothing.
+
+| Level | Bonus | Rare finds (total) | Upgrade cost |
+|:-----:|:-----:|:------------------:|:------------:|
+| 0 | ×1.10 | – | 100,000 |
+| 1 | ×1.14 | 25 | 250,000 |
+| 2 | ×1.18 | 100 | 500,000 |
+| 3 | ×1.22 | 250 | 1,000,000 |
+| 4 | ×1.26 | 500 | 2,500,000 |
+| 5 | ×1.30 | 1,000 | 25,000,000 |
+| 6 | ×1.34 | 2,500 | 125,000,000 |
+| 7 | ×1.38 | 5,000 | 625,000,000 |
+| 8 | ×1.42 | 10,000 | 2,500,000,000 |
+| 9 | ×1.46 | 25,000 | 12,500,000,000 |
+| 10 | ×1.50 | 50,000 | – |
 
 The charm progress is kept outside the game save, per save file, in the browser storage, so your save and your backups stay exactly what the unmodified game would write, and a save touched by this script still loads without it. In the desktop client the progress is also mirrored to a `<trainer> [<save key>] oak-charms.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save, such as after importing a backup into a fresh install. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
 
-Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; and a max-level charm counts toward the "max level Oak Item" achievements.
+Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; a shiny wild Pokémon always carries its held item, so that drop counts as a rare find too; and a max-level charm counts toward the "max level Oak Item" achievements.
 
 <hr>
 
