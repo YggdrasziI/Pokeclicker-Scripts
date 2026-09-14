@@ -5,7 +5,7 @@
 // @description   Adds five Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.6.0
+// @version       1.6.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -29,7 +29,8 @@
 //   expOnGain: exp granted when that currency is gained (base amount, bonus applied)
 //   expGain:   exp granted by one plain use of the charm, 1 when omitted; the window
 //              shows the progress in uses, like the game does for its own items
-//   icon:      replaces the missing assets/images/oakitems/<key>.png
+//   icon:      replaces the missing assets/images/oakitems/<key>.png; a raster icon
+//              is redrawn at the size of the game's sprites, an SVG used as is
 const oakCharms = [
     {
         key: 'Quest_Charm',
@@ -486,10 +487,46 @@ function initOakCharmsOverrides() {
 
     // The Oak Item grids break their rows every 4 items, and a Bootstrap .col alone
     // on its row takes the full width, so a lone tile came out four times too big.
-    // Pinning every tile to a quarter row changes nothing for the full rows.
+    // Pinning every tile to a quarter row changes nothing for the full rows. The
+    // rows are also centered, which left a lone tile in the middle of its row:
+    // start every row at the left, under the first column, like a grid.
     const style = document.createElement('style');
-    style.textContent = '#oakItemsModal ul.row > li.col { flex: 0 0 25%; max-width: 25%; }';
+    style.textContent = '#oakItemsModal ul.row > li.col { flex: 0 0 25%; max-width: 25%; }'
+        + ' #oakItemsModal ul.row.justify-content-center { justify-content: flex-start !important; }';
     document.head.appendChild(style);
+
+    // The tiles size themselves on the sprite: the game's Oak Item sprites are 120
+    // pixels wide with the item drawn on 96, and the borrowed roaming icon is 25. A
+    // raster icon is drawn onto a canvas of the sprites' own size first, on the same
+    // 96 pixels, so its tile keeps the geometry of the game's tiles; a small icon is
+    // scaled by a whole factor to stay crisp. SVG icons scale by themselves.
+    const spriteSize = 120;
+    const spriteIcons = {};
+    function spriteSizedIcon(charm) {
+        return new Promise((resolve) => {
+            const icon = new Image();
+            icon.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = spriteSize;
+                    canvas.height = spriteSize;
+                    const context = canvas.getContext('2d');
+                    const largest = Math.max(icon.naturalWidth, icon.naturalHeight);
+                    const scale = largest < 48 ? Math.floor(100 / largest) : 96 / largest;
+                    const width = icon.naturalWidth * scale;
+                    const height = icon.naturalHeight * scale;
+                    context.imageSmoothingEnabled = !Number.isInteger(scale);
+                    context.drawImage(icon, (spriteSize - width) / 2, (spriteSize - height) / 2, width, height);
+                    resolve(canvas.toDataURL());
+                } catch (error) {
+                    console.warn(`Oak Charms: could not draw the ${charm.displayName} icon at the sprite size`, error);
+                    resolve(charm.icon);
+                }
+            };
+            icon.onerror = () => resolve(charm.icon);
+            icon.src = charm.icon;
+        });
+    }
 
     // The Oak Item templates build the image path from the enum key. Image error
     // events do not bubble, so catch them in the capture phase and swap the icon.
@@ -499,9 +536,17 @@ function initOakCharmsOverrides() {
             return;
         }
         const charm = oakCharms.find((c) => target.src.endsWith(`oakitems/${c.key}.png`));
-        if (charm) {
-            target.src = charm.icon;
+        if (!charm) {
+            return;
         }
+        if (/\.svg$/i.test(charm.icon)) {
+            target.src = charm.icon;
+            return;
+        }
+        spriteIcons[charm.key] = spriteIcons[charm.key] ?? spriteSizedIcon(charm);
+        spriteIcons[charm.key].then((src) => {
+            target.src = src;
+        });
     }, true);
 }
 

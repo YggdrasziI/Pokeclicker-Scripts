@@ -622,7 +622,7 @@ This script adds five Oak Items to the game's own Oak Items window. Three of the
 | 9 | ×1.46 | 25,000 | 12,500,000,000 |
 | 10 | ×1.50 | 50,000 | – |
 
-<strong>Roaming Charm</strong> makes roaming Pokémon appear more often on every route, the way the game's boosted route does: level 10 is the boosted route's own ×3, and the two stack, as do the Roaming farm auras. The route info window already shows the resulting odds. It is the Shiny Charm's twin: it unlocks once you have captured 70 unique Pokémon, follows the Shiny Charm's experience and Pokédollar costs (levels 6 to 10 on the Oak Items Overload scale), and gains 150 experience per roaming Pokémon encountered while equipped, like the Shiny Charm's 150 per shiny, which the window shows as roamers met. It shows up with the roaming icon of the route info window.
+<strong>Roaming Charm</strong> makes roaming Pokémon appear more often on every route, the way the game's boosted route does: level 10 is the boosted route's own ×3, and the two stack, as do the Roaming farm auras. The route info window already shows the resulting odds. It is the Shiny Charm's twin: it unlocks once you have captured 70 unique Pokémon, follows the Shiny Charm's experience and Pokédollar costs (levels 6 to 10 on the Oak Items Overload scale), and gains 150 experience per roaming Pokémon encountered while equipped, like the Shiny Charm's 150 per shiny, which the window shows as roamers met. It shows up with the roaming icon of the route info window, redrawn at the size of the game's Oak Item sprites so its tile matches the others.
 
 | Level | Bonus | Roamers encountered (total) | Upgrade cost |
 |:-----:|:-----:|:---------------------------:|:------------:|
