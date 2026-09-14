@@ -642,7 +642,7 @@ Each item has its own lists of bonuses, experience and costs for levels 6 to 10,
 | Sprayduck | 30,000 | 100,000 | 150,000 | 200,000 | 300,000 |
 | Shiny Charm | 30,000 | 100,000 | 300,000 | 1,000,000 | 2,000,000 |
 | Cell Battery | 450 | 1,000 | 2,000 | 3,500 | 8,000 |
-| Treasure Scanner | 10,000 | 20,000 | 30,000 | 50,000 | 80,000 |
+| Treasure Scanner | 20,000 | 30,000 | 40,000 | 50,000 | 80,000 |
 
 | Item | Level 5 (game) | 6 | 7 | 8 | 9 | 10 |
 |:-----|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
