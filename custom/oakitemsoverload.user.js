@@ -5,7 +5,7 @@
 // @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are kept outside the game save, so the save stays exactly what the unmodified game would write.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.3.0
+// @version       1.4.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -104,10 +104,37 @@ function overloadOakItem(item, overload) {
 function overloadOakItems(oakItems) {
     Object.entries(overloadedOakItems).forEach(([key, overload]) => {
         const item = oakItems.itemList[OakItemType[key]];
-        if (item !== undefined) {
+        if (item !== undefined && overloadEnabledFor(key)) {
             overloadOakItem(item, overload);
         }
     });
+}
+
+// Which items the player overloads, one switch each in the Scripts tab of the
+// settings, stored once for every save as { key: false } for the items turned off.
+// The lists are extended when the game builds its items, before the save is read,
+// so a switch applies when the game is next loaded. An item turned off keeps the
+// game's maximum; its overloaded level stays in the side store for when it is
+// turned on again.
+const overloadEnabledKey = 'oakItemsOverloadEnabled';
+let overloadEnabled = loadOverloadEnabled();
+
+function loadOverloadEnabled() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(overloadEnabledKey));
+        return stored !== null && typeof stored === 'object' ? stored : {};
+    } catch {
+        return {};
+    }
+}
+
+function overloadEnabledFor(key) {
+    return overloadEnabled[key] !== false;
+}
+
+function setOverloadEnabled(key, enabled) {
+    overloadEnabled[key] = enabled;
+    localStorage.setItem(overloadEnabledKey, JSON.stringify(overloadEnabled));
 }
 
 // Achievements for the overloaded levels, picked up by the Custom Achievements script
@@ -203,7 +230,7 @@ function collectOakItemsOverloadBackup() {
     if (!overloadLoaded || !App.game?.oakItems) {
         return null;
     }
-    const levels = collectOverloadedLevels(App.game.oakItems);
+    const levels = overloadStoreContents(App.game.oakItems);
     const serialized = JSON.stringify(levels);
     if (serialized === lastOverloadHandedOver) {
         return null;
@@ -229,6 +256,15 @@ function collectOverloadedLevels(oakItems) {
         }
     });
     return levels;
+}
+
+// What the side store holds: the levels above, plus the stored levels of the items
+// not overloaded this session (turned off in the settings, or unknown to this
+// version), read once at load and carried over so no level is lost to a switch.
+let preservedLevels = {};
+
+function overloadStoreContents(oakItems) {
+    return { ...preservedLevels, ...collectOverloadedLevels(oakItems) };
 }
 
 // Runs on document ready, before the game builds its Oak Item list and reads the
@@ -283,7 +319,7 @@ function initOakItemsOverloadOverrides() {
         // Game.load() calls toJSON before fromJSON on a brand-new save; never let
         // the defaults overwrite a store that has not been read yet
         if (overloadLoaded) {
-            storeOverload(levels);
+            storeOverload(overloadStoreContents(this));
         }
         return save;
     };
@@ -294,10 +330,13 @@ function initOakItemsOverloadOverrides() {
     OakItems.prototype.fromJSON = function (json, ...args) {
         const result = fromJSONOld.call(this, json, ...args);
         const stored = loadOverloadStore() ?? restoreOverloadFromClient();
+        preservedLevels = {};
         if (stored) {
             Object.entries(stored).forEach(([key, entry]) => {
                 const item = this.itemList[OakItemType[key]];
-                if (item?.overloadBaseMaxLevel !== undefined && item.level === item.overloadBaseMaxLevel && entry.level > item.level) {
+                if (item?.overloadBaseMaxLevel === undefined) {
+                    preservedLevels[key] = entry;
+                } else if (item.level === item.overloadBaseMaxLevel && entry.level > item.level) {
                     item.fromJSON({ ...item.toJSON(), level: entry.level, exp: entry.exp });
                 }
             });
@@ -308,7 +347,7 @@ function initOakItemsOverloadOverrides() {
 }
 
 function initOakItemsOverload() {
-    if (overloadedItemsOf(App.game.oakItems).length === 0) {
+    if (!OakItems.prototype.overloadInstalled) {
         throw new Error('The Oak Items were not overloaded; the script probably loaded after the game started.');
     }
 
@@ -317,6 +356,74 @@ function initOakItemsOverload() {
         window.DesktopSaveBackupProviders = window.DesktopSaveBackupProviders ?? [];
         window.DesktopSaveBackupProviders.push(collectOakItemsOverloadBackup);
     }
+
+    // One switch per item in the Scripts tab of the settings
+    const settingsBody = createScriptSettingsContainer('Oak Items Overload');
+    Object.keys(overloadedOakItems).forEach((key) => {
+        const displayName = App.game.oakItems.itemList[OakItemType[key]]?.displayName ?? GameConstants.humanifyString(key);
+        const row = document.createElement('tr');
+        row.innerHTML = `<td class="p-2" colspan="2"><label class="m-0" for="checkbox-oakItemsOverload-${key}">Overload the ${displayName}</label>`
+            + `<input id="checkbox-oakItemsOverload-${key}" type="checkbox" class="mx-2"></td>`;
+        settingsBody.appendChild(row);
+        const checkbox = row.querySelector('input');
+        checkbox.checked = overloadEnabledFor(key);
+        checkbox.addEventListener('change', (event) => {
+            setOverloadEnabled(key, event.target.checked);
+        });
+    });
+    const note = document.createElement('tr');
+    note.innerHTML = '<td class="p-2 text-muted small" colspan="2">Applies when the game is reloaded. An item turned off keeps the game\'s maximum level; its overloaded level is kept for when it is turned on again.</td>';
+    settingsBody.appendChild(note);
+}
+
+/**
+ * Creates container for scripts settings in the settings menu, adding scripts tab if it doesn't exist yet
+ */
+function createScriptSettingsContainer(name) {
+    const settingsID = name.replaceAll(/s/g, '').toLowerCase();
+    var settingsContainer = document.getElementById('settings-scripts-container');
+
+    // Create scripts settings tab if it doesn't exist yet
+    if (!settingsContainer) {
+        // Fixes the Scripts nav item getting wrapped to the bottom by increasing the max width of the window
+        document.querySelector('#settingsModal div').style.maxWidth = '850px';
+        // Create and attach script settings tab link
+        const settingTabs = document.querySelector('#settingsModal ul.nav-tabs');
+        const li = document.createElement('li');
+        li.classList.add('nav-item');
+        li.innerHTML = `<a class="nav-link" href="#settings-scripts" data-toggle="tab">Scripts</a>`;
+        settingTabs.appendChild(li);
+        // Create and attach script settings tab contents
+        const tabContent = document.querySelector('#settingsModal .tab-content');
+        scriptSettings = document.createElement('div');
+        scriptSettings.classList.add('tab-pane');
+        scriptSettings.setAttribute('id', 'settings-scripts');
+        tabContent.appendChild(scriptSettings);
+        settingsContainer = document.createElement('div');
+        settingsContainer.setAttribute('id', 'settings-scripts-container');
+        scriptSettings.appendChild(settingsContainer);
+    }
+
+    // Create settings container
+    const settingsTable = document.createElement('table');
+    settingsTable.classList.add('table', 'table-striped', 'table-hover', 'm-0');
+    const header = document.createElement('thead');
+    header.innerHTML = `<tr><th colspan="2">${name}</th></tr>`;
+    settingsTable.appendChild(header);
+    const settingsBody = document.createElement('tbody');
+    settingsBody.setAttribute('id', `settings-scripts-${settingsID}`);
+    settingsTable.appendChild(settingsBody);
+
+    // Insert settings container in alphabetical order
+    let settingsList = Array.from(settingsContainer.children);
+    let insertBefore = settingsList.find(elem => elem.querySelector('tbody').id > `settings-scripts-${settingsID}`);
+    if (insertBefore) {
+        insertBefore.before(settingsTable);
+    } else {
+        settingsContainer.appendChild(settingsTable);
+    }
+
+    return settingsBody;
 }
 
 function loadEpheniaScript(scriptName, initFunction, priorityFunction) {

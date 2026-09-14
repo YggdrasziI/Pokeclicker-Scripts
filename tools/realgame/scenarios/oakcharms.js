@@ -83,6 +83,26 @@ try {
     }
     quest.fromJSON({ level: 7, exp: 30000, isActive: false });
 
+    // A charm turned off in the Scripts settings is locked, unequipped at once, and
+    // never equipped from the store; it keeps its level. Applied at once.
+    player.highestRegion(GameConstants.Region.johto);
+    check('the Quest Charm unlocks in Johto', quest.isUnlocked() && quest.hint() === 'Reach the Johto region');
+    const questSwitch = document.getElementById('checkbox-oakCharms-Quest_Charm');
+    check('a settings switch per charm, on by default', questSwitch?.checked === true && document.getElementById('checkbox-oakCharms-Roaming_Charm')?.checked === true);
+    quest.isActive = true;
+    questSwitch.checked = false;
+    questSwitch.dispatchEvent(new Event('change'));
+    check('turned off: locked with a hint, and unequipped', !quest.isUnlocked() && quest.hint() === 'Turned off in the Scripts settings' && !quest.isActive);
+    check('the choice is stored', JSON.parse(localStorage.getItem('oakCharmsEnabled'))?.Quest_Charm === false);
+    quest.isActive = true;
+    App.game.oakItems.fromJSON(App.game.oakItems.toJSON());
+    check('a store equipping a charm turned off is unequipped on load, level kept', !quest.isActive && quest.level === 7);
+    questSwitch.checked = true;
+    questSwitch.dispatchEvent(new Event('change'));
+    check('turned back on: unlocked, level kept', quest.isUnlocked() && quest.hint() === 'Reach the Johto region' && quest.level === 7
+        && JSON.parse(localStorage.getItem('oakCharmsEnabled')).Quest_Charm === true);
+    player.highestRegion(GameConstants.Region.kanto);
+
     // The Dowsing Charm is the game's rare item multiplier (1 on a fresh save: no Pickup aura)
     check('rare item multiplier is 1 with the charm unequipped', App.game.multiplier.getBonus('rareItemDropRate') === 1);
     dowsing.fromJSON({ level: 10, exp: 50000, isActive: true });

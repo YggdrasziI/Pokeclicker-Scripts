@@ -84,6 +84,27 @@ try {
     check('level 6 restored after reload', reloaded.level === 6 && reloaded.maxLevel === 10 && reloaded.calculateBonusIfActive() === 1.6);
     check('still counted as max level', App.game.oakItems.maxLevelOakItems() === 1);
 
+    // An item turned off in the Scripts settings keeps the game's maximum from the next
+    // load on; the store keeps its overloaded level for when it is turned on again
+    const coinSwitch = document.getElementById('checkbox-oakItemsOverload-Amulet_Coin');
+    check('a settings switch per overloaded item, on by default', coinSwitch?.checked === true && document.getElementById('checkbox-oakItemsOverload-Treasure_Scanner')?.checked === true);
+    coinSwitch.checked = false;
+    coinSwitch.dispatchEvent(new Event('change'));
+    check('the choice is stored, the item stays overloaded until the game is reloaded', JSON.parse(localStorage.getItem('oakItemsOverloadEnabled'))?.Amulet_Coin === false && reloaded.maxLevel === 10);
+    App.game = new Game();
+    App.game.initialize();
+    const plain = item('Amulet_Coin');
+    check('after the reload the item keeps the game\'s maximum', plain.maxLevel === 5 && plain.overloadBaseMaxLevel === undefined && plain.level === 5 && plain.isMaxLevel());
+    check('the other items are still overloaded', item('Magic_Ball').maxLevel === 10 && overloadedItemsOf(App.game.oakItems).length === 9);
+    App.game.oakItems.toJSON();
+    const kept = JSON.parse(localStorage.getItem(`oakItemsOverload-${Save.key}`));
+    check('the store keeps the level 6 for later', kept?.Amulet_Coin?.level === 6 && kept.Amulet_Coin.exp === 30000, JSON.stringify(kept));
+    coinSwitch.checked = true;
+    coinSwitch.dispatchEvent(new Event('change'));
+    App.game = new Game();
+    App.game.initialize();
+    check('turned back on: level 6 comes back after the reload', item('Amulet_Coin').level === 6 && item('Amulet_Coin').maxLevel === 10);
+
     // A save levelled down below the maximum is left alone
     localStorage.setItem(`oakItemsOverload-${Save.key}`, JSON.stringify({ Amulet_Coin: { level: 8, exp: 80000 } }));
     saveObject.oakItems.Amulet_Coin.level = 3;

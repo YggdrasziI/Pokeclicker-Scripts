@@ -638,6 +638,8 @@ This script adds five Oak Items to the game's own Oak Items window. Three of the
 | 9 | ×2.80 | 6,667 | 5,000,000,000 |
 | 10 | ×3.00 | 13,334 | – |
 
+The <strong>Scripts</strong> tab of the settings window has one switch per charm. A charm turned off is locked, hidden from the Oak Items window and unequipped at once, and its hooks do nothing; its level and experience are kept, and come back when it is turned on again. The choice is kept once for every save file.
+
 The charm progress is kept outside the game save, per save file, in the browser storage, so your save and your backups stay exactly what the unmodified game would write, and a save touched by this script still loads without it. In the desktop client the progress is also mirrored to a `<trainer> [<save key>] oak-charms.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save, such as after importing a backup into a fresh install. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
 
 Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; and a shiny wild Pokémon always carries its held item, so that drop counts as a rare find too.
@@ -674,6 +676,8 @@ Each item has its own lists of bonuses, experience and costs for levels 6 to 10,
 | Treasure Scanner | 24% | 26% | 28% | 30% | 32% | 35% |
 
 The Squirtbottle and Sprinklotad keep the game's maximum. The Oak Charms have their own ten levels, on the same scale, in their own script.
+
+The <strong>Scripts</strong> tab of the settings window has one switch per overloaded item, applied when the game is next loaded since the levels are extended before the save is read. An item turned off keeps the game's maximum of 5; its overloaded level stays in the side store and comes back when it is turned on again. The choice is kept once for every save file. The "all 10" achievement still counts the ten items of the table.
 
 The overloaded levels are kept outside the game save, per save file, in the browser storage: the save itself keeps level 5, so your save and your backups stay exactly what the unmodified game would write, and the game without this script simply shows the item at level 5. In the desktop client the levels are also mirrored to a `<trainer> [<save key>] oak-items-overload.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save. An overloaded level is only restored over a save standing at level 5; an item that was reset below that in the meantime keeps its lower level. An item at level 5 or above still counts toward the game's "max level Oak Item" achievements, exactly as the unmodified game counts it. With the <strong>Custom Achievements</strong> script installed, the overloaded levels get achievements of their own, in an <strong>Oak Items Overload</strong> category with a 10% achievement bonus: 1, 3, 8 then all 10 items at level 10 (Past the Professor's Limit; Overload Triple; Overload Overlord; Nothing Left to Overload).
 

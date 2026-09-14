@@ -5,7 +5,7 @@
 // @description   Adds five Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.6.1
+// @version       1.7.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -113,6 +113,39 @@ const dowsingChestExp = { 3: 1, 2: 2, 1: 3, 0: 5 };
 
 function oakCharmItem(charm) {
     return App.game.oakItems.itemList[OakItemType[charm.key]];
+}
+
+// Which charms the player uses, one switch each in the Scripts tab of the settings,
+// stored once for every save as { key: false } for the charms turned off. A charm
+// turned off stays registered, so its enum value, its loadout entries and its side
+// store entry survive the switch, but it is locked, hidden from the Oak Items window
+// and never equipped. Applied at once.
+const charmsEnabledKey = 'oakCharmsEnabled';
+let charmsEnabled = loadCharmsEnabled();
+const charmTiles = {};
+
+function loadCharmsEnabled() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(charmsEnabledKey));
+        return stored !== null && typeof stored === 'object' ? stored : {};
+    } catch {
+        return {};
+    }
+}
+
+function charmEnabled(charm) {
+    return charmsEnabled[charm.key] !== false;
+}
+
+function setCharmEnabled(charm, enabled) {
+    charmsEnabled[charm.key] = enabled;
+    localStorage.setItem(charmsEnabledKey, JSON.stringify(charmsEnabled));
+    (charmTiles[charm.key] ?? []).forEach((tile) => {
+        tile.hidden = !enabled;
+    });
+    if (!enabled && App.game?.oakItems) {
+        App.game.oakItems.deactivate(OakItemType[charm.key]);
+    }
 }
 
 // Achievements for the charms, picked up by the Custom Achievements script when it is
@@ -303,13 +336,14 @@ function initOakCharmsOverrides() {
             this.uses = Number(json?.uses) || 0;
         }
 
-        // The base class unlocks on unique pokémon caught; each charm has its own condition.
+        // The base class unlocks on unique pokémon caught; each charm has its own
+        // condition, and a charm turned off in the settings stays locked.
         isUnlocked() {
-            return this.charm.isUnlocked();
+            return charmEnabled(this.charm) && this.charm.isUnlocked();
         }
 
         getHint() {
-            return this.charm.hint;
+            return charmEnabled(this.charm) ? this.charm.hint : 'Turned off in the Scripts settings';
         }
 
         get hint() {
@@ -381,6 +415,10 @@ function initOakCharmsOverrides() {
                 }
             });
         }
+        // A charm turned off in the settings is never equipped, whatever the store says
+        oakCharms.filter((charm) => !charmEnabled(charm)).forEach((charm) => {
+            this.itemList[OakItemType[charm.key]].isActive = false;
+        });
         charmsLoaded = true;
         return result;
     };
@@ -539,6 +577,14 @@ function initOakCharmsOverrides() {
         if (!charm) {
             return;
         }
+        // The tile of the Oak Items window (and of its Loadouts tab) is the image's
+        // list item: kept to hide the charms turned off in the settings
+        const tile = target.closest('li');
+        if (tile) {
+            charmTiles[charm.key] = charmTiles[charm.key] ?? [];
+            charmTiles[charm.key].push(tile);
+            tile.hidden = !charmEnabled(charm);
+        }
         if (/\.svg$/i.test(charm.icon)) {
             target.src = charm.icon;
             return;
@@ -560,6 +606,73 @@ function initOakCharms() {
         window.DesktopSaveBackupProviders = window.DesktopSaveBackupProviders ?? [];
         window.DesktopSaveBackupProviders.push(collectOakCharmsBackup);
     }
+
+    // One switch per charm in the Scripts tab of the settings
+    const settingsBody = createScriptSettingsContainer('Oak Charms');
+    oakCharms.forEach((charm) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td class="p-2" colspan="2"><label class="m-0" for="checkbox-oakCharms-${charm.key}">${charm.displayName}: ${charm.description}</label>`
+            + `<input id="checkbox-oakCharms-${charm.key}" type="checkbox" class="mx-2"></td>`;
+        settingsBody.appendChild(row);
+        const checkbox = row.querySelector('input');
+        checkbox.checked = charmEnabled(charm);
+        checkbox.addEventListener('change', (event) => {
+            setCharmEnabled(charm, event.target.checked);
+        });
+    });
+    const note = document.createElement('tr');
+    note.innerHTML = '<td class="p-2 text-muted small" colspan="2">A charm turned off is locked, hidden from the Oak Items window and unequipped at once; its level and experience are kept for when it is turned on again.</td>';
+    settingsBody.appendChild(note);
+}
+
+/**
+ * Creates container for scripts settings in the settings menu, adding scripts tab if it doesn't exist yet
+ */
+function createScriptSettingsContainer(name) {
+    const settingsID = name.replaceAll(/s/g, '').toLowerCase();
+    var settingsContainer = document.getElementById('settings-scripts-container');
+
+    // Create scripts settings tab if it doesn't exist yet
+    if (!settingsContainer) {
+        // Fixes the Scripts nav item getting wrapped to the bottom by increasing the max width of the window
+        document.querySelector('#settingsModal div').style.maxWidth = '850px';
+        // Create and attach script settings tab link
+        const settingTabs = document.querySelector('#settingsModal ul.nav-tabs');
+        const li = document.createElement('li');
+        li.classList.add('nav-item');
+        li.innerHTML = `<a class="nav-link" href="#settings-scripts" data-toggle="tab">Scripts</a>`;
+        settingTabs.appendChild(li);
+        // Create and attach script settings tab contents
+        const tabContent = document.querySelector('#settingsModal .tab-content');
+        scriptSettings = document.createElement('div');
+        scriptSettings.classList.add('tab-pane');
+        scriptSettings.setAttribute('id', 'settings-scripts');
+        tabContent.appendChild(scriptSettings);
+        settingsContainer = document.createElement('div');
+        settingsContainer.setAttribute('id', 'settings-scripts-container');
+        scriptSettings.appendChild(settingsContainer);
+    }
+
+    // Create settings container
+    const settingsTable = document.createElement('table');
+    settingsTable.classList.add('table', 'table-striped', 'table-hover', 'm-0');
+    const header = document.createElement('thead');
+    header.innerHTML = `<tr><th colspan="2">${name}</th></tr>`;
+    settingsTable.appendChild(header);
+    const settingsBody = document.createElement('tbody');
+    settingsBody.setAttribute('id', `settings-scripts-${settingsID}`);
+    settingsTable.appendChild(settingsBody);
+
+    // Insert settings container in alphabetical order
+    let settingsList = Array.from(settingsContainer.children);
+    let insertBefore = settingsList.find(elem => elem.querySelector('tbody').id > `settings-scripts-${settingsID}`);
+    if (insertBefore) {
+        insertBefore.before(settingsTable);
+    } else {
+        settingsContainer.appendChild(settingsTable);
+    }
+
+    return settingsBody;
 }
 
 function loadEpheniaScript(scriptName, initFunction, priorityFunction) {
