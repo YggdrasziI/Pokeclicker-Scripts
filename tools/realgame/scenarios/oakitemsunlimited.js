@@ -27,7 +27,7 @@ try {
     const rules = [...document.head.querySelectorAll('style')].map((style) => style.textContent).join('\n');
     check('the module rows are laid out two per line', rules.includes('#oakItemsBody > table > tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }'));
     check('an emptied row takes no cell', rules.includes('#oakItemsBody > table > tbody > tr:empty { display: none; }'));
-    check('the icon cell keeps its own width, not the table\'s 1 pixel', rules.includes('td.tight { flex: 0 0 auto; width: auto; }'));
+    check('the icon cell keeps its own width, not the table\'s 1 pixel', rules.includes('td.tight { display: block; flex: 0 0 auto; width: auto; }'));
     const rows = () => [...document.querySelectorAll('#oakItemsBody > table > tbody > tr')];
     check('one row per Oak Item, all emptied while nothing is equipped', rows().length === oakItems.itemList.length && rows().every((row) => row.childNodes.length === 0));
 
