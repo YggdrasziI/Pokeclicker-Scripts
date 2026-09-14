@@ -556,7 +556,7 @@ There may be some other cool or neat custom events added in with this as well.
 
 <a name="custom-oak-charms"></a>
 ## [Custom] Oak Charms (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakcharms.user.js">oakcharms.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakcharms.user.js">One-Click Install</a>)
-This script adds four Oak Items to the game's own Oak Items window. Three of them multiply a currency the way the Amulet Coin multiplies Pokédollars; the fourth, the Dowsing Charm, does what the Dowsing Machine does. Each takes one of your Oak Item slots like any other item, and shows up with a borrowed icon since the game has no sprite for it. All four level up from the Oak Items window, from level 0 to 10, for a Pokédollar upgrade cost, once they have earned enough experience by being used. The first five levels are on the scale of the game's own Oak Items; levels 6 to 10 are on the far steeper scale of the Oak Items Overload script, each costing the level 5 upgrade times 10, 50, 250, 1,000 then 5,000. The experience each level needs is listed below.
+This script adds five Oak Items to the game's own Oak Items window. Three of them multiply a currency the way the Amulet Coin multiplies Pokédollars; the fourth, the Dowsing Charm, does what the Dowsing Machine does; the fifth, the Roaming Charm, does what a boosted route does. Each takes one of your Oak Item slots like any other item, and shows up with a borrowed icon since the game has no sprite for it. All five level up from the Oak Items window, from level 0 to 10, for a Pokédollar upgrade cost, once they have earned enough experience by being used. The first five levels are on the scale of the game's own Oak Items; levels 6 to 10 are on the far steeper scale of the Oak Items Overload script, each costing the level 5 upgrade times 10, 50, 250, 1,000 then 5,000. The experience each level needs is listed below.
 
 <strong>Quest Charm</strong> multiplies the Quest Points you gain from quests. It unlocks when you reach Johto, and gains 1 experience each time it multiplies a quest reward.
 
@@ -622,11 +622,27 @@ This script adds four Oak Items to the game's own Oak Items window. Three of the
 | 9 | ×1.46 | 25,000 | 12,500,000,000 |
 | 10 | ×1.50 | 50,000 | – |
 
+<strong>Roaming Charm</strong> makes roaming Pokémon appear more often on every route, the way the game's boosted route does: level 10 is the boosted route's own ×3, and the two stack, as do the Roaming farm auras. The route info window already shows the resulting odds. It is the Shiny Charm's twin: it unlocks once you have captured 70 unique Pokémon, follows the Shiny Charm's experience and Pokédollar costs (levels 6 to 10 on the Oak Items Overload scale), and gains 150 experience per roaming Pokémon encountered while equipped, like the Shiny Charm's 150 per shiny, which the window shows as roamers met. It shows up with the roaming icon of the route info window.
+
+| Level | Bonus | Roamers encountered (total) | Upgrade cost |
+|:-----:|:-----:|:---------------------------:|:------------:|
+| 0 | ×1.50 | – | 50,000 |
+| 1 | ×1.60 | 4 | 100,000 |
+| 2 | ×1.70 | 7 | 250,000 |
+| 3 | ×1.80 | 17 | 500,000 |
+| 4 | ×1.90 | 34 | 1,000,000 |
+| 5 | ×2.00 | 67 | 10,000,000 |
+| 6 | ×2.20 | 200 | 50,000,000 |
+| 7 | ×2.40 | 667 | 250,000,000 |
+| 8 | ×2.60 | 2,000 | 1,000,000,000 |
+| 9 | ×2.80 | 6,667 | 5,000,000,000 |
+| 10 | ×3.00 | 13,334 | – |
+
 The charm progress is kept outside the game save, per save file, in the browser storage, so your save and your backups stay exactly what the unmodified game would write, and a save touched by this script still loads without it. In the desktop client the progress is also mirrored to a `<trainer> [<save key>] oak-charms.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save, such as after importing a backup into a fresh install. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
 
 Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; and a shiny wild Pokémon always carries its held item, so that drop counts as a rare find too.
 
-The charms never count toward the game's "max level Oak Item" achievements, which keep counting the game's twelve items. With the <strong>Custom Achievements</strong> script installed, the charms get achievements of their own, in an <strong>Oak Charms</strong> category with a 10% achievement bonus: 1, 2 then all 4 charms at level 5 (Charmed, I'm Sure; Twice as Charming; Full Charm Bracelet) and at level 10 (Charm Overload; Double Charm Overload; Charm Offensive).
+The charms never count toward the game's "max level Oak Item" achievements, which keep counting the game's twelve items. With the <strong>Custom Achievements</strong> script installed, the charms get achievements of their own, in an <strong>Oak Charms</strong> category with a 10% achievement bonus: 1, 2, 3 then all 5 charms at level 5 (Charmed, I'm Sure; Twice as Charming; Third Time's the Charm; Full Charm Bracelet) and at level 10 (Charm Overload; Double Charm Overload; Triple Charm Overload; Charm Offensive), and 100, 1,000 then 10,000 roaming Pokémon encountered with the Roaming Charm equipped (Roam Sweet Roam; Born to Roam; Legends Never Rest). The roamer count is kept with the charm progress, outside the save.
 
 <hr>
 

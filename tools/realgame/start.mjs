@@ -70,7 +70,7 @@ virtualConsole.on('log', (...args) => {
     const text = args.map(String).join(' ');
     // The game's own timestamped, styled progress lines are noise here
     if (!/^\[\d|%c/.test(text)) {
-        console.log(`[page] ${text.slice(0, 2000)}`);
+        console.log(`[page] ${text.slice(0, 10000)}`);
     }
 });
 virtualConsole.on('error', (...args) => console.log('[page error]', ...args.map((a) => String(a).slice(0, 500))));

@@ -1,10 +1,11 @@
 // Scenario for tools/realgame/start.mjs, with oakcharms (and optionally customachievements for
 // the achievement checks, and oakitemsoverload,
-// in either order): the four charms exist with their own ten levels, bonuses, costs and
+// in either order): the five charms exist with their own ten levels, bonuses, costs and
 // experience; a level past 5 is bought through the game's own upgrade path, kept out of
 // the save in the charms' side store, and restored on reload. The Dowsing Charm feeds
 // the game's rare item multiplier, gains exp from held item drops and rare chests, and
-// scales the chest "more loot" roll of a real dungeon.
+// scales the chest "more loot" roll of a real dungeon. The Roaming Charm feeds the
+// game's roaming multiplier, gains exp and counts its uses on roaming encounters.
 try {
     const out = [];
     const check = (label, condition, detail) => {
@@ -14,14 +15,16 @@ try {
         }
     };
     const item = (key) => App.game.oakItems.itemList[OakItemType[key]];
+    const near = (value, expected) => Math.abs(value - expected) < 1e-9;
     const quest = item('Quest_Charm');
     const farm = item('Farm_Charm');
     const battle = item('Battle_Charm');
     const dowsing = item('Dowsing_Charm');
-    const charms = [quest, farm, battle, dowsing];
+    const roaming = item('Roaming_Charm');
+    const charms = [quest, farm, battle, dowsing, roaming];
 
     // Definitions
-    check('the four charms exist', charms.every((charm) => charm !== undefined));
+    check('the five charms exist', charms.every((charm) => charm !== undefined));
     check('ten levels each', charms.every((charm) => charm.maxLevel === 10 && charm.bonusList.length === 11 && charm.costList.length === 10 && charm.expList.length === 10));
     check('not touched by Oak Items Overload', charms.every((charm) => charm.overloadBaseMaxLevel === undefined));
     check('Quest Charm bonuses 1.15x .. 2.25x .. 3.5x', quest.bonusList[0] === 1.15 && quest.bonusList[5] === 2.25 && quest.bonusList[10] === 3.5);
@@ -34,6 +37,12 @@ try {
         && dowsing.costList[0].amount === 100000 && dowsing.costList[9].amount === 12500000000 && dowsing.costList[9].currency === GameConstants.Currency.money
         && dowsing.expList[0] === 25 && dowsing.expList[9] === 50000);
     check('Dowsing Charm is locked before Hoenn', !dowsing.isUnlocked() && dowsing.hint() === 'Reach the Hoenn region');
+    check('Roaming Charm 1.5x .. 2x .. 3x, the boosted route value, on the Shiny Charm\'s lists', roaming.bonusList[0] === 1.5 && roaming.bonusList[5] === 2 && roaming.bonusList[10] === GameConstants.ROAMING_INCREASED_CHANCE
+        && roaming.costList[0].amount === 50000 && roaming.costList[4].amount === 1000000 && roaming.costList[5].amount === 10000000 && roaming.costList[9].amount === 5000000000
+        && roaming.costList[9].currency === GameConstants.Currency.money
+        && roaming.expList[0] === 500 && roaming.expList[4] === 10000 && roaming.expList[5] === 30000 && roaming.expList[9] === 2000000 && roaming.expGain === 150);
+    check('Roaming Charm progress counts roamers, 4 for the first level', roaming.progressString === '0 / 4');
+    check('Roaming Charm is locked before 70 unique Pokémon', !roaming.isUnlocked() && roaming.hint() === 'Capture 70 unique Pokémon');
 
     // Level 5 is not the end: the upgrade needs the next experience step and costs 200M
     quest.fromJSON({ level: 5, exp: 1000, isActive: true });
@@ -57,10 +66,18 @@ try {
         const five = achievement('Charmed, I\'m Sure');
         const ten = achievement('Charm Overload');
         const allTen = achievement('Charm Offensive');
-        check('charm achievements registered', five !== undefined && ten !== undefined && allTen?.property.requiredValue === 4);
+        check('charm achievements registered', five !== undefined && ten !== undefined && allTen?.property.requiredValue === 5 && achievement('Full Charm Bracelet')?.property.requiredValue === 5);
+        check('a tier at 3 charms in both series', achievement('Third Time\'s the Charm')?.property.requiredValue === 3 && achievement('Triple Charm Overload')?.property.requiredValue === 3);
         check('in their own category', five.category.name === 'oakCharms' && five.category !== achievement('Is That How I Use This?').category);
         check('one charm at level 10 completes the first tiers', five.property.getProgress() === 1 && five.isCompleted() && ten.isCompleted() && allTen.property.getProgress() === 1 && !allTen.isCompleted());
         check('the game\'s own achievement sees no max-level item', achievement('Is That How I Use This?').property.getProgress() === 0);
+        const roamSweetRoam = achievement('Roam Sweet Roam');
+        check('roamer achievements registered, 100 .. 10,000, in the same category', roamSweetRoam?.property.requiredValue === 100 && roamSweetRoam.category === five.category
+            && achievement('Born to Roam')?.property.requiredValue === 1000 && achievement('Legends Never Rest')?.property.requiredValue === 10000);
+        roaming.fromJSON({ level: 1, exp: 0, isActive: true, uses: 100 });
+        check('100 roamers met complete Roam Sweet Roam', roamSweetRoam.property.getProgress() === 100 && roamSweetRoam.isCompleted() && !achievement('Born to Roam').isCompleted());
+        roaming.fromJSON({ level: 0, exp: 0, isActive: false });
+        check('the count reads 0 from a store without it', roaming.uses === 0 && roamSweetRoam.property.getProgress() === 0);
     } else {
         out.push('     (Custom Achievements not loaded, achievements skipped)');
     }
@@ -104,11 +121,49 @@ try {
     dowsing.fromJSON({ level: 3, exp: 250, isActive: false });
     check('an unequipped charm gains nothing from drops', expAfterDefeat({ type: ItemType.item, id: 'xAttack' }) === 0);
 
-    // The save stays vanilla; the side store keeps the charms at level 7 and 3
+    // The Roaming Charm is the game's roaming multiplier (1 on a fresh save: no Roaming aura)
+    check('roaming multiplier is 1 with the charm unequipped', App.game.multiplier.getBonus('roaming') === 1);
+    const route = Routes.getRoute(GameConstants.Region.kanto, 1);
+    const rateUnequipped = PokemonFactory.roamingRate(route);
+    roaming.fromJSON({ level: 10, exp: 2000000, isActive: true });
+    check('roaming multiplier is 3 at level 10', App.game.multiplier.getBonus('roaming') === 3);
+    check('the route\'s roaming odds are three times better at level 10', rateUnequipped > 0 && near(PokemonFactory.roamingRate(route), rateUnequipped / 3), `${rateUnequipped} -> ${PokemonFactory.roamingRate(route)}`);
+    roaming.fromJSON({ level: 2, exp: 1000, isActive: true });
+    check('roaming multiplier follows the level', App.game.multiplier.getBonus('roaming') === 1.7);
+    App.game.multiplier.getBonus('roaming', true);
+    check('reading the multiplier grants no experience nor use', roaming.normalizedExp === 0 && roaming.uses === 0);
+
+    // Roaming encounters through the game's own roll: Mew roams Kanto from the start, an
+    // event roamer may too.
+    // The roll is the Rand.chance call of generateRoamingEncounter, forced by a spy.
+    const roamingEncounter = (rolls) => {
+        Rand.chance = () => rolls;
+        const start = { exp: roaming.normalizedExp, uses: roaming.uses };
+        try {
+            const result = PokemonFactory.generateRoamingEncounter(1, GameConstants.Region.kanto);
+            return { result, exp: roaming.normalizedExp - start.exp, uses: roaming.uses - start.uses };
+        } finally {
+            delete Rand.chance;
+        }
+    };
+    let encounter = roamingEncounter(true);
+    check('a roaming encounter gives 150 exp and one use', typeof encounter.result === 'string' && encounter.exp === 150 && encounter.uses === 1, JSON.stringify(encounter));
+    encounter = roamingEncounter(false);
+    check('a failed roll gives nothing', encounter.result === false && encounter.exp === 0 && encounter.uses === 0, JSON.stringify(encounter));
+    roaming.fromJSON({ level: 2, exp: 1000, isActive: false, uses: 1 });
+    encounter = roamingEncounter(true);
+    check('an unequipped charm gains nothing from roamers', typeof encounter.result === 'string' && encounter.exp === 0 && encounter.uses === 0, JSON.stringify(encounter));
+    roaming.fromJSON({ level: 10, exp: 2000000, isActive: true, uses: 1 });
+    encounter = roamingEncounter(true);
+    check('a max-level charm still counts its uses', encounter.exp === 0 && encounter.uses === 1 && roaming.uses === 2, JSON.stringify(encounter));
+    roaming.fromJSON({ level: 2, exp: 1000, isActive: true, uses: 2 });
+
+    // The save stays vanilla; the side store keeps the charms at level 7, 3 and 2
     const save = App.game.oakItems.toJSON();
-    check('save holds no charm', save.Quest_Charm === undefined && save.Farm_Charm === undefined && save.Battle_Charm === undefined && save.Dowsing_Charm === undefined);
+    check('save holds no charm', save.Quest_Charm === undefined && save.Farm_Charm === undefined && save.Battle_Charm === undefined && save.Dowsing_Charm === undefined && save.Roaming_Charm === undefined);
     const stored = JSON.parse(localStorage.getItem(`oakCharms-${Save.key}`));
     check('side store holds levels 7 and 3', stored?.Quest_Charm?.level === 7 && stored.Quest_Charm.exp === 30000 && stored.Dowsing_Charm?.level === 3, JSON.stringify(stored));
+    check('side store holds the Roaming Charm level and uses', stored?.Roaming_Charm?.level === 2 && stored.Roaming_Charm.uses === 2, JSON.stringify(stored?.Roaming_Charm));
 
     // Reload: the levels come back from the store
     const saveObject = Save.getSaveObject();
@@ -121,7 +176,10 @@ try {
     check('level 7 restored after reload', reloaded.level === 7 && reloaded.maxLevel === 10 && reloaded.calculateBonusIfActive() === 2.75);
     const reloadedDowsing = item('Dowsing_Charm');
     check('Dowsing Charm level 3 restored after reload', reloadedDowsing.level === 3 && reloadedDowsing.calculateBonusIfActive() === 1.22);
-    check('the new game registered the multiplier once', App.game.multiplier.multipliers.rareItemDropRate.filter((m) => m.source === 'Dowsing Charm').length === 1);
+    const reloadedRoaming = item('Roaming_Charm');
+    check('Roaming Charm level 2 and its 2 uses restored after reload', reloadedRoaming.level === 2 && reloadedRoaming.uses === 2 && reloadedRoaming.calculateBonusIfActive() === 1.7);
+    check('the new game registered the multipliers once', App.game.multiplier.multipliers.rareItemDropRate.filter((m) => m.source === 'Dowsing Charm').length === 1
+        && App.game.multiplier.multipliers.roaming.filter((m) => m.source === 'Roaming Charm').length === 1);
 
     // The chest "more loot" roll of a real dungeon. A fresh save cannot enter Viridian
     // Forest yet: ticket, tokens and Route 2. The roll is the first Rand.chance call of
@@ -157,7 +215,6 @@ try {
         seen.exp = reloadedDowsing.normalizedExp - start;
         return seen;
     };
-    const near = (value, expected) => Math.abs(value - expected) < 1e-9;
     // rare: 0.5 / (4 / 4) / 1.5
     reloadedDowsing.fromJSON({ level: 3, exp: 250, isActive: false });
     let seen = openRiggedChest('rare');

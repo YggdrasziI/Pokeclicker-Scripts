@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Oak Charms
 // @namespace     Pokeclicker Scripts
 // @author        YggdrasziI
-// @description   Adds four Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, and the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine. Each unlocks on its own condition and levels up by using it.
+// @description   Adds five Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.5.0
+// @version       1.6.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -27,6 +27,8 @@
 //   currency:  the wallet currency the charm multiplies, null for a charm applied
 //              and fed by its own hooks instead
 //   expOnGain: exp granted when that currency is gained (base amount, bonus applied)
+//   expGain:   exp granted by one plain use of the charm, 1 when omitted; the window
+//              shows the progress in uses, like the game does for its own items
 //   icon:      replaces the missing assets/images/oakitems/<key>.png
 const oakCharms = [
     {
@@ -85,6 +87,23 @@ const oakCharms = [
         hint: 'Reach the Hoenn region',
         icon: 'assets/images/items/battleItem/Dowsing_machine.png',
     },
+    {
+        key: 'Roaming_Charm',
+        displayName: 'Roaming Charm',
+        description: 'Encounter roaming Pokémon more often',
+        // The Shiny Charm's own levels, as extended by Oak Items Overload: level 10 is
+        // the x3 of a boosted route (GameConstants.ROAMING_INCREASED_CHANCE)
+        bonusList: [1.50, 1.60, 1.70, 1.80, 1.90, 2.00, 2.20, 2.40, 2.60, 2.80, 3.00],
+        expList: [500, 1000, 2500, 5000, 10000, 30000, 100000, 300000, 1000000, 2000000],
+        costList: [50000, 100000, 250000, 500000, 1000000, 10000000, 50000000, 250000000, 1000000000, 5000000000],
+        // Not a currency charm: exp comes from the roaming encounter hook, 150 per
+        // roamer met, like the Shiny Charm's 150 per shiny
+        currency: null,
+        expGain: 150,
+        isUnlocked: () => App.game.party.caughtPokemon.length >= 70,
+        hint: 'Capture 70 unique Pokémon',
+        icon: 'assets/images/encountersInfo/roaming.png',
+    },
 ];
 
 // Exp a dungeon chest grants the Dowsing Charm, by the game's loot tier weight
@@ -98,15 +117,17 @@ function oakCharmItem(charm) {
 // Achievements for the charms, picked up by the Custom Achievements script when it is
 // installed, in a category of their own: the game's "max level Oak Item" achievements
 // and their bonus never see the charms. Two series shaped like the game's tiers, one at
-// level 5 (the scale of the game's own Oak Items) and one at level 10.
+// level 5 (the scale of the game's own Oak Items) and one at level 10, then one on the
+// roaming Pokémon met with the Roaming Charm equipped.
 function oakCharmAchievementDefinitions() {
     const category = { name: 'oakCharms', displayName: 'Oak Charms', bonus: 10 };
+    const achievable = () => !App.game.challenges.list.disableOakItems.active();
     const total = oakCharms.length;
     const series = {
-        5: [[1, 0.05, 'Charmed, I\'m Sure'], [2, 0.10, 'Twice as Charming'], [total, 0.18, 'Full Charm Bracelet']],
-        10: [[1, 0.10, 'Charm Overload'], [2, 0.14, 'Double Charm Overload'], [total, 0.18, 'Charm Offensive']],
+        5: [[1, 0.05, 'Charmed, I\'m Sure'], [2, 0.10, 'Twice as Charming'], [3, 0.14, 'Third Time\'s the Charm'], [total, 0.18, 'Full Charm Bracelet']],
+        10: [[1, 0.10, 'Charm Overload'], [2, 0.14, 'Double Charm Overload'], [3, 0.16, 'Triple Charm Overload'], [total, 0.18, 'Charm Offensive']],
     };
-    return Object.entries(series).flatMap(([level, tiers]) => tiers.map(([amount, bonus, name]) => ({
+    const levels = Object.entries(series).flatMap(([level, tiers]) => tiers.map(([amount, bonus, name]) => ({
         name,
         description: `Level ${amount === total ? `all ${total}` : amount} Oak Charm${amount > 1 ? 's' : ''} to level ${level}.`,
         progress: () => oakCharms.filter((charm) => oakCharmItem(charm).level >= Number(level)).length,
@@ -116,8 +137,21 @@ function oakCharmAchievementDefinitions() {
         type: GameConstants.AchievementType['Max Level Oak Item'],
         series: `oakCharms:${level}`,
         hint: `${amount} Oak Charm${amount > 1 ? 's' : ''} leveled to level ${level}.`,
-        achievable: () => !App.game.challenges.list.disableOakItems.active(),
+        achievable,
     })));
+    const roamingCharm = oakCharms.find((c) => c.key === 'Roaming_Charm');
+    const roamers = [[100, 0.05, 'Roam Sweet Roam'], [1000, 0.10, 'Born to Roam'], [10000, 0.14, 'Legends Never Rest']].map(([amount, bonus, name]) => ({
+        name,
+        description: `Encounter ${amount.toLocaleString('en-US')} roaming Pokémon with the Roaming Charm equipped.`,
+        progress: () => oakCharmItem(roamingCharm).uses,
+        amount,
+        bonus,
+        category,
+        series: 'oakCharms:roamers',
+        hint: `${amount.toLocaleString('en-US')} roaming Pokémon encountered with the Roaming Charm equipped.`,
+        achievable,
+    }));
+    return levels.concat(roamers);
 }
 
 // The charm progress (level, exp, equipped) lives outside the game save, so a save
@@ -230,12 +264,42 @@ function initOakCharmsOverrides() {
 
     class OakCharm extends OakItem {
         constructor(charm) {
-            super(OakItemType[charm.key], charm.displayName, charm.description, true, charm.bonusList, 1, 0, 1,
+            super(OakItemType[charm.key], charm.displayName, charm.description, true, charm.bonusList, 1, 0, charm.expGain ?? 1,
                 charm.expList, charm.costList.length, AmountFactory.createArray(charm.costList, GameConstants.Currency.money));
             this.charm = charm;
             // Not one of the game's Oak Items: never counted by the game's "max level
             // Oak Item" achievements, see maxLevelOakItems below
             this.customOakItem = true;
+            // Uses while equipped, kept with the level and exp for the charm achievements:
+            // the game's own count sits in the save, under the charm's enum index. An
+            // observable, like level, so the achievements' computed completion follows it.
+            this.usesKO = ko.observable(0);
+        }
+
+        get uses() {
+            return this.usesKO();
+        }
+
+        set uses(value) {
+            this.usesKO(value);
+        }
+
+        // The base class only uses an equipped item, and stops granting exp at the last
+        // level; the count goes on.
+        use(...args) {
+            if (this.isActive) {
+                this.uses += 1;
+            }
+            super.use(...args);
+        }
+
+        toJSON() {
+            return { ...super.toJSON(), uses: this.uses };
+        }
+
+        fromJSON(json) {
+            super.fromJSON(json);
+            this.uses = Number(json?.uses) || 0;
         }
 
         // The base class unlocks on unique pokémon caught; each charm has its own condition.
@@ -266,6 +330,10 @@ function initOakCharmsOverrides() {
         // Dowsing Machine registers its own x1.5. The game reads it without the
         // "use" flag, so the roll grants no exp: the loot hooks below do.
         this.multiplier.addBonus('rareItemDropRate', () => this.calculateBonus(OakItemType.Dowsing_Charm), 'Dowsing Charm');
+        // PokemonFactory.roamingRate divides its 1-in-N odds by this multiplier, next
+        // to the boosted route's x3 and the farm auras, and reads it without the "use"
+        // flag as well: the roaming encounter hook below grants the exp.
+        this.multiplier.addBonus('roaming', () => this.calculateBonus(OakItemType.Roaming_Charm), 'Roaming Charm');
 
         // The game's "max level Oak Items" achievements count from maxLevelOakItems, which
         // the game recomputes from every item of the list, charms included. Count only
@@ -366,6 +434,19 @@ function initOakCharmsOverrides() {
         const exp = dowsingChestExp[weight];
         if (exp && App.game?.oakItems) {
             oakCharmItem(dowsingCharm).use(undefined, exp);
+        }
+        return result;
+    };
+
+    // The Roaming Charm levels on roaming Pokémon met, the way the Shiny Charm levels
+    // on shinies: generateRoamingEncounter, called by generateWildPokemon for every
+    // wild encounter, returns the roamer's name once its roll succeeds, false otherwise.
+    const roamingCharm = oakCharms.find((c) => c.key === 'Roaming_Charm');
+    const generateRoamingEncounterOld = PokemonFactory.generateRoamingEncounter;
+    PokemonFactory.generateRoamingEncounter = function (...args) {
+        const result = generateRoamingEncounterOld.apply(this, args);
+        if (result && App.game?.oakItems) {
+            oakCharmItem(roamingCharm).use();
         }
         return result;
     };
