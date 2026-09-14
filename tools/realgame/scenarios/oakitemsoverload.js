@@ -23,6 +23,9 @@ try {
     check('experience is 30k .. 3M', coin.expList.length === 10 && coin.expList[5] === 30000 && coin.expList[9] === 3000000);
     check('Magic Ball reaches 20%', item('Magic_Ball').bonusList[10] === 20 && item('Magic_Ball').maxLevel === 10);
     check('Cell Battery experience follows its own list', item('Cell_Battery').expList[5] === 450 && item('Cell_Battery').expList[9] === 45000);
+    check('Explosive Charge costs follow its own list',
+        item('Explosive_Charge').costList[5].amount === 20000000 && item('Explosive_Charge').costList[9].amount === 10000000000
+        && item('Explosive_Charge').costList[9].currency === GameConstants.Currency.money);
     check('EXP Share reaches 1.75x', item('Exp_Share').maxLevel === 10 && item('Exp_Share').bonusList[10] === 1.75);
     check('Squirtbottle keeps the game maximum', item('Squirtbottle').maxLevel === 5 && item('Squirtbottle').overloadBaseMaxLevel === undefined);
     check('Sprinklotad keeps the game maximum', item('Sprinklotad').maxLevel === 5);
