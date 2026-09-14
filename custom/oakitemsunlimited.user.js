@@ -5,7 +5,7 @@
 // @description   Removes the limit for the amount of Oak Items that you're able to equip so that you're able to equip all of them, and lays the equipped Oak Items module out two items per row, with shortened numbers (1.5B), so it stays short with every item equipped.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.1.0
+// @version       1.1.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -45,7 +45,10 @@ function initOakItemsUnlimitedOverrides() {
 
     // The table becomes a two-column grid of rows. A row whose item is not equipped
     // stays in the table, emptied by the "if" binding: hide it so it takes no cell.
-    // The stripes would alternate on the hidden rows too, so they go.
+    // The stripes would alternate on the hidden rows too, so they go. The icon cell
+    // is the game's td.tight, 1 pixel wide so that the table shrinks the column to
+    // the icon: in a flex row that pixel is the cell's size and the progress bar
+    // covers the icon, so the cell takes its own width back.
     const style = document.createElement('style');
     style.textContent = [
         '#oakItemsBody > table { display: block; }',
@@ -53,7 +56,7 @@ function initOakItemsUnlimitedOverrides() {
         '#oakItemsBody > table > tbody > tr { display: flex; align-items: stretch; }',
         '#oakItemsBody > table > tbody > tr:empty { display: none; }',
         '#oakItemsBody > table > tbody > tr:nth-of-type(odd) { background-color: transparent; }',
-        '#oakItemsBody > table > tbody > tr > td.tight { flex: 0 0 auto; }',
+        '#oakItemsBody > table > tbody > tr > td.tight { flex: 0 0 auto; width: auto; }',
         '#oakItemsBody > table > tbody > tr > td.p-0 { flex: 1 1 auto; min-width: 0; }',
         '#oakItemsBody > table > tbody .progress span { font-size: 13px !important; white-space: nowrap; }',
         '#oakItemsBody > table > tfoot, #oakItemsBody > table > tfoot > tr, #oakItemsBody > table > tfoot > tr > td { display: block; }',
