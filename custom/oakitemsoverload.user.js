@@ -5,7 +5,7 @@
 // @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are kept outside the game save, so the save stays exactly what the unmodified game would write.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.2.1
+// @version       1.3.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -108,6 +108,27 @@ function overloadOakItems(oakItems) {
             overloadOakItem(item, overload);
         }
     });
+}
+
+// Achievements for the overloaded levels, picked up by the Custom Achievements script
+// when it is installed, in a category of their own: the game's "max level Oak Item"
+// achievements keep counting the game's maximum and keep their bonus. One series
+// shaped like the game's tiers, for the items standing at their overloaded maximum.
+function overloadAchievementDefinitions() {
+    const total = Object.keys(overloadedOakItems).length;
+    const tiers = [[1, 0.05, 'Past the Professor\'s Limit'], [3, 0.10, 'Overload Triple'], [8, 0.14, 'Overload Overlord'], [total, 0.18, 'Nothing Left to Overload']];
+    return tiers.map(([amount, bonus, name]) => ({
+        name,
+        description: `Level ${amount === total ? `all ${total}` : amount} overloaded Oak Item${amount > 1 ? 's' : ''} to the overloaded maximum.`,
+        progress: () => overloadedItemsOf(App.game.oakItems).filter((item) => item.level >= item.maxLevel).length,
+        amount,
+        bonus,
+        category: { name: 'oakItemsOverload', displayName: 'Oak Items Overload', bonus: 10 },
+        type: GameConstants.AchievementType['Max Level Oak Item'],
+        series: 'oakItemsOverload',
+        hint: `${amount} overloaded Oak Item${amount > 1 ? 's' : ''} leveled to the overloaded maximum.`,
+        achievable: () => !App.game.challenges.list.disableOakItems.active(),
+    }));
 }
 
 // The table is written by hand: a level with a bonus but no price or no experience
@@ -224,6 +245,11 @@ function initOakItemsOverloadOverrides() {
     checkOverloadTable();
     OakItems.prototype.overloadInstalled = true;
 
+    // Achievements, picked up by the Custom Achievements script whichever loads first
+    const windowObject = !App.isUsingClient ? unsafeWindow : window;
+    windowObject.CustomAchievementsQueue = windowObject.CustomAchievementsQueue ?? [];
+    windowObject.CustomAchievementsQueue.push(() => overloadAchievementDefinitions());
+
     // Extend the items right after the game builds its list, before the save is read.
     const initializeOld = OakItems.prototype.initialize;
     OakItems.prototype.initialize = function (...args) {
@@ -232,9 +258,11 @@ function initOakItemsOverloadOverrides() {
 
         // The game counts its "max level Oak Items" achievements from isMaxLevel(), which an
         // overloaded item only reaches at level 10. Count the game's own maximum instead, and
-        // ignore the game's writes, which would count the other way
+        // ignore the game's writes, which would count the other way. An Oak Item added by
+        // another script flags itself customOakItem and is never counted (the Oak Charms
+        // script installs this same rule, so the load order does not matter).
         this.maxLevelOakItems = ko.pureComputed({
-            read: () => this.itemList.filter((item) => item.level >= (item.overloadBaseMaxLevel ?? item.maxLevel)).length,
+            read: () => this.itemList.filter((item) => !item.customOakItem && item.level >= (item.overloadBaseMaxLevel ?? item.maxLevel)).length,
             write: () => {},
         });
         return result;

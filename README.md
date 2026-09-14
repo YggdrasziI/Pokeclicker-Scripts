@@ -461,7 +461,7 @@ Also, yes, changing these will give you the respective Challenge ribbons on your
 ## [Custom] Custom Achievements (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/customachievements.user.js">customachievements.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/customachievements.user.js">One-Click Install</a>)
 This script lets other scripts add achievements to the game's own Achievements window. Each script declares its achievements in a category of its own, with its own achievement bonus, so the game's achievements and their bonus stay exactly as they are. The custom categories show up in the window's Category filter, the achievements chain in the achievement tracker like the game's tiers do, and the ones you unlock are remembered by name in the game save, which the unmodified game simply ignores.
 
-The script ships no achievement by itself: <strong>Shiny Variants</strong> registers its Rare and Epic shiny achievements through it. A single setting in the <strong>Scripts</strong> tab turns the bonus of the custom categories on or off.
+The script ships no achievement by itself: <strong>Shiny Variants</strong> registers its Rare and Epic shiny achievements through it, <strong>Oak Charms</strong> its charm level achievements and <strong>Oak Items Overload</strong> its overloaded level achievements. A single setting in the <strong>Scripts</strong> tab turns the bonus of the custom categories on or off.
 
 To add achievements from another script, push definitions on <code>window.CustomAchievementsQueue</code> (the order the scripts load in does not matter):
 
@@ -624,7 +624,9 @@ This script adds four Oak Items to the game's own Oak Items window. Three of the
 
 The charm progress is kept outside the game save, per save file, in the browser storage, so your save and your backups stay exactly what the unmodified game would write, and a save touched by this script still loads without it. In the desktop client the progress is also mirrored to a `<trainer> [<save key>] oak-charms.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save, such as after importing a backup into a fresh install. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
 
-Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; a shiny wild Pokémon always carries its held item, so that drop counts as a rare find too; and a max-level charm counts toward the "max level Oak Item" achievements.
+Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; and a shiny wild Pokémon always carries its held item, so that drop counts as a rare find too.
+
+The charms never count toward the game's "max level Oak Item" achievements, which keep counting the game's twelve items. With the <strong>Custom Achievements</strong> script installed, the charms get achievements of their own, in an <strong>Oak Charms</strong> category with a 10% achievement bonus: 1, 2 then all 4 charms at level 5 (Charmed, I'm Sure; Twice as Charming; Full Charm Bracelet) and at level 10 (Charm Overload; Double Charm Overload; Charm Offensive).
 
 <hr>
 
@@ -632,7 +634,15 @@ Known quirks: the quest completion message and its logbook entry print the base 
 ## [Custom] Oak Items Overload (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakitemsoverload.user.js">oakitemsoverload.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakitemsoverload.user.js">One-Click Install</a>)
 This script lets Oak Items be upgraded past their maximum level, from 5 to 10, through the game's own Oak Items window: once an item reaches level 5 its progress bar keeps filling, and the usual Upgrade button buys the next level. The overloaded levels cost far more than the game's own and need far more experience.
 
-Each item has its own lists of bonuses, experience and costs for levels 6 to 10, written by hand in the `overloadedOakItems` table at the top of the script, so every item can be tuned on its own scale. The experience is a running total, like the game's own (a regular Oak Item needs 10,000 in total for level 5), and the costs are in the currency of the item's regular upgrades. The values shipped are: 30,000, 100,000, 300,000, 1,000,000 then 3,000,000 experience and 10M, 50M, 250M, 1B then 5B Pokédollars for every item, except the Cell Battery, which needs 450, 1,500, 4,500, 15,000 then 45,000 experience on its own scale, and the Explosive Charge, which costs 20M, 100M, 500M, 2B then 10B.
+Each item has its own lists of bonuses, experience and costs for levels 6 to 10, written by hand in the `overloadedOakItems` table at the top of the script, so every item can be tuned on its own scale. The experience is a running total, like the game's own (a regular Oak Item needs 10,000 in total for level 5), and the costs are in the currency of the item's regular upgrades. The costs shipped are 10M, 50M, 250M, 1B then 5B Pokédollars for every item except the Explosive Charge (20M, 100M, 500M, 2B then 10B); the experience totals are in the table below.
+
+| Item | 6 | 7 | 8 | 9 | 10 |
+|:-----|:-----:|:-----:|:-----:|:-----:|:-----:|
+| Magic Ball, Amulet Coin, Rocky Helmet, EXP Share, Magma Stone, Explosive Charge | 30,000 | 100,000 | 300,000 | 1,000,000 | 3,000,000 |
+| Sprayduck | 30,000 | 100,000 | 150,000 | 200,000 | 300,000 |
+| Shiny Charm | 30,000 | 100,000 | 300,000 | 1,000,000 | 2,000,000 |
+| Cell Battery | 450 | 1,000 | 2,000 | 3,500 | 8,000 |
+| Treasure Scanner | 10,000 | 20,000 | 30,000 | 50,000 | 80,000 |
 
 | Item | Level 5 (game) | 6 | 7 | 8 | 9 | 10 |
 |:-----|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
@@ -649,7 +659,7 @@ Each item has its own lists of bonuses, experience and costs for levels 6 to 10,
 
 The Squirtbottle and Sprinklotad keep the game's maximum. The Oak Charms have their own ten levels, on the same scale, in their own script.
 
-The overloaded levels are kept outside the game save, per save file, in the browser storage: the save itself keeps level 5, so your save and your backups stay exactly what the unmodified game would write, and the game without this script simply shows the item at level 5. In the desktop client the levels are also mirrored to a `<trainer> [<save key>] oak-items-overload.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save. An overloaded level is only restored over a save standing at level 5; an item that was reset below that in the meantime keeps its lower level. An item at level 5 or above still counts toward the "max level Oak Item" achievements.
+The overloaded levels are kept outside the game save, per save file, in the browser storage: the save itself keeps level 5, so your save and your backups stay exactly what the unmodified game would write, and the game without this script simply shows the item at level 5. In the desktop client the levels are also mirrored to a `<trainer> [<save key>] oak-items-overload.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save. An overloaded level is only restored over a save standing at level 5; an item that was reset below that in the meantime keeps its lower level. An item at level 5 or above still counts toward the game's "max level Oak Item" achievements, exactly as the unmodified game counts it. With the <strong>Custom Achievements</strong> script installed, the overloaded levels get achievements of their own, in an <strong>Oak Items Overload</strong> category with a 10% achievement bonus: 1, 3, 8 then all 10 items at level 10 (Past the Professor's Limit; Overload Triple; Overload Overlord; Nothing Left to Overload).
 
 <hr>
 

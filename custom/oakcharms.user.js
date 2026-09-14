@@ -5,7 +5,7 @@
 // @description   Adds four Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, and the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.4.0
+// @version       1.5.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -93,6 +93,31 @@ const dowsingChestExp = { 3: 1, 2: 2, 1: 3, 0: 5 };
 
 function oakCharmItem(charm) {
     return App.game.oakItems.itemList[OakItemType[charm.key]];
+}
+
+// Achievements for the charms, picked up by the Custom Achievements script when it is
+// installed, in a category of their own: the game's "max level Oak Item" achievements
+// and their bonus never see the charms. Two series shaped like the game's tiers, one at
+// level 5 (the scale of the game's own Oak Items) and one at level 10.
+function oakCharmAchievementDefinitions() {
+    const category = { name: 'oakCharms', displayName: 'Oak Charms', bonus: 10 };
+    const total = oakCharms.length;
+    const series = {
+        5: [[1, 0.05, 'Charmed, I\'m Sure'], [2, 0.10, 'Twice as Charming'], [total, 0.18, 'Full Charm Bracelet']],
+        10: [[1, 0.10, 'Charm Overload'], [2, 0.14, 'Double Charm Overload'], [total, 0.18, 'Charm Offensive']],
+    };
+    return Object.entries(series).flatMap(([level, tiers]) => tiers.map(([amount, bonus, name]) => ({
+        name,
+        description: `Level ${amount === total ? `all ${total}` : amount} Oak Charm${amount > 1 ? 's' : ''} to level ${level}.`,
+        progress: () => oakCharms.filter((charm) => oakCharmItem(charm).level >= Number(level)).length,
+        amount,
+        bonus,
+        category,
+        type: GameConstants.AchievementType['Max Level Oak Item'],
+        series: `oakCharms:${level}`,
+        hint: `${amount} Oak Charm${amount > 1 ? 's' : ''} leveled to level ${level}.`,
+        achievable: () => !App.game.challenges.list.disableOakItems.active(),
+    })));
 }
 
 // The charm progress (level, exp, equipped) lives outside the game save, so a save
@@ -188,6 +213,11 @@ function initOakCharmsOverrides() {
         throw new Error('The game started before the Oak Charms script loaded; the Oak Items cannot be added this session.');
     }
 
+    // Achievements, picked up by the Custom Achievements script whichever loads first
+    const windowObject = !App.isUsingClient ? unsafeWindow : window;
+    windowObject.CustomAchievementsQueue = windowObject.CustomAchievementsQueue ?? [];
+    windowObject.CustomAchievementsQueue.push(() => oakCharmAchievementDefinitions());
+
     // Extend the OakItemType enum in both directions, like a TypeScript enum.
     // OakItems.toJSON keys the save by OakItemType[item.name], and fromJSON only
     // reads the enum's names, so both mappings are needed for the items to persist.
@@ -203,6 +233,9 @@ function initOakCharmsOverrides() {
             super(OakItemType[charm.key], charm.displayName, charm.description, true, charm.bonusList, 1, 0, 1,
                 charm.expList, charm.costList.length, AmountFactory.createArray(charm.costList, GameConstants.Currency.money));
             this.charm = charm;
+            // Not one of the game's Oak Items: never counted by the game's "max level
+            // Oak Item" achievements, see maxLevelOakItems below
+            this.customOakItem = true;
         }
 
         // The base class unlocks on unique pokémon caught; each charm has its own condition.
@@ -233,6 +266,16 @@ function initOakCharmsOverrides() {
         // Dowsing Machine registers its own x1.5. The game reads it without the
         // "use" flag, so the roll grants no exp: the loot hooks below do.
         this.multiplier.addBonus('rareItemDropRate', () => this.calculateBonus(OakItemType.Dowsing_Charm), 'Dowsing Charm');
+
+        // The game's "max level Oak Items" achievements count from maxLevelOakItems, which
+        // the game recomputes from every item of the list, charms included. Count only
+        // the game's own items, at the game's own maximum (Oak Items Overload raises
+        // maxLevel and records the game's in overloadBaseMaxLevel; it installs this same
+        // rule, so the load order does not matter), and ignore the game's writes.
+        this.maxLevelOakItems = ko.pureComputed({
+            read: () => this.itemList.filter((item) => !item.customOakItem && item.level >= (item.overloadBaseMaxLevel ?? item.maxLevel)).length,
+            write: () => {},
+        });
         return result;
     };
 
@@ -268,7 +311,6 @@ function initOakCharmsOverrides() {
                     item.fromJSON(stored[charm.key]);
                 }
             });
-            this.maxLevelOakItems(this.itemList.filter((item) => item.isMaxLevel()).length);
         }
         charmsLoaded = true;
         return result;

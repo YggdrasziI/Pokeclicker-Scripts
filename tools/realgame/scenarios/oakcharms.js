@@ -1,4 +1,5 @@
-// Scenario for tools/realgame/start.mjs, with oakcharms (and optionally oakitemsoverload,
+// Scenario for tools/realgame/start.mjs, with oakcharms (and optionally customachievements for
+// the achievement checks, and oakitemsoverload,
 // in either order): the four charms exist with their own ten levels, bonuses, costs and
 // experience; a level past 5 is bought through the game's own upgrade path, kept out of
 // the save in the charms' side store, and restored on reload. The Dowsing Charm feeds
@@ -48,6 +49,21 @@ try {
     quest.fromJSON({ level: 10, exp: 300000, isActive: true });
     check('level 10 is the end', quest.isMaxLevel() && quest.calculateBonus() === 3.5);
     check('the only max-level item is the charm', App.game.oakItems.itemList.filter((i) => i.isMaxLevel()).length === 1);
+    check('a max-level charm never counts for the game\'s achievements', App.game.oakItems.maxLevelOakItems() === 0);
+
+    // The charm achievements, in their own category, count the charms at level 5 and 10
+    if (typeof CustomAchievements !== 'undefined') {
+        const achievement = (name) => AchievementHandler.achievementList.find((a) => a.name === name);
+        const five = achievement('Charmed, I\'m Sure');
+        const ten = achievement('Charm Overload');
+        const allTen = achievement('Charm Offensive');
+        check('charm achievements registered', five !== undefined && ten !== undefined && allTen?.property.requiredValue === 4);
+        check('in their own category', five.category.name === 'oakCharms' && five.category !== achievement('Is That How I Use This?').category);
+        check('one charm at level 10 completes the first tiers', five.property.getProgress() === 1 && five.isCompleted() && ten.isCompleted() && allTen.property.getProgress() === 1 && !allTen.isCompleted());
+        check('the game\'s own achievement sees no max-level item', achievement('Is That How I Use This?').property.getProgress() === 0);
+    } else {
+        out.push('     (Custom Achievements not loaded, achievements skipped)');
+    }
     quest.fromJSON({ level: 7, exp: 30000, isActive: false });
 
     // The Dowsing Charm is the game's rare item multiplier (1 on a fresh save: no Pickup aura)

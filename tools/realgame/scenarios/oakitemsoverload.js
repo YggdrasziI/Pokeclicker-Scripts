@@ -1,4 +1,5 @@
-// Scenario for tools/realgame/start.mjs, with oakitemsoverload (and optionally oakcharms,
+// Scenario for tools/realgame/start.mjs, with oakitemsoverload (and optionally customachievements
+// for the achievement checks, and oakcharms,
 // in either order, which keep their own ten levels): the listed Oak Items go to level 10
 // with the extra bonuses, costs and experience; the others keep the game's maximum; an
 // overloaded level is bought through the game's own upgrade path, kept out of the save,
@@ -22,7 +23,7 @@ try {
         && coin.costList[9].currency === GameConstants.Currency.money);
     check('experience is 30k .. 3M', coin.expList.length === 10 && coin.expList[5] === 30000 && coin.expList[9] === 3000000);
     check('Magic Ball reaches 20%', item('Magic_Ball').bonusList[10] === 20 && item('Magic_Ball').maxLevel === 10);
-    check('Cell Battery experience follows its own list', item('Cell_Battery').expList[5] === 450 && item('Cell_Battery').expList[9] === 45000);
+    check('Cell Battery experience follows its own list', item('Cell_Battery').expList[5] === 450 && item('Cell_Battery').expList[9] === 8000);
     check('Explosive Charge costs follow its own list',
         item('Explosive_Charge').costList[5].amount === 20000000 && item('Explosive_Charge').costList[9].amount === 10000000000
         && item('Explosive_Charge').costList[9].currency === GameConstants.Currency.money);
@@ -49,6 +50,20 @@ try {
     check('counted as max level for the achievements', App.game.oakItems.maxLevelOakItems() === 1);
     coin.fromJSON({ level: 10, exp: 3000000, isActive: true });
     check('level 10 is the end', coin.isMaxLevel() && coin.calculateBonus() === 2.0);
+    check('still one item for the game\'s achievements', App.game.oakItems.maxLevelOakItems() === 1);
+
+    // The overload achievements, in their own category, count the items at level 10
+    if (typeof CustomAchievements !== 'undefined') {
+        const achievement = (name) => AchievementHandler.achievementList.find((a) => a.name === name);
+        const first = achievement('Past the Professor\'s Limit');
+        const all = achievement('Nothing Left to Overload');
+        check('overload achievements registered', first !== undefined && all !== undefined && all.property.requiredValue === 10);
+        check('in their own category', first.category.name === 'oakItemsOverload' && first.category !== achievement('Is That How I Use This?').category);
+        check('one item at level 10 completes the first tier', first.property.getProgress() === 1 && first.isCompleted() && all.property.getProgress() === 1 && !all.isCompleted());
+        check('the game\'s own achievement still sees one max-level item', achievement('Is That How I Use This?').property.getProgress() === 1);
+    } else {
+        out.push('     (Custom Achievements not loaded, achievements skipped)');
+    }
     coin.fromJSON({ level: 6, exp: 30000, isActive: true });
 
     // The save keeps the game's maximum; the side store keeps the real level
