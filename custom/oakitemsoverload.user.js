@@ -5,7 +5,7 @@
 // @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are kept outside the game save, so the save stays exactly what the unmodified game would write.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.2.0
+// @version       1.2.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -49,12 +49,12 @@ const overloadedOakItems = {
     },
     Sprayduck: {
         bonusList: [1.60, 1.70, 1.80, 1.90, 2.00],
-        expList: [30000, 100000, 300000, 1000000, 3000000],
+        expList: [30000, 100000, 150000, 200000, 300000],
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
     Shiny_Charm: {
         bonusList: [2.20, 2.40, 2.60, 2.80, 3.00],
-        expList: [30000, 100000, 300000, 1000000, 3000000],
+        expList: [30000, 100000, 300000, 1000000, 2000000],
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
     Magma_Stone: {
@@ -64,7 +64,7 @@ const overloadedOakItems = {
     },
     Cell_Battery: {
         bonusList: [2.30, 2.60, 2.90, 3.20, 3.50],
-        expList: [450, 1500, 4500, 15000, 45000],
+        expList: [450, 1000, 2000, 3500, 8000],
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
     Explosive_Charge: {
@@ -74,7 +74,7 @@ const overloadedOakItems = {
     },
     Treasure_Scanner: {
         bonusList: [26, 28, 30, 32, 35],
-        expList: [30000, 100000, 300000, 1000000, 3000000],
+        expList: [10000, 20000, 30000, 50000, 80000],
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
 };
