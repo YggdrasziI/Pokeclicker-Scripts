@@ -689,6 +689,8 @@ All items are able to work together just fine, including leveling simultaneously
 
 This also removes any requirements needed to unlock any Oak Item slots, meaning you get the max number of slots given to you on a fresh save.
 
+With every item equipped, the Oak Items module of the main screen (the list with the experience, the level and the upgrade cost of each equipped item) grew as tall as the column. The script lays it out two items per row, and shortens the numbers in the progress bars the way the game's "Shorten currency amount shown on main screen" setting does, whatever that setting says: 2,500 / 5,000 reads 2.5K / 5K and an upgrade at 1,500,000,000 Pokédollars reads 1.5B. The Oak Items window and the tooltips keep the full figures.
+
 <hr>
 
 <a name="omega-protein-gains"></a>

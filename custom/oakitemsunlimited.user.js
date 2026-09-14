@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Oak Items Unlimited
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia
-// @description   Removes the limit for the amount of Oak Items that you're able to equip so that you're able to equip all of them.
+// @description   Removes the limit for the amount of Oak Items that you're able to equip so that you're able to equip all of them, and lays the equipped Oak Items module out two items per row, with shortened numbers (1.5B), so it stays short with every item equipped.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.3
+// @version       1.1.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -26,6 +26,61 @@ function initOakItems() {
     }
     oakItems.maxActiveCount(oakMax);
     document.getElementById('oakItemsModal').querySelector('h5').innerHTML = "Oak Items Equipped: " + oakItems.activeCount() + '/' + oakMax;
+}
+
+// The equipped Oak Items module lists one item per table row: with every item
+// equipped it takes most of the column. Lay the rows out two per line, and shorten
+// the numbers in the progress bars the way the game's "Shorten currency amount
+// shown on main screen" setting does (1,500,000,000 becomes 1.5B), since half a
+// row cannot hold "Upgrade (1,500,000,000)". Runs on document ready, before the
+// game applies its Knockout bindings: the bindings are rewritten in the template.
+function initOakItemsUnlimitedOverrides() {
+    if (typeof App !== 'undefined' && App.game) {
+        throw new Error('The game started before the Oak Items Unlimited script loaded; the Oak Items module cannot be laid out this session.');
+    }
+    const container = document.getElementById('oakItemsContainer');
+    if (!container) {
+        throw new Error('Oak Items Unlimited: the Oak Items module was not found in the page.');
+    }
+
+    // The table becomes a two-column grid of rows. A row whose item is not equipped
+    // stays in the table, emptied by the "if" binding: hide it so it takes no cell.
+    // The stripes would alternate on the hidden rows too, so they go.
+    const style = document.createElement('style');
+    style.textContent = [
+        '#oakItemsBody > table { display: block; }',
+        '#oakItemsBody > table > tbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }',
+        '#oakItemsBody > table > tbody > tr { display: flex; align-items: stretch; }',
+        '#oakItemsBody > table > tbody > tr:empty { display: none; }',
+        '#oakItemsBody > table > tbody > tr:nth-of-type(odd) { background-color: transparent; }',
+        '#oakItemsBody > table > tbody > tr > td.tight { flex: 0 0 auto; }',
+        '#oakItemsBody > table > tbody > tr > td.p-0 { flex: 1 1 auto; min-width: 0; }',
+        '#oakItemsBody > table > tbody .progress span { font-size: 13px !important; white-space: nowrap; }',
+        '#oakItemsBody > table > tfoot, #oakItemsBody > table > tfoot > tr, #oakItemsBody > table > tfoot > tr > td { display: block; }',
+    ].join('\n');
+    document.head.appendChild(style);
+
+    // The progress "2,500 / 5,000" and the "Upgrade (1,000,000 <currency>)" of each row:
+    // shorten every number with the game's own formatter. The strings are the game's
+    // templates; a template that no longer matches is left as it is.
+    const rewrites = [
+        ['text: $data.progressString',
+            'text: $data.progressString.replace(/[\\d,]+/g, function (n) { return GameConstants.formatNumber(Number(n.replace(/,/g, \'\'))); })'],
+        ['$data.calculateCost().amount.toLocaleString(\'en-US\')', 'GameConstants.formatNumber($data.calculateCost().amount)'],
+    ];
+    let rewritten = 0;
+    container.querySelectorAll('tbody span[data-bind]').forEach((span) => {
+        const binding = span.getAttribute('data-bind');
+        rewrites.forEach(([from, to]) => {
+            if (binding.includes(from)) {
+                span.setAttribute('data-bind', binding.replace(from, to));
+                rewritten++;
+            }
+        });
+    });
+    if (rewritten !== rewrites.length) {
+        console.warn(`Oak Items Unlimited: ${rewritten} of ${rewrites.length} Oak Items module bindings rewritten, the game's templates may have changed`);
+    }
 }
 
 function loadEpheniaScript(scriptName, initFunction, priorityFunction) {
@@ -95,5 +150,5 @@ function loadEpheniaScript(scriptName, initFunction, priorityFunction) {
 }
 
 if (!App.isUsingClient || localStorage.getItem('oakitemsunlimited') === 'true') {
-    loadEpheniaScript('oakitemsunlimited', initOakItems);
+    loadEpheniaScript('oakitemsunlimited', initOakItems, initOakItemsUnlimitedOverrides);
 }
