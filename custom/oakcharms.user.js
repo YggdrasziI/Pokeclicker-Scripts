@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Oak Charms
 // @namespace     Pokeclicker Scripts
 // @author        YggdrasziI
-// @description   Adds five Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route. Each unlocks on its own condition and levels up by using it.
+// @description   Adds five Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route, and shows its bonus next to the roaming odds of the route's encounters window. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.7.0
+// @version       1.8.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -490,6 +490,33 @@ function initOakCharmsOverrides() {
         return result;
     };
 
+    // The route's encounters window shows the roaming odds from roamingRate, charm
+    // included, and marks a boosted route with an arrow and a tooltip line: mark the
+    // charm's share the same way, in its own colour. The window's content sits under
+    // a knockout "if" and is rebuilt every time it opens, so the template itself is
+    // edited here, before the game binds it.
+    const boostedMark = document.querySelector('#routeInfoModal span[data-bind="visible: isBoosted"]');
+    if (boostedMark) {
+        const bonus = 'App.game.oakItems.calculateBonus(OakItemType.Roaming_Charm)';
+        const percent = `Math.round((${bonus} - 1) * 100)`;
+        const charmMark = document.createElement('span');
+        charmMark.className = 'small ml-1 oakcharms-roaming-bonus';
+        charmMark.setAttribute('data-bind', `visible: ${bonus} > 1, text: '+' + ${percent} + '%'`);
+        boostedMark.after(charmMark);
+        // The tooltip title is a template literal: append the charm's line to it
+        const tooltip = boostedMark.parentElement;
+        const binding = tooltip.getAttribute('data-bind') ?? '';
+        const titleEnd = ' : \'\')}`';
+        const charmLine = `\${${bonus} > 1 ? '<br/><br/>Roaming Charm: +' + ${percent} + '% (×' + ${bonus} + '), already counted in this chance.' : ''}`;
+        if (binding.split(titleEnd).length === 2) {
+            tooltip.setAttribute('data-bind', binding.replace(titleEnd, `${titleEnd.slice(0, -1)}${charmLine}\``));
+        } else {
+            console.warn('Oak Charms: roaming tooltip not found, the Roaming Charm has no line in it');
+        }
+    } else {
+        console.warn('Oak Charms: route encounters window not found, the Roaming Charm bonus is not shown there');
+    }
+
     // The chest's "more loot" roll is hard-coded in openChest: the game multiplies
     // its chance by 1.5 while a Dowsing Machine runs, then rolls it with the first
     // Rand.chance call of the function, before gainLoot. Scale that one roll by
@@ -530,7 +557,8 @@ function initOakCharmsOverrides() {
     // start every row at the left, under the first column, like a grid.
     const style = document.createElement('style');
     style.textContent = '#oakItemsModal ul.row > li.col { flex: 0 0 25%; max-width: 25%; }'
-        + ' #oakItemsModal ul.row.justify-content-center { justify-content: flex-start !important; }';
+        + ' #oakItemsModal ul.row.justify-content-center { justify-content: flex-start !important; }'
+        + ' .oakcharms-roaming-bonus { color: #ffd54f; font-weight: bold; }';
     document.head.appendChild(style);
 
     // The tiles size themselves on the sprite: the game's Oak Item sprites are 120

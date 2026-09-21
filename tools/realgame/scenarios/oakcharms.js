@@ -153,6 +153,36 @@ try {
     App.game.multiplier.getBonus('roaming', true);
     check('reading the multiplier grants no experience nor use', roaming.normalizedExp === 0 && roaming.uses === 0);
 
+    // The route's encounters window marks the charm's share next to the roaming odds.
+    // Its content is rendered by the "if" on the modal state: a fresh save stands on
+    // Kanto route 1, where Mew roams. start.mjs never applies the game's bindings, so
+    // bind the window alone, with the game's own view model; updates are deferred.
+    const routeWindow = document.getElementById('routeInfoModal');
+    const charmMark = () => routeWindow.querySelector('.oakcharms-roaming-bonus');
+    const roamingTooltip = () => String($(charmMark()?.parentElement).data('bs.tooltip')?.config.title ?? '');
+    const openRouteWindow = (open) => {
+        DisplayObservables.modalState.routeInfoModalObservable(open ? 'show' : 'hidden');
+        ko.tasks.runEarly();
+    };
+    const setRoaming = (json) => {
+        roaming.fromJSON(json);
+        ko.tasks.runEarly();
+    };
+    check('the route window template carries the charm\'s mark', charmMark() !== null && charmMark().previousElementSibling?.getAttribute('data-bind') === 'visible: isBoosted');
+    ko.applyBindings(App.game, routeWindow);
+    check('the route window is empty while closed', charmMark() === null);
+    openRouteWindow(true);
+    check('the route window shows +70% at level 2', charmMark()?.textContent === '+70%' && charmMark().style.display !== 'none', `${player.region}/${player.route}: ${charmMark()?.outerHTML}`);
+    check('the roaming tooltip has the charm\'s line', roamingTooltip().includes('Roaming Charm: +70% (×1.7)'), roamingTooltip());
+    check('the roaming odds shown count the charm', routeWindow.textContent.includes(`1 / ${Math.floor(PokemonFactory.roamingRate(Routes.getRoute(player.region, player.route))).toLocaleString('en-US')} `));
+    setRoaming({ level: 10, exp: 2000000, isActive: true });
+    check('the route window shows +200% at level 10', charmMark()?.textContent === '+200%', charmMark()?.textContent);
+    setRoaming({ level: 2, exp: 1000, isActive: false });
+    check('the route window hides the mark of an unequipped charm', charmMark()?.style.display === 'none', charmMark()?.outerHTML);
+    openRouteWindow(false);
+    check('the route window content is dropped when it closes', charmMark() === null);
+    roaming.fromJSON({ level: 2, exp: 1000, isActive: true });
+
     // Roaming encounters through the game's own roll: Mew roams Kanto from the start, an
     // event roamer may too.
     // The roll is the Rand.chance call of generateRoamingEncounter, forced by a spy.
