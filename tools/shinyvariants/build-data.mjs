@@ -68,6 +68,7 @@ const SPECIES_ALIASES = {
     FLABEBE: 'Flabébé',
     BATTLE_BOND_GRENINJA: 'Ash-Greninja',
     ETERNAL_FLOETTE: 'Floette (Eternal)',
+    HISUI_BASCULIN: 'Basculin (White-Striped)',
 };
 const REGION_PREFIXES = {
     ALOLA_: 'Alolan ',
@@ -101,6 +102,7 @@ const FORM_CANDIDATES = {
     'poke-ball': (B) => [`${B} (Poké Ball)`],
     'super': (B) => [`${B} (Super Size)`],
     'noice': (B) => [`${B} (Noice Face)`],
+    'no-ice': (B) => [`${B} (Noice Face)`],
     'eternal': (B) => [`${B} (Eternal)`],
 };
 // Form keys that are the Pokémon's default appearance in PokéClicker
@@ -120,13 +122,14 @@ function titleCase(text) {
 }
 
 function speciesName(enumName) {
+    // Aliases first: a regional form may carry a PokéClicker name of its own
+    if (SPECIES_ALIASES[enumName]) {
+        return SPECIES_ALIASES[enumName];
+    }
     for (const [prefix, replacement] of Object.entries(REGION_PREFIXES)) {
         if (enumName.startsWith(prefix)) {
             return replacement + speciesName(enumName.slice(prefix.length));
         }
-    }
-    if (SPECIES_ALIASES[enumName]) {
-        return SPECIES_ALIASES[enumName];
     }
     return enumName.split('_').map((word) => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
 }
