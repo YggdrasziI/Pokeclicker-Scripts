@@ -5,7 +5,7 @@
 // @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are kept outside the game save, so the save stays exactly what the unmodified game would write.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.4.0
+// @version       1.4.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -53,7 +53,7 @@ const overloadedOakItems = {
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
     Shiny_Charm: {
-        bonusList: [2.20, 2.40, 2.60, 2.80, 3.00],
+        bonusList: [2.25, 2.50, 3.00, 3.50, 4.00],
         expList: [30000, 100000, 300000, 1000000, 2000000],
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
