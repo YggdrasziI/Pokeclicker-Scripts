@@ -43,14 +43,22 @@ try {
     coin.gainExp(2500);
     flush();
     check('the progress follows the experience, 2.5K / 5K', progressText() === '2.5K / 5K', progressText());
+
+    // The row's tooltip keeps the full figures, read the way Bootstrap reads them
+    // when the tooltip opens
+    const tooltipText = () => $(coinRow).data('bs.tooltip')?.getTitle();
+    check('the tooltip keeps the game\'s own lines', tooltipText()?.includes('<u>Amulet Coin</u>') && tooltipText().includes('Level: <strong>4/5</strong>'), tooltipText());
+    check('the tooltip shows the full progress, 2,500 / 5,000', tooltipText()?.includes('<br/>Progress: <strong>2,500 / 5,000</strong>') && !tooltipText().includes('Upgrade:'), tooltipText());
     coin.gainExp(2500);
     flush();
     const upgrade = coinRow.querySelector('.progress span.clickable');
     check('the upgrade reads 1M with the currency icon', upgrade?.textContent.trim() === 'Upgrade (1M )' && upgrade.querySelector('img')?.getAttribute('src') === 'assets/images/currency/money.svg', upgrade?.innerHTML);
+    check('the tooltip shows the full upgrade cost, 1,000,000', tooltipText()?.includes('<br/>Upgrade: <strong>1,000,000 <img src=assets/images/currency/money.svg height=18px/></strong>'), tooltipText());
     App.game.wallet.gainMoney(1000000, true);
     upgrade.click();
     flush();
     check('the upgrade still buys the level', coin.level === 5 && progressText() === 'MAX LEVEL!', progressText());
+    check('the tooltip adds nothing at max level', tooltipText()?.includes('Level: <strong>5/5</strong>') && !tooltipText().includes('Progress:') && !tooltipText().includes('Upgrade:') && !tooltipText().includes('NaN'), tooltipText());
     coin.fromJSON({ level: 0, exp: 0, isActive: false });
     flush();
     check('an unequipped item empties its row again', coinRow.childNodes.length === 0);

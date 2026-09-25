@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Oak Items Unlimited
 // @namespace     Pokeclicker Scripts
 // @author        Ephenia
-// @description   Removes the limit for the amount of Oak Items that you're able to equip so that you're able to equip all of them, and lays the equipped Oak Items module out two items per row, with shortened numbers (1.5B), so it stays short with every item equipped.
+// @description   Removes the limit for the amount of Oak Items that you're able to equip so that you're able to equip all of them, and lays the equipped Oak Items module out two items per row, with shortened numbers (1.5B), so it stays short with every item equipped; the full figures stay in the tooltip of each row.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.1.2
+// @version       1.2.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -32,8 +32,10 @@ function initOakItems() {
 // equipped it takes most of the column. Lay the rows out two per line, and shorten
 // the numbers in the progress bars the way the game's "Shorten currency amount
 // shown on main screen" setting does (1,500,000,000 becomes 1.5B), since half a
-// row cannot hold "Upgrade (1,500,000,000)". Runs on document ready, before the
-// game applies its Knockout bindings: the bindings are rewritten in the template.
+// row cannot hold "Upgrade (1,500,000,000)". The full figures go to the tooltip the
+// game already shows on each row, under its level and bonus lines. Runs on document
+// ready, before the game applies its Knockout bindings: the bindings are rewritten
+// in the template.
 function initOakItemsUnlimitedOverrides() {
     if (typeof App !== 'undefined' && App.game) {
         throw new Error('The game started before the Oak Items Unlimited script loaded; the Oak Items module cannot be laid out this session.');
@@ -65,19 +67,26 @@ function initOakItemsUnlimitedOverrides() {
     document.head.appendChild(style);
 
     // The progress "2,500 / 5,000" and the "Upgrade (1,000,000 <currency>)" of each row:
-    // shorten every number with the game's own formatter. The strings are the game's
-    // templates; a template that no longer matches is left as it is.
+    // shorten every number with the game's own formatter. The row's tooltip gets the
+    // full progress and upgrade cost after the game's own lines: Bootstrap calls a
+    // title function each time the tooltip opens, so the figures are current at the
+    // hover. The strings are the game's templates; a template that no longer matches
+    // is left as it is.
     const rewrites = [
         ['text: $data.progressString',
             'text: $data.progressString.replace(/[\\d,]+/g, function (n) { return GameConstants.formatNumber(Number(n.replace(/,/g, \'\'))); })'],
         ['$data.calculateCost().amount.toLocaleString(\'en-US\')', 'GameConstants.formatNumber($data.calculateCost().amount)'],
+        ['title: $data.tooltip,',
+            'title: function () { return $data.tooltip()'
+            + ' + ($data.isMaxLevel() ? \'\' : \'<br/>Progress: <strong>\' + $data.progressString + \'</strong>\')'
+            + ' + ($data.hasEnoughExp() && !$data.isMaxLevel() ? \'<br/>Upgrade: <strong>\' + $data.calculateCost().amount.toLocaleString(\'en-US\') + \' <img src=assets/images/currency/\' + GameConstants.Currency[$data.calculateCost().currency] + \'.svg height=18px/></strong>\' : \'\'); },'],
     ];
     let rewritten = 0;
-    container.querySelectorAll('tbody span[data-bind]').forEach((span) => {
-        const binding = span.getAttribute('data-bind');
+    container.querySelectorAll('tbody [data-bind]').forEach((element) => {
+        const binding = element.getAttribute('data-bind');
         rewrites.forEach(([from, to]) => {
             if (binding.includes(from)) {
-                span.setAttribute('data-bind', binding.replace(from, to));
+                element.setAttribute('data-bind', binding.replace(from, to));
                 rewritten++;
             }
         });
