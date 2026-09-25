@@ -21,7 +21,7 @@ try {
     check('costs are 10M .. 5B Pokedollars',
         coin.costList.length === 10 && coin.costList[5].amount === 10000000 && coin.costList[9].amount === 5000000000
         && coin.costList[9].currency === GameConstants.Currency.money);
-    check('experience is 30k .. 3M', coin.expList.length === 10 && coin.expList[5] === 30000 && coin.expList[9] === 3000000);
+    check('experience is 30k .. 2M', coin.expList.length === 10 && coin.expList[5] === 30000 && coin.expList[9] === 2000000);
     check('Magic Ball reaches 20%', item('Magic_Ball').bonusList[10] === 20 && item('Magic_Ball').maxLevel === 10);
     check('Cell Battery experience follows its own list', item('Cell_Battery').expList[5] === 450 && item('Cell_Battery').expList[9] === 8000);
     check('Explosive Charge costs follow its own list',

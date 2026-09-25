@@ -24,7 +24,14 @@
 // own scale:
 //   bonusList: the bonus at each overloaded level
 //   expList:   the experience needed in total to buy each level, like the game's own
-//              expList (the game asks 10,000 in total for level 5, the Cell Battery 150)
+//              expList (the game asks 10,000 in total for level 5, the Cell Battery 150).
+//              The game never shows this total: its progress bar shows uses, that is
+//              ceil((expList[n] - expList[n - 1]) / expGain), the item's expGain being
+//              the experience one use gives. The Shiny Charm (expGain 150) ends up with
+//              [500, 1000, 2500, 5000, 10000, 30000, 100000, 300000, 1000000, 2000000],
+//              so level 9 costs 1,000,000 - 300,000 = 700,000 experience and the bar
+//              shows "x / 4,667". The game's own levels read the same way: level 5
+//              shows 34, not 10,000.
 //   costList:  the price of each level, in the currency of the item's regular upgrades
 const overloadedOakItems = {
     Magic_Ball: {
