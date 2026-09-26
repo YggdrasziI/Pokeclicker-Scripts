@@ -188,7 +188,11 @@ ok = ok && window.__started === true;
 
 if (ok && options.scenario) {
     run(readFileSync(options.scenario, 'utf8'), 'scenario');
-    await wait(500);
+    // An asynchronous scenario sets its result later; wait for it, up to 15 seconds
+    for (let waited = 0; window.__scenario === undefined && waited < 15000; waited += 50) {
+        await wait(50);
+    }
+    await wait(100);
     if (pageErrors.length) {
         console.log(`errors during the scenario:\n${pageErrors.map((e) => String(e.detail?.stack ?? e.message ?? e).slice(0, 800)).join('\n')}`);
     }

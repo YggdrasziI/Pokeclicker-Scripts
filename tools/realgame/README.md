@@ -25,9 +25,13 @@ priority function throws, or when the scenario fails.
   `%APPDATA%pokeclicker-desktopsave-backups`), the base64 the game's own
   "load from file" reads. Nothing is written back to the file.
 - **A scenario** is a plain script run in the page once the game has started, with
-  the game's globals in scope. It sets `window.__scenario` to `true` or `false`;
-  `scenarios/` holds the existing ones.
+  the game's globals in scope. It sets `window.__scenario` to `true` or `false`, right
+  away or asynchronously (the tool waits up to 15 seconds for it); `scenarios/` holds
+  the existing ones.
 
-What jsdom cannot do: draw (no canvas), fetch assets, play sounds. The game's
+What jsdom cannot do: draw (no canvas), fetch assets, play sounds. The start
+sequence also skips the game's `ko.applyBindings`, so the page's lists never render:
+a scenario that checks markup clones the template fragment and binds it itself
+(see `scenarios/shinyvariants-stars.js`). The game's
 progress lines and settings warnings are filtered out of the output; everything
 else the page logs is shown with a `[page]` prefix.

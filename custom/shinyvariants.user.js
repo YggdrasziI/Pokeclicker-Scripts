@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Shiny Variants
 // @namespace     Pokeclicker Scripts
 // @author        YggdrasziI
-// @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex and the party list, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
+// @description   Brings PokéRogue's shiny variants to PokéClicker. Every shiny now comes in three palettes, standard, rare and epic, each unlocked on its own when that shiny is caught or hatched again. The unlocked palettes show as coloured stars in the Pokédex, the party list and the Hatchery, the sprites are recoloured with PokéRogue's own colour tables, and the displayed palette can be changed from the Pokémon's statistics window.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.4.0
+// @version       1.4.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -31,7 +31,7 @@ const SHINY_VARIANT_DATA = {"v":1,"src":"pokerogue-assets 35c1ee672","tol":3,"ic
 
 class ShinyVariants {
     // Same tints as PokéRogue: standard (gold), rare (cyan), epic (red)
-    static VERSION = '1.4.0';
+    static VERSION = '1.4.1';
     static VARIANT_NAMES = ['Standard', 'Rare', 'Epic'];
     static VARIANT_COLORS = ['#f8c020', '#20f8f0', '#e81048'];
     static SETTING_KEYS = {
@@ -87,7 +87,7 @@ class ShinyVariants {
         const settingsBody = createScriptSettingsContainer('Shiny Variants');
         const rows = [
             ['recolor', 'Recolour shiny sprites with the palette shown'],
-            ['stars', 'Show the palette stars in the Pokédex and the party list'],
+            ['stars', 'Show the palette stars in the Pokédex, the party list and the Hatchery'],
             ['enemies', 'Wild shiny Pokémon show the palette they will unlock'],
         ];
         rows.forEach(([name, label]) => {
@@ -872,8 +872,9 @@ class ShinyVariants {
             .sv-stars .sv-page-0, .sv-stars .sv-page-1, .sv-stars .sv-page-2 { width: 30px; height: 28px; margin-right: 2px; }
             .sv-stars.sv-page-row { flex-direction: row; }
             #pokedexModal .pokedexEntry .sv-stars { position: absolute; left: 3px; top: 26px; }
-            #pokemonListContainer sup.sv-stars .sv-star { width: 12px; height: 12px; }
-            #pokemonListContainer sup.sv-stars .sv-small + .sv-small { margin-right: -3px; }
+            #pokemonListContainer sup.sv-stars .sv-star, #breedingModal sup.sv-stars .sv-star { width: 12px; height: 12px; }
+            #pokemonListContainer sup.sv-stars .sv-small + .sv-small, #breedingModal sup.sv-stars .sv-small + .sv-small { margin-right: -3px; }
+            #breeding-pokemon-list-container .pokedexEntry .sv-stars { position: absolute; right: 2px; bottom: 35px; }
         `;
         document.head.appendChild(style);
 
@@ -898,6 +899,31 @@ class ShinyVariants {
             partySparkle.after(stars);
         } else {
             console.warn('Shiny Variants: party list not found, no stars there');
+        }
+
+        // Hatchery card: $data is the PartyPokemon; the stars replace the game's ✨,
+        // in its place above the Pokérus icon
+        const hatcherySparkle = document.querySelector('#breeding-pokemon-list-container div.breedingListShiny[data-bind="visible: App.game.party.alreadyCaughtPokemon($data.id, true)"]');
+        if (hatcherySparkle) {
+            hatcherySparkle.setAttribute('data-bind', 'visible: App.game.party.alreadyCaughtPokemon($data.id, true) && !ShinyVariants.settings.stars()');
+            const stars = document.createElement('div');
+            stars.className = 'sv-stars';
+            stars.setAttribute('data-bind', 'visible: ShinyVariants.showStars($data.id), html: ShinyVariants.starsHtml($data.id)');
+            hatcherySparkle.after(stars);
+        } else {
+            console.warn('Shiny Variants: Hatchery list not found, no stars there');
+        }
+
+        // Egg pools: partyPokemon is the PartyPokemon or undefined; same as the party list
+        const eggSparkle = document.querySelector('#breedingModal sup[data-bind="visible: partyPokemon?.shiny ?? false"]');
+        if (eggSparkle) {
+            eggSparkle.setAttribute('data-bind', 'visible: (partyPokemon?.shiny ?? false) && !ShinyVariants.settings.stars()');
+            const stars = document.createElement('sup');
+            stars.className = 'sv-stars';
+            stars.setAttribute('data-bind', 'visible: ShinyVariants.showStars(partyPokemon?.id), html: ShinyVariants.starsHtml(partyPokemon?.id)');
+            eggSparkle.after(stars);
+        } else {
+            console.warn('Shiny Variants: Hatchery egg pools not found, no stars there');
         }
 
         // Statistics window: $data is the Pokémon id, and the row sits in the
