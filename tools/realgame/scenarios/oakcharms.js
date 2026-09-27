@@ -77,6 +77,8 @@ try {
         const allTen = achievement('Charm Offensive');
         check('charm achievements registered', five !== undefined && ten !== undefined && allTen?.property.requiredValue === 6 && achievement('Full Charm Bracelet')?.property.requiredValue === 6);
         check('a tier at 3 charms in both series', achievement('Third Time\'s the Charm')?.property.requiredValue === 3 && achievement('Triple Charm Overload')?.property.requiredValue === 3);
+        check('tiers at 4 and 5 charms in both series', achievement('Four-Leaf Charm')?.property.requiredValue === 4 && achievement('High Five Charms')?.property.requiredValue === 5
+            && achievement('Quadruple Charm Overload')?.property.requiredValue === 4 && achievement('Quintuple Charm Overload')?.property.requiredValue === 5);
         check('in their own category', five.category.name === 'oakCharms' && five.category !== achievement('Is That How I Use This?').category);
         check('one charm at level 10 completes the first tiers', five.property.getProgress() === 1 && five.isCompleted() && ten.isCompleted() && allTen.property.getProgress() === 1 && !allTen.isCompleted());
         check('the game\'s own achievement sees no max-level item', achievement('Is That How I Use This?').property.getProgress() === 0);
@@ -87,6 +89,15 @@ try {
         check('100 roamers met complete Roam Sweet Roam', roamSweetRoam.property.getProgress() === 100 && roamSweetRoam.isCompleted() && !achievement('Born to Roam').isCompleted());
         roaming.fromJSON({ level: 0, exp: 0, isActive: false });
         check('the count reads 0 from a store without it', roaming.uses === 0 && roamSweetRoam.property.getProgress() === 0);
+        const diggingDeep = achievement('Digging Deep');
+        check('layer achievements registered, 100 .. 10,000, in the same category', diggingDeep?.property.requiredValue === 100 && diggingDeep.category === five.category
+            && achievement('Tunnel Vision')?.property.requiredValue === 1000 && achievement('Journey to the Center of the Earth')?.property.requiredValue === 10000);
+        mining.fromJSON({ level: 1, exp: 10, isActive: true, uses: 99 });
+        UndergroundController.notifyMineCompleted();
+        UndergroundController.addPlayerUndergroundExp(GameConstants.UNDERGROUND_EXPERIENCE_CLEAR_LAYER, true);
+        check('the 100th layer completes Digging Deep', diggingDeep.property.getProgress() === 100 && diggingDeep.isCompleted() && !achievement('Tunnel Vision').isCompleted());
+        mining.fromJSON({ level: 0, exp: 0, isActive: false });
+        check('the layer count reads 0 from a store without it', mining.uses === 0 && diggingDeep.property.getProgress() === 0);
     } else {
         out.push('     (Custom Achievements not loaded, achievements skipped)');
     }

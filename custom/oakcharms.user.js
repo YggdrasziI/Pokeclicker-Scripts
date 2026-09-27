@@ -5,7 +5,7 @@
 // @description   Adds six Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route, and shows its bonus next to the roaming odds of the route's encounters window, and the Mining Charm multiplies the Underground experience a completed mine layer gives, up to x4. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.9.0
+// @version       1.9.1
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -165,15 +165,16 @@ function setCharmEnabled(charm, enabled) {
 // Achievements for the charms, picked up by the Custom Achievements script when it is
 // installed, in a category of their own: the game's "max level Oak Item" achievements
 // and their bonus never see the charms. Two series shaped like the game's tiers, one at
-// level 5 (the scale of the game's own Oak Items) and one at level 10, then one on the
-// roaming Pokémon met with the Roaming Charm equipped.
+// level 5 (the scale of the game's own Oak Items) and one at level 10, one on the
+// roaming Pokémon met with the Roaming Charm equipped, and one on the mine layers
+// completed with the Mining Charm equipped.
 function oakCharmAchievementDefinitions() {
     const category = { name: 'oakCharms', displayName: 'Oak Charms', bonus: 10 };
     const achievable = () => !App.game.challenges.list.disableOakItems.active();
     const total = oakCharms.length;
     const series = {
-        5: [[1, 0.05, 'Charmed, I\'m Sure'], [2, 0.10, 'Twice as Charming'], [3, 0.14, 'Third Time\'s the Charm'], [total, 0.18, 'Full Charm Bracelet']],
-        10: [[1, 0.10, 'Charm Overload'], [2, 0.14, 'Double Charm Overload'], [3, 0.16, 'Triple Charm Overload'], [total, 0.18, 'Charm Offensive']],
+        5: [[1, 0.05, 'Charmed, I\'m Sure'], [2, 0.10, 'Twice as Charming'], [3, 0.14, 'Third Time\'s the Charm'], [4, 0.15, 'Four-Leaf Charm'], [5, 0.16, 'High Five Charms'], [total, 0.18, 'Full Charm Bracelet']],
+        10: [[1, 0.10, 'Charm Overload'], [2, 0.14, 'Double Charm Overload'], [3, 0.16, 'Triple Charm Overload'], [4, 0.17, 'Quadruple Charm Overload'], [5, 0.17, 'Quintuple Charm Overload'], [total, 0.18, 'Charm Offensive']],
     };
     const levels = Object.entries(series).flatMap(([level, tiers]) => tiers.map(([amount, bonus, name]) => ({
         name,
@@ -199,7 +200,19 @@ function oakCharmAchievementDefinitions() {
         hint: `${amount.toLocaleString('en-US')} roaming Pokémon encountered with the Roaming Charm equipped.`,
         achievable,
     }));
-    return levels.concat(roamers);
+    const miningCharm = oakCharms.find((c) => c.key === 'Mining_Charm');
+    const layers = [[100, 0.05, 'Digging Deep'], [1000, 0.10, 'Tunnel Vision'], [10000, 0.14, 'Journey to the Center of the Earth']].map(([amount, bonus, name]) => ({
+        name,
+        description: `Complete ${amount.toLocaleString('en-US')} mine layers with the Mining Charm equipped.`,
+        progress: () => oakCharmItem(miningCharm).uses,
+        amount,
+        bonus,
+        category,
+        series: 'oakCharms:layers',
+        hint: `${amount.toLocaleString('en-US')} mine layers completed with the Mining Charm equipped.`,
+        achievable,
+    }));
+    return levels.concat(roamers, layers);
 }
 
 // The charm progress (level, exp, equipped) lives outside the game save, so a save
