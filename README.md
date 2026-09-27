@@ -699,7 +699,7 @@ There may be some other cool or neat custom events added in with this as well.
 
 <a name="custom-oak-charms"></a>
 ## [Custom] Oak Charms (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/oakcharms.user.js">oakcharms.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/oakcharms.user.js">One-Click Install</a>)
-This script adds five Oak Items to the game's own Oak Items window. Three of them multiply a currency the way the Amulet Coin multiplies Pokédollars; the fourth, the Dowsing Charm, does what the Dowsing Machine does; the fifth, the Roaming Charm, does what a boosted route does. Each takes one of your Oak Item slots like any other item, and shows up with a borrowed icon since the game has no sprite for it. All five level up from the Oak Items window, from level 0 to 10, for a Pokédollar upgrade cost, once they have earned enough experience by being used. The first five levels are on the scale of the game's own Oak Items; levels 6 to 10 are on the far steeper scale of the Oak Items Overload script, each costing the level 5 upgrade times 10, 50, 250, 1,000 then 5,000. The experience each level needs is listed below.
+This script adds six Oak Items to the game's own Oak Items window. Three of them multiply a currency the way the Amulet Coin multiplies Pokédollars; the fourth, the Dowsing Charm, does what the Dowsing Machine does; the fifth, the Roaming Charm, does what a boosted route does; the sixth, the Mining Charm, multiplies the Underground experience of a completed mine layer. Each takes one of your Oak Item slots like any other item, and shows up with a borrowed icon since the game has no sprite for it. All six level up from the Oak Items window, from level 0 to 10, for a Pokédollar upgrade cost, once they have earned enough experience by being used. The first five levels are on the scale of the game's own Oak Items; levels 6 to 10 are on the far steeper scale of the Oak Items Overload script, each costing the level 5 upgrade times 10, 50, 250, 1,000 then 5,000. The experience each level needs is listed below.
 
 <strong>Quest Charm</strong> multiplies the Quest Points you gain from quests. It unlocks when you reach Johto, and gains 1 experience each time it multiplies a quest reward.
 
@@ -781,13 +781,29 @@ This script adds five Oak Items to the game's own Oak Items window. Three of the
 | 9 | ×2.80 | 6,667 | 5,000,000,000 |
 | 10 | ×3.00 | 13,334 | – |
 
+<strong>Mining Charm</strong> multiplies the Underground experience a completed mine layer gives: ×2 at level 5, ×4 at level 10. It applies to every layer completed while it is equipped, yours or a hired helper's, and the share of that experience the game hands to the other side grows with it; items dug up are not multiplied. It unlocks once you have mined 100 layers in the Underground, and gains 1 experience per layer completed while equipped. It shows up with the Underground's hammer icon.
+
+| Level | Bonus | Layers completed (total) | Upgrade cost |
+|:-----:|:-----:|:------------------------:|:------------:|
+| 0 | ×1.20 | – | 100,000 |
+| 1 | ×1.35 | 10 | 250,000 |
+| 2 | ×1.50 | 25 | 500,000 |
+| 3 | ×1.65 | 50 | 1,000,000 |
+| 4 | ×1.80 | 100 | 2,500,000 |
+| 5 | ×2.00 | 250 | 25,000,000 |
+| 6 | ×2.40 | 750 | 125,000,000 |
+| 7 | ×2.80 | 2,500 | 625,000,000 |
+| 8 | ×3.20 | 7,500 | 2,500,000,000 |
+| 9 | ×3.60 | 25,000 | 12,500,000,000 |
+| 10 | ×4.00 | 75,000 | – |
+
 The <strong>Scripts</strong> tab of the settings window has one switch per charm. A charm turned off is locked, hidden from the Oak Items window and unequipped at once, and its hooks do nothing; its level and experience are kept, and come back when it is turned on again. The choice is kept once for every save file.
 
 The charm progress is kept outside the game save, per save file, in the browser storage, so your save and your backups stay exactly what the unmodified game would write, and a save touched by this script still loads without it. In the desktop client the progress is also mirrored to a `<trainer> [<save key>] oak-charms.json` file next to the save backups, and restored from there when the browser storage holds nothing for that save, such as after importing a backup into a fresh install. Rewards that bypass bonuses in the base game, such as flat questline rewards, stay flat here too.
 
 Known quirks: the quest completion message and its logbook entry print the base reward while the wallet receives the multiplied amount (the Battle Frontier result shows the real figure); the "all quests completed" bonus and the Farm Points from redeem codes are multiplied as well; and a shiny wild Pokémon always carries its held item, so that drop counts as a rare find too.
 
-The charms never count toward the game's "max level Oak Item" achievements, which keep counting the game's twelve items. With the <strong>Custom Achievements</strong> script installed, the charms get achievements of their own, in an <strong>Oak Charms</strong> category with a 10% achievement bonus: 1, 2, 3 then all 5 charms at level 5 (Charmed, I'm Sure; Twice as Charming; Third Time's the Charm; Full Charm Bracelet) and at level 10 (Charm Overload; Double Charm Overload; Triple Charm Overload; Charm Offensive), and 100, 1,000 then 10,000 roaming Pokémon encountered with the Roaming Charm equipped (Roam Sweet Roam; Born to Roam; Legends Never Rest). The roamer count is kept with the charm progress, outside the save.
+The charms never count toward the game's "max level Oak Item" achievements, which keep counting the game's twelve items. With the <strong>Custom Achievements</strong> script installed, the charms get achievements of their own, in an <strong>Oak Charms</strong> category with a 10% achievement bonus: 1, 2, 3 then all 6 charms at level 5 (Charmed, I'm Sure; Twice as Charming; Third Time's the Charm; Full Charm Bracelet) and at level 10 (Charm Overload; Double Charm Overload; Triple Charm Overload; Charm Offensive), and 100, 1,000 then 10,000 roaming Pokémon encountered with the Roaming Charm equipped (Roam Sweet Roam; Born to Roam; Legends Never Rest). The roamer count is kept with the charm progress, outside the save.
 
 <hr>
 

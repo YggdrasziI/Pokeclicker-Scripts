@@ -1,11 +1,12 @@
 // Scenario for tools/realgame/start.mjs, with oakcharms (and optionally customachievements for
 // the achievement checks, and oakitemsoverload,
-// in either order): the five charms exist with their own ten levels, bonuses, costs and
+// in either order): the six charms exist with their own ten levels, bonuses, costs and
 // experience; a level past 5 is bought through the game's own upgrade path, kept out of
 // the save in the charms' side store, and restored on reload. The Dowsing Charm feeds
 // the game's rare item multiplier, gains exp from held item drops and rare chests, and
 // scales the chest "more loot" roll of a real dungeon. The Roaming Charm feeds the
-// game's roaming multiplier, gains exp and counts its uses on roaming encounters.
+// game's roaming multiplier, gains exp and counts its uses on roaming encounters. The
+// Mining Charm multiplies the experience of a completed mine layer, not of an item find.
 try {
     const out = [];
     const check = (label, condition, detail) => {
@@ -21,10 +22,11 @@ try {
     const battle = item('Battle_Charm');
     const dowsing = item('Dowsing_Charm');
     const roaming = item('Roaming_Charm');
-    const charms = [quest, farm, battle, dowsing, roaming];
+    const mining = item('Mining_Charm');
+    const charms = [quest, farm, battle, dowsing, roaming, mining];
 
     // Definitions
-    check('the five charms exist', charms.every((charm) => charm !== undefined));
+    check('the six charms exist', charms.every((charm) => charm !== undefined));
     check('ten levels each', charms.every((charm) => charm.maxLevel === 10 && charm.bonusList.length === 11 && charm.costList.length === 10 && charm.expList.length === 10));
     check('not touched by Oak Items Overload', charms.every((charm) => charm.overloadBaseMaxLevel === undefined));
     check('Quest Charm bonuses 1.15x .. 2.25x .. 3.5x', quest.bonusList[0] === 1.15 && quest.bonusList[5] === 2.25 && quest.bonusList[10] === 3.5);
@@ -42,6 +44,13 @@ try {
         && roaming.costList[9].currency === GameConstants.Currency.money
         && roaming.expList[0] === 500 && roaming.expList[4] === 10000 && roaming.expList[5] === 30000 && roaming.expList[9] === 2000000 && roaming.expGain === 150);
     check('Roaming Charm progress counts roamers, 4 for the first level', roaming.progressString === '0 / 4');
+    check('Mining Charm 1.2x .. 2x .. 4x for 12.5B, one exp per layer', mining.bonusList[0] === 1.2 && mining.bonusList[5] === 2 && mining.bonusList[10] === 4
+        && mining.costList[0].amount === 100000 && mining.costList[9].amount === 12500000000 && mining.costList[9].currency === GameConstants.Currency.money
+        && mining.expList[0] === 10 && mining.expList[4] === 250 && mining.expList[9] === 75000 && mining.expGain === 1 && mining.progressString === '0 / 10');
+    check('Mining Charm is locked before 100 layers mined', !mining.isUnlocked() && mining.hint() === 'Mine 100 layers in the Underground');
+    App.game.statistics.undergroundLayersMined(100);
+    check('Mining Charm unlocks at 100 layers mined', mining.isUnlocked());
+    App.game.statistics.undergroundLayersMined(0);
     check('Roaming Charm is locked before 70 unique Pokémon', !roaming.isUnlocked() && roaming.hint() === 'Capture 70 unique Pokémon');
 
     // Level 5 is not the end: the upgrade needs the next experience step and costs 200M
@@ -66,7 +75,7 @@ try {
         const five = achievement('Charmed, I\'m Sure');
         const ten = achievement('Charm Overload');
         const allTen = achievement('Charm Offensive');
-        check('charm achievements registered', five !== undefined && ten !== undefined && allTen?.property.requiredValue === 5 && achievement('Full Charm Bracelet')?.property.requiredValue === 5);
+        check('charm achievements registered', five !== undefined && ten !== undefined && allTen?.property.requiredValue === 6 && achievement('Full Charm Bracelet')?.property.requiredValue === 6);
         check('a tier at 3 charms in both series', achievement('Third Time\'s the Charm')?.property.requiredValue === 3 && achievement('Triple Charm Overload')?.property.requiredValue === 3);
         check('in their own category', five.category.name === 'oakCharms' && five.category !== achievement('Is That How I Use This?').category);
         check('one charm at level 10 completes the first tiers', five.property.getProgress() === 1 && five.isCompleted() && ten.isCompleted() && allTen.property.getProgress() === 1 && !allTen.isCompleted());
@@ -208,11 +217,44 @@ try {
     check('a max-level charm still counts its uses', encounter.exp === 0 && encounter.uses === 1 && roaming.uses === 2, JSON.stringify(encounter));
     roaming.fromJSON({ level: 2, exp: 1000, isActive: true, uses: 2 });
 
+    // Mine layers, through the calls UndergroundController.handleDig makes: an item find
+    // gives its experience with share set, a completed layer notifies then gives its own
+    const underground = App.game.underground;
+    const layerExp = GameConstants.UNDERGROUND_EXPERIENCE_CLEAR_LAYER;
+    const findExp = GameConstants.UNDERGROUND_EXPERIENCE_DIG_UP_ITEM;
+    const playerExpAfter = (steps) => {
+        const start = { player: underground.undergroundExp, charm: mining.normalizedExp, uses: mining.uses };
+        steps();
+        return { player: underground.undergroundExp - start.player, charm: mining.normalizedExp - start.charm, uses: mining.uses - start.uses };
+    };
+    const clearLayer = () => {
+        UndergroundController.notifyMineCompleted();
+        UndergroundController.addPlayerUndergroundExp(layerExp, true);
+    };
+    let dig = playerExpAfter(clearLayer);
+    check('an unequipped charm leaves a layer at its 100 exp', dig.player === layerExp && dig.charm === 0 && dig.uses === 0, JSON.stringify(dig));
+    mining.fromJSON({ level: 5, exp: 250, isActive: true });
+    dig = playerExpAfter(clearLayer);
+    check('level 5 doubles a layer, 1 charm exp and 1 use', dig.player === 2 * layerExp && dig.charm === 1 && dig.uses === 1, JSON.stringify(dig));
+    dig = playerExpAfter(() => UndergroundController.addPlayerUndergroundExp(findExp, true));
+    check('an item find is not multiplied and gives no charm exp', dig.player === findExp && dig.charm === 0 && dig.uses === 0, JSON.stringify(dig));
+    mining.fromJSON({ level: 10, exp: 75000, isActive: true, uses: 1 });
+    dig = playerExpAfter(clearLayer);
+    check('level 10 gives four times a layer', dig.player === 4 * layerExp && dig.uses === 1, JSON.stringify(dig));
+    dig = playerExpAfter(() => {
+        UndergroundController.notifyMineCompleted({ name: 'helper' });
+        UndergroundController.addHiredHelperUndergroundExp(layerExp, true);
+    });
+    const helperShare = Math.floor(+(4 * layerExp * GameConstants.HELPER_EXPERIENCE_PLAYER_FRACTION).toFixed(1));
+    check('a layer a helper completes is multiplied too, the player\'s share with it', dig.player === helperShare && dig.uses === 1, `${JSON.stringify(dig)} vs ${helperShare}`);
+    mining.fromJSON({ level: 4, exp: 100, isActive: true, uses: 3 });
+
     // The save stays vanilla; the side store keeps the charms at level 7, 3 and 2
     const save = App.game.oakItems.toJSON();
-    check('save holds no charm', save.Quest_Charm === undefined && save.Farm_Charm === undefined && save.Battle_Charm === undefined && save.Dowsing_Charm === undefined && save.Roaming_Charm === undefined);
+    check('save holds no charm', save.Quest_Charm === undefined && save.Farm_Charm === undefined && save.Battle_Charm === undefined && save.Dowsing_Charm === undefined && save.Roaming_Charm === undefined && save.Mining_Charm === undefined);
     const stored = JSON.parse(localStorage.getItem(`oakCharms-${Save.key}`));
     check('side store holds levels 7 and 3', stored?.Quest_Charm?.level === 7 && stored.Quest_Charm.exp === 30000 && stored.Dowsing_Charm?.level === 3, JSON.stringify(stored));
+    check('side store holds the Mining Charm level and uses', stored?.Mining_Charm?.level === 4 && stored.Mining_Charm.uses === 3, JSON.stringify(stored?.Mining_Charm));
     check('side store holds the Roaming Charm level and uses', stored?.Roaming_Charm?.level === 2 && stored.Roaming_Charm.uses === 2, JSON.stringify(stored?.Roaming_Charm));
 
     // Reload: the levels come back from the store

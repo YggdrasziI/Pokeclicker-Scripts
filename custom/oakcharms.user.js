@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Oak Charms
 // @namespace     Pokeclicker Scripts
 // @author        YggdrasziI
-// @description   Adds five Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route, and shows its bonus next to the roaming odds of the route's encounters window. Each unlocks on its own condition and levels up by using it.
+// @description   Adds six Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route, and shows its bonus next to the roaming odds of the route's encounters window, and the Mining Charm multiplies the Underground experience a completed mine layer gives, up to x4. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.8.0
+// @version       1.9.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -104,6 +104,20 @@ const oakCharms = [
         isUnlocked: () => App.game.party.caughtPokemon.length >= 70,
         hint: 'Capture 70 unique Pokémon',
         icon: 'assets/images/encountersInfo/roaming.png',
+    },
+    {
+        key: 'Mining_Charm',
+        displayName: 'Mining Charm',
+        description: 'Gain more Underground experience from completing mine layers',
+        // x2 at level 5, x4 at level 10
+        bonusList: [1.20, 1.35, 1.50, 1.65, 1.80, 2.00, 2.40, 2.80, 3.20, 3.60, 4.00],
+        expList: [10, 25, 50, 100, 250, 750, 2500, 7500, 25000, 75000],
+        costList: [100000, 250000, 500000, 1000000, 2500000, 25000000, 125000000, 625000000, 2500000000, 12500000000],
+        // Not a currency charm: exp comes from the layer completion hook, one per layer
+        currency: null,
+        isUnlocked: () => App.game.statistics.undergroundLayersMined() >= 100,
+        hint: 'Mine 100 layers in the Underground',
+        icon: 'assets/images/underground/Hammer.png',
     },
 ];
 
@@ -489,6 +503,32 @@ function initOakCharmsOverrides() {
         }
         return result;
     };
+
+    // The Mining Charm multiplies the experience of a completed mine layer. The game
+    // clears a layer in UndergroundController.handleDig: notifyMineCompleted, then one
+    // addPlayerUndergroundExp (the player dug) or addHiredHelperUndergroundExp (a helper
+    // did) of UNDERGROUND_EXPERIENCE_CLEAR_LAYER with share set, which hands a fraction
+    // of it to the other side. The flag set by the notification marks that next call;
+    // item finds call the same functions, but before the layer is checked.
+    const miningCharm = oakCharms.find((c) => c.key === 'Mining_Charm');
+    let layerCleared = false;
+    const notifyMineCompletedOld = UndergroundController.notifyMineCompleted;
+    UndergroundController.notifyMineCompleted = function (...args) {
+        layerCleared = true;
+        return notifyMineCompletedOld.apply(this, args);
+    };
+    ['addPlayerUndergroundExp', 'addHiredHelperUndergroundExp'].forEach((name) => {
+        const addExpOld = UndergroundController[name];
+        UndergroundController[name] = function (experience, share, ...args) {
+            if (layerCleared && share && App.game?.oakItems) {
+                layerCleared = false;
+                const item = oakCharmItem(miningCharm);
+                experience *= item.calculateBonus();
+                item.use();
+            }
+            return addExpOld.call(this, experience, share, ...args);
+        };
+    });
 
     // The route's encounters window shows the roaming odds from roamingRate, charm
     // included, and marks a boosted route with an arrow and a tooltip line: mark the
