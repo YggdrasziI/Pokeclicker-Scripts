@@ -90,6 +90,7 @@ What this fork changed on that side:
 19. [**Simple Time Changer** ](#custom-simple-time-changer)
 20. [**Simple Weather Changer** ](#simple-weather-changer)
 21. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
+22. [**Wither Mulch** ](#custom-wither-mulch)
 
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
@@ -738,6 +739,18 @@ Each row can be given its own odds, or you can set a single global rate that ove
 <strong>Karma Mode</strong> replaces all of that with a pity counter: the odds improve by one on every failed roll and snap back to the game's own rate the moment a shiny appears, so a dry streak cannot last forever. While it is on, the manual rates are locked.
 
 <strong>DOM Updates</strong> refreshes the table live as rolls happen, which is useful for watching karma mode work and pointless otherwise.
+
+<hr>
+
+<a name="custom-wither-mulch"></a>
+## [Custom] Wither Mulch (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/ephymew-only/custom/withermulch.user.js">withermulch.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/ephymew-only/custom/withermulch.user.js">One-Click Install</a>)
+This script adds a <strong>Wither Mulch</strong> to the farm, sold for 300 Farm Points in every shop that sells mulch, right after the game's own mulches (the Explorers Poké Mart shows it once the farm shortcut is unlocked, like the others). It shows up in the farm's mulch list with a darkened Rich Mulch icon, since the game has no sprite for it.<br>
+
+Put on a planted plot, it makes the plant wither at once, exactly as it does when it grows past its last stage: half its harvest is dropped into your inventory, it may replant itself, and it may turn into a Kasib Berry when no Colbur Berry grows in the farm. The mulch is used up by that one withering and never stays on the plot: one mulch per plant, whatever amount is selected, and Mulch All withers every planted plot it can, one mulch each. Empty and safe-locked plots are left alone.
+
+Its purpose is the <strong>Banettite</strong>: the game gives it, 5% of the time, when a Kasib Berry withers, once you have reached Kalos and caught Banette. A Kasib Berry always replants itself when it withers, so one Kasib plot and a stack of Wither Mulch is enough to roll for it as often as you like.
+
+The mulch stock is kept outside the game save, per save file, in the browser storage, so your save stays exactly what the unmodified game would write and still loads without the script.
 
 <hr>
 
