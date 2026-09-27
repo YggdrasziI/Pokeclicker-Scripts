@@ -31,7 +31,12 @@ function initOmegaProtein() {
     // The game's cap, 5 vitamins per region reached, all types combined, comes from this one
     // static: vitaminUsesRemaining() on every pokémon is maxVitaminUsesAllowed() minus the
     // vitamins used. It is what hides a "maxed" pokémon in the vitamin window, greys its
+    // @variants full
     // + button, and what the Automation's Auto Vitamins stops at. Lift it here too, or
+    // @end-variants
+    // @variants ephymew
+    // + button, and what any auto vitamins stops at. Lift it here too, or
+    // @end-variants
     // useVitamin below accepts vitamins that nothing else offers to give.
     PartyPokemon.omegaProteinBaseMaxVitaminUsesAllowed = PartyPokemon.maxVitaminUsesAllowed;
     PartyPokemon.maxVitaminUsesAllowed = function () {

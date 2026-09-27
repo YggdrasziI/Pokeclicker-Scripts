@@ -19,6 +19,12 @@ desktop client that ships them. Three families of code that do not mix:
   `desktop/app.asar` is the built archive that users actually run. Changing the
   source alone ships nothing.
 
+The project ships in **three versions**: Complete (`master`), Ephymew only
+(`ephymew-only`) and Automation only (`automation-only`). Only `master` is ever
+edited. The two other branches are generated from it by `tools/variants/publish.mjs`,
+which uses the `@variants` markers to drop whatever names the other half. See the
+`variants-release` skill.
+
 ## Operating principles
 
 - Working code only. Plausible is not correct. Verify before reporting done.
@@ -93,6 +99,7 @@ in a *URL* is ours to change; these identifiers are not.
 node automation/build.mjs                      # regenerate pokeclickerautomation.user.js
 cd automation/test && npm install && npm test  # menu / init / bridges, under jsdom
 node tools/realgame/start.mjs <script> [...]   # start the client's real game build with scripts, under jsdom
+node tools/variants/publish.mjs                # after pushing master: regenerate and push ephymew-only / automation-only
 ```
 
 The tests load the **built bundle**, not the sources. Build first or you are

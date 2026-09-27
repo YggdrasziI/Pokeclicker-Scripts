@@ -52,16 +52,22 @@ was built against. They gate the client's own update prompts.
 
 ## Where scripts come from
 
-`desktop/app_src/src/main.js:934` holds the single `repoUrl` the client uses:
+`desktop/app_src/src/main.js:938` holds the single `repoUrl` the client uses:
 
 ```js
 const repoUrl = 'https://api.github.com/repos/<account>/Pokeclicker-Scripts/contents/';
 ```
 
-`getRepoContents(repoUrl)` then `getRepoContents(repoUrl + 'custom')` enumerate the
-repository, and each file's own `download_url` from the API response is fetched.
+`getRepoContents(repoUrl + '?ref=<branch>')` then the same for `custom` enumerate
+the repository, and each file's own `download_url` from the API response is fetched.
 There is no per-file URL anywhere else — this one line decides the source for
-every script. Two log strings nearby (`:966`, `:973`) name the account too.
+every script. The log strings nearby name the account too.
+
+The branch is the version of the project chosen in Settings → Scripts → *Scripts
+version*: `DesktopScriptHandler.scriptsVariants` in `scripthandler.js` maps each
+version to its branch (`master`, `ephymew-only`, `automation-only`). A 404 on
+`custom` is an empty list, since the Automation-only branch has no such folder.
+A new version needs an entry there and in `tools/variants/markers.mjs`.
 
 Unrelated GitHub URLs in the same file belong to the **game's** updater and must
 not be repointed: `main.js:270` (`codeload.github.com/pokeclicker/pokeclicker`)
@@ -104,3 +110,8 @@ Stage only the files the task touched, write the message in the style of
 `git log` (imperative subject, a short body saying what changed and why), and
 push to `origin master`. Only leave a change uncommitted when the user asks
 for that explicitly.
+
+Then publish the two other versions of the project: `node tools/variants/publish.mjs`.
+The `ephymew-only` and `automation-only` branches are generated from master and
+are never edited directly; if the publish reports a leak, mark the passage on master
+with `@variants` and publish again (see the `variants-release` skill).

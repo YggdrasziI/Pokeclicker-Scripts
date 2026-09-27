@@ -7,13 +7,39 @@
 // standard loadEpheniaScript bootstrap.
 //
 // Usage: node automation/build.mjs
+//        node automation/build.mjs --variant=automation --out=<file>
+//
+// The default writes the full version to the repository root. --variant builds another
+// version of the project (see tools/variants): the @variants passages of the sources are
+// filtered, the modules that only exist to cooperate with the other scripts are left out,
+// and the update URLs point at that version's branch.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { applyVariantMarkers, VARIANTS } from '../tools/variants/markers.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..');
+
+const options = { variant: 'full', out: null };
+for (const arg of process.argv.slice(2)) {
+    const match = /^--(variant|out)=(.+)$/.exec(arg);
+    if (!match) {
+        throw new Error(`Unknown argument ${arg}`);
+    }
+    options[match[1]] = match[2];
+}
+if (!(options.variant in VARIANTS) || options.variant === 'ephymew') {
+    throw new Error(`The Automation bundle has no '${options.variant}' version`);
+}
+if (options.variant !== 'full' && !options.out) {
+    throw new Error('--variant needs --out: the root file is the full version');
+}
+const branch = VARIANTS[options.variant].branch;
+
+// Modules that only cooperate with the other scripts of the full version
+const FULL_ONLY = ['lib/Bridges.js', 'lib/EpheniaControls.js'];
 
 // Dependency order, mirroring upstream's ComponentLoader: a class must be defined
 // before any class whose static initializers reference it.
@@ -52,7 +78,7 @@ const SOURCES = [
     'lib/Bridges.js',
     'lib/EpheniaControls.js',
     'Automation.js',
-];
+].filter((relative) => options.variant === 'full' || !FULL_ONLY.includes(relative));
 
 const SCRIPT_NAME = 'pokeclickerautomation';
 const VERSION = '1.2.0';
@@ -68,8 +94,8 @@ const HEADER = `// ==UserScript==
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
-// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/${SCRIPT_NAME}.user.js
-// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/master/${SCRIPT_NAME}.user.js
+// @downloadURL   https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/${branch}/${SCRIPT_NAME}.user.js
+// @updateURL     https://raw.githubusercontent.com/YggdrasziI/Pokeclicker-Scripts/${branch}/${SCRIPT_NAME}.user.js
 
 // @match         https://www.pokeclicker.com/
 // @icon          https://www.google.com/s2/favicons?domain=pokeclicker.com
@@ -100,7 +126,7 @@ async function readLoader() {
 const parts = [HEADER];
 
 for (const relative of SOURCES) {
-    const contents = await readFile(join(here, relative), 'utf8');
+    const contents = applyVariantMarkers(await readFile(join(here, relative), 'utf8'), options.variant, relative);
     parts.push(`\n/* ${'='.repeat(72)}\n * ${relative}\n * ${'='.repeat(72)} */\n`);
     parts.push(contents.trimEnd());
     parts.push('\n');
@@ -118,7 +144,7 @@ if (!App.isUsingClient || localStorage.getItem('${SCRIPT_NAME}') === 'true') {
 `);
 
 const output = parts.join('');
-const target = join(repoRoot, `${SCRIPT_NAME}.user.js`);
+const target = options.out ? resolve(options.out) : join(repoRoot, `${SCRIPT_NAME}.user.js`);
 await writeFile(target, output, 'utf8');
 
 console.log(`Wrote ${target}`);

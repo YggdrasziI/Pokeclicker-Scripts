@@ -25,8 +25,10 @@ class Automation
     static Vitamins = AutomationVitamins;
     static ClickStats = AutomationClickStats;
     static SaveBackup = AutomationSaveBackup;
+    // @variants full
     static Bridges = AutomationBridges;
     static EpheniaControls = AutomationEpheniaControls;
+    // @end-variants
 
     static InitSteps = class AutomationInitSteps
     {
@@ -96,19 +98,26 @@ class Automation
                     this.BattleFrontier.initialize(initStep);
                     this.MaxRaid.initialize(initStep);
 
+                    // @variants full
                     // Safari is left out on purpose: nothing else depends on it, and Ephenia's
                     // autosafarizone covers it with better pathfinding and uncaught/contagious hunting.
+                    // @end-variants
+                    // @variants automation
+                    // Safari is not ported yet: nothing else depends on it.
+                    // @end-variants
                     // this.Safari.initialize(initStep);
 
                     // Floating panel
                     this.BattleCafe.initialize(initStep);
 
+                    // @variants full
                     // Keeps this automation and the Ephenia userscripts from running
                     // incompatible features at the same time
                     this.Bridges.initialize(initStep);
 
                     // Mirrors the Ephenia scripts' main switches into the card
                     this.EpheniaControls.initialize(initStep);
+                    // @end-variants
 
                     // Every module has dropped its controls in by now, so they can be
                     // wrapped into foldable sections

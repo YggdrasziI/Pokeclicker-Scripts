@@ -35,7 +35,7 @@ const MOD_EXPECTED_CLIENT_VERSION = '1.2.0';
 // Used for update checking as the real client version gets overridden by the mod
 const MOD_EXPECTED_ELECTRON_VERSION = '^21.3.1';
 // VERY IMPORTANT: update this in desktopupdatechecker.js as well!
-const POKECLICKER_SCRIPTS_DESKTOP_VERSION = '2.2.0';
+const POKECLICKER_SCRIPTS_DESKTOP_VERSION = '2.3.0';
 
 console.info("Data directory:", dataDir);
 
@@ -607,7 +607,7 @@ function injectDesktopScriptsModifications(gameWindow) {
     });
   }
 
-  function getRepoContents(url) {
+  function getRepoContents(url, allowMissing = false) {
     return new Promise((resolve, reject) => {
       var request = new XMLHttpRequest();
       request.onload = () => {
@@ -616,6 +616,9 @@ function injectDesktopScriptsModifications(gameWindow) {
           files = files.filter((f) => (f.name.endsWith('.js')));
           files = files.map((f) => ([f.name, f.download_url]));
           resolve(files);
+        } else if (request.status === 404 && allowMissing) {
+          // A version of the project without this folder
+          resolve([]);
         } else {
           reject(`Failed to read repository contents (status code ${request.status})`);
         }
@@ -954,17 +957,25 @@ function injectDesktopScriptsModifications(gameWindow) {
       return;
     }
 
-    let epheniaScriptsDone = getRepoContents(repoUrl)
+    // The version of the project chosen in the settings is a branch of the repository
+    var repoBranch = 'master';
+    let epheniaScriptsDone = gameWindow.webContents.executeJavaScript(`DesktopScriptHandler.getScriptsBranch();`)
+      .then((branch) => {
+        repoBranch = branch;
+      }, (err) => {
+        logInGameWindow(`Could not read the scripts version, using master:\n${err}`, 'warn');
+      })
+      .then(() => getRepoContents(`${repoUrl}?ref=${encodeURIComponent(repoBranch)}`))
       .then((data) => {
         repoFiles = data;
-        return getRepoContents(repoUrl + 'custom');
+        return getRepoContents(`${repoUrl}custom?ref=${encodeURIComponent(repoBranch)}`, true);
       }, (err) => {
         throw err;
       })
       .then((data) => {
         repoFiles = repoFiles.concat(data);
         let repoFilenames = repoFiles.map(f => f[0]);
-        logInGameWindow(`Found script files in YggdrasziI/Pokeclicker-Scripts/ github repository:\n${repoFilenames.join('\n')}`, 'debug');
+        logInGameWindow(`Found script files in YggdrasziI/Pokeclicker-Scripts/ github repository (branch ${repoBranch}):\n${repoFilenames.join('\n')}`, 'debug');
         let scriptsExecuted = handleScripts(repoFiles);
         disableExtraneousScripts(localFiles, repoFilenames);
         return scriptsExecuted;

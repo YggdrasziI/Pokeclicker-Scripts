@@ -92,6 +92,23 @@ class DesktopScriptHandler {
         return val === true;
     }
 
+    // Which version of the project the client downloads: each one is a branch of the repository
+    static scriptsVariants = {
+        full: ['Complete', 'master'],
+        ephymew: ['Ephymew only', 'ephymew-only'],
+        automation: ['Automation only', 'automation-only'],
+    };
+
+    static getScriptsVariant() {
+        var val = localStorage.getItem('pokeclickerScriptsVariant');
+        return val in this.scriptsVariants ? val : 'full';
+    }
+
+    // Called by main.js to know which branch to list the scripts from
+    static getScriptsBranch() {
+        return this.scriptsVariants[this.getScriptsVariant()][1];
+    }
+
     static init() {
         console.log('Loading Pokéclicker Scripts Desktop scripthandler');
 
@@ -147,8 +164,23 @@ class DesktopScriptHandler {
         document.getElementById('settings-scripts-enableScriptsUser').appendChild(info);
 
 
+        // Add setting to choose the version of the project to download
+        let setting = document.createElement('tr');
+        setting.innerHTML =
+            `<td class="p-2 col-md-8"><label class="m-0" for="select-scriptsVariant">Scripts version</label></td>` +
+            `<td class="p-2 col-md-4"><select id="select-scriptsVariant" class="form-control">` +
+            Object.entries(this.scriptsVariants).map(([id, [label]]) => `<option value="${id}">${label}</option>`).join('') +
+            `</select></td>`;
+        document.getElementById('settings-scripts-desktopSettings').appendChild(setting);
+        document.getElementById('select-scriptsVariant').value = this.getScriptsVariant();
+        document.getElementById('select-scriptsVariant').addEventListener('change', event => {
+            localStorage.setItem('pokeclickerScriptsVariant', event.target.value);
+            // The other version's files must be downloaded even with auto-updates off
+            localStorage.setItem('epheniaUpdateScriptsNextLaunch', true);
+        });
+
         // Add setting to disable script auto-updates
-        let setting = document.createElement('tr')
+        setting = document.createElement('tr')
         setting.innerHTML =
             `<td class="p-2 col-md-8"><label class="m-0" for="checkbox-scriptAutoUpdates">Script auto-updates enabled</label></td>` + 
             `<td class="p-2 col-md-4"><input id="checkbox-scriptAutoUpdates" type="checkbox"></td>`;

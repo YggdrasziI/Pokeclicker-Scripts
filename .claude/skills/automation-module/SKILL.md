@@ -106,6 +106,11 @@ Cross-script conflicts with the Ephenia userscripts are declared in
 `automation/lib/Bridges.js` — add an entry there if the new feature drives the
 player's position or an activity an Ephenia script also drives.
 
+The Automation-only version is built without `Bridges` and `EpheniaControls`
+(`FULL_ONLY` in `automation/build.mjs`). A module or a comment that names the
+standalone scripts belongs inside `// @variants full` markers, and a module that only
+exists to cooperate with them goes in `FULL_ONLY` (see the `variants-release` skill).
+
 ## Safety rules
 
 - Never edit `pokeclickerautomation.user.js`. Edit the module and rebuild.
@@ -146,3 +151,8 @@ Stage only the files the task touched, write the message in the style of
 `git log` (imperative subject, a short body saying what changed and why), and
 push to `origin master`. Only leave a change uncommitted when the user asks
 for that explicitly.
+
+Then publish the two other versions of the project: `node tools/variants/publish.mjs`.
+The `ephymew-only` and `automation-only` branches are generated from master and
+are never edited directly; if the publish reports a leak, mark the passage on master
+with `@variants` and publish again (see the `variants-release` skill).

@@ -10,9 +10,21 @@ Various scripts & enhancements for the game [Pokéclicker](https://www.pokeclick
 
 ## ⚠️ Read this first
 
+<!-- @variants full -->
 **This repository is a Frankenstein fusion.** It stitches together two unrelated PokéClicker projects — [ephymew's **Pokeclicker Scripts**](https://github.com/ephymew/Pokeclicker-Scripts) and [Farigh's **pokeclicker-automation**](https://github.com/Farigh/pokeclicker-automation) — into one set of scripts, and then changes both of them. The seams show, and they are ours.
 
 **Do not report anything from here to the original authors.** Neither ephymew nor Farigh has anything to do with this fork, and a bug you hit here is far more likely to come from the stitching than from their code. The same goes for the Pokéclicker team: **never** report script problems to the game's developers.
+<!-- @end-variants -->
+<!-- @variants ephymew -->
+**This repository is a fork** of [ephymew's **Pokeclicker Scripts**](https://github.com/ephymew/Pokeclicker-Scripts), and changes it. This page describes its **Ephymew-only** version; the [full version](//github.com/YggdrasziI/Pokeclicker-Scripts) carries more.
+
+**Do not report anything from here to the original author.** ephymew has nothing to do with this fork, and a bug you hit here is far more likely to come from the changes than from the original code. The same goes for the Pokéclicker team: **never** report script problems to the game's developers.
+<!-- @end-variants -->
+<!-- @variants automation -->
+**This repository is a fork** of [Farigh's **pokeclicker-automation**](https://github.com/Farigh/pokeclicker-automation), and changes it. This page describes its **Automation-only** version; the [full version](//github.com/YggdrasziI/Pokeclicker-Scripts) carries more.
+
+**Do not report anything from here to the original author.** Farigh has nothing to do with this fork, and a bug you hit here is far more likely to come from the changes than from the original code. The same goes for the Pokéclicker team: **never** report script problems to the game's developers.
+<!-- @end-variants -->
 
 Anything that misbehaves in *this* repository belongs [in this repository's issues](https://github.com/YggdrasziI/Pokeclicker-Scripts/issues).
 
@@ -25,13 +37,31 @@ Anything that misbehaves in *this* repository belongs [in this repository's issu
 These scripts are written for script manager browser extensions such as [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/), and should work with most others. With one installed, the **One-Click Install** link in each section below is enough.
 
 For the desktop version of the game ([Pokéclicker Desktop](//github.com/RedSparr0w/Pokeclicker-desktop)), replace its <strong>app.asar</strong> with the [modified one from this repository](//github.com/YggdrasziI/Pokeclicker-Scripts/tree/master/desktop); it brings its own script manager, which downloads and updates every script here on its own. Detailed instructions are [here](//github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/desktop/README.md).
+<!-- @variants full -->
+
+The scripts here come in three versions, and the client downloads one of them, chosen in Settings → Scripts → **Scripts version**: *Complete* (everything on this page), *Ephymew only* (every script except Automation) or *Automation only* (the Automation script alone). A change takes effect on the next launch, and the scripts that are not part of the chosen version are disabled. For a browser script manager, each version is a branch of this repository: `master`, `ephymew-only` and `automation-only`; a script installed from a branch updates from that branch.
+<!-- @end-variants -->
+<!-- @variants ephymew -->
+
+This is the version the client downloads with Settings → Scripts → **Scripts version** set to *Ephymew only*. The One-Click Install links below keep a browser script manager on this version too.
+<!-- @end-variants -->
+<!-- @variants automation -->
+
+This is the version the client downloads with Settings → Scripts → **Scripts version** set to *Automation only*. The One-Click Install link below keeps a browser script manager on this version too.
+<!-- @end-variants -->
 
 Development targets PokéClicker **v0.10.26** (branch `port-v0.10.26`).
 
 <hr>
 
+<!-- @variants full -->
 ## Upstream projects, and what changed here
+<!-- @end-variants -->
+<!-- @variants ephymew automation -->
+## Upstream project, and what changed here
+<!-- @end-variants -->
 
+<!-- @variants full ephymew -->
 ### ephymew — [Pokeclicker Scripts](https://github.com/ephymew/Pokeclicker-Scripts)
 
 Every standalone `*.user.js` here, the `custom/` folder and the desktop script manager come from that project (published under the **Ephenia** name for most of its life, hence `loadEpheniaScript` and friends throughout the code — that name is a compatibility contract with scripts published elsewhere and is deliberately left alone). This fork branched off its last commit, from May 2025.
@@ -48,28 +78,44 @@ What this fork changed on that side:
 * The Enhanced Auto Clicker comes back on its own after a Battle Frontier or Safari visit, instead of switching itself off for good.
 * Additional Visual Settings: the settings are laid out vertically, and the Shops shortcut became a region-wide item list — every item on sale in the region, in one place, with its price and where to buy it.
 
+<!-- @end-variants -->
+<!-- @variants full automation -->
 ### Farigh — [pokeclicker-automation](https://github.com/Farigh/pokeclicker-automation)
 
 The whole `automation/` folder, and the [`pokeclickerautomation.user.js`](#automation) bundle it generates. That project is alive and maintained upstream; this is a port of it, not a mirror.
 
 What this fork changed on that side:
 
+<!-- @end-variants -->
+<!-- @variants full -->
 * **Bundled instead of loaded.** Upstream fetches each module from GitHub at runtime through its `ComponentLoader`. Here `node automation/build.mjs` concatenates them into one self-contained userscript, so the desktop client works offline and the script behaves like every other script in this repository.
 * **New modules:** auto vitamins, click statistics ported over from the Enhanced Auto Clicker, scheduled save backups (desktop client only), and the two pieces of glue below.
 * **`Bridges`** — the two projects automate overlapping things. Turning on a feature that would fight an Ephenia script (two auto-clickers, two miners, two hatcheries) now asks before switching the other one off, in both directions.
 * **`EpheniaControls`** — the Ephenia scripts each bury their switches in the screen they act on. Their main switches are mirrored into the Automation card, so everything is reachable from one place; their settings stay where they were, in Settings → Scripts.
 * **New options** in the existing modules: a Farm Points mode for the farm, automatic Battle Café spinning, Mystery Mine mega-stone hunting, hatchery-helper hiring for the Achievements focus, an Evolution items tab in the auto-shop, an "until shiny" egg mode, automatic Purify Chamber loading, a stuck-quest watchdog, a remaining-evolution count on the Trivia stone tooltips, and a gem-upgrade order that finishes one affinity before starting the next instead of spreading a type's gems thin.
 * **A focus fallback chain.** A blocked "Focus on" topic used to switch the whole feature off. It now hands over to up to three fallback topics of your choosing, and comes back on its own once it can make progress again.
+<!-- @end-variants -->
+<!-- @variants automation -->
+* **Bundled instead of loaded.** Upstream fetches each module from GitHub at runtime through its `ComponentLoader`. Here `node automation/build.mjs` concatenates them into one self-contained userscript, so the desktop client works offline and the script behaves like every other script in this repository.
+* **New modules:** auto vitamins, click statistics and scheduled save backups (desktop client only).
+* **New options** in the existing modules: a Farm Points mode for the farm, automatic Battle Café spinning, Mystery Mine mega-stone hunting, hatchery-helper hiring for the Achievements focus, an Evolution items tab in the auto-shop, an "until shiny" egg mode, automatic Purify Chamber loading, a stuck-quest watchdog, a remaining-evolution count on the Trivia stone tooltips, and a gem-upgrade order that finishes one affinity before starting the next instead of spreading a type's gems thin.
+* **A focus fallback chain.** A blocked "Focus on" topic used to switch the whole feature off. It now hands over to up to three fallback topics of your choosing, and comes back on its own once it can make progress again.
+<!-- @end-variants -->
+<!-- @variants full automation -->
 
 The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/docs/ROADMAP.md).
 
+<!-- @end-variants -->
 <hr>
 
 ## The scripts
 
+<!-- @variants full ephymew -->
 **Vanilla scripts** are purely for automation or other QoL things.<br>
 **Custom scripts** are able to do or change things that aren't within the bounds of the vanilla game, or they may be considered more cheaty.
+<!-- @end-variants -->
 
+<!-- @variants full -->
 # Vanilla Scripts
 1. [**Automation** ](#automation)
 2. [**Additional Visual Settings** ](#additional-visual-settings)
@@ -104,7 +150,49 @@ The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//gi
 19. [**Simple Time Changer** ](#custom-simple-time-changer)
 20. [**Simple Weather Changer** ](#simple-weather-changer)
 21. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
+<!-- @end-variants -->
+<!-- @variants ephymew -->
+# Vanilla Scripts
+1. [**Additional Visual Settings** ](#additional-visual-settings)
+2. [**Auto Battle Frontier** ](#auto-battle-frontier)
+3. [**Auto Battle Items** ](#auto-battle-items)
+4. [**Catch Filter Fantasia** ](#catch-filter-fantasia)
+5. [**Enhanced Auto Clicker** ](#enhanced-auto-clicker)
+6. [**Enhanced Auto Hatchery** ](#enhanced-auto-hatchery)
+7. [**Enhanced Auto Mine** ](#enhanced-auto-mine)
+8. [**Simple Auto Farmer** ](#simple-auto-farmer)
+9. [**Script Fixer Upper**](#script-fixer-upper)
+10. [**Script Manager** (Included in desktop/app.asar)](#script-manager)
+# Custom Scripts
+1. [**Auto NPC Codes** ](#custom-auto-npc-codes)
+2. [**Auto Quest Completer** ](#auto-quest-completer)
+3. [**Auto Safari Zone** ](#auto-safari-zone)
+4. [**Catch Speed Adjuster** ](#catch-speed-adjuster)
+5. [**Challenge Mode Changer** ](#challenge-mode-changer)
+6. [**Custom Achievements** ](#custom-custom-achievements)
+7. [**Debug Cheats Tools** ](#custom-debug-cheats-tools)
+8. [**Discord Code Generator** ](#discord-code-generator)
+9. [**Infinite Battle Café** ](#infinite-battle-cafe)
+10. [**Infinite Max Raid** ](#infinite-max-raid)
+11. [**Infinite Seasonal Events** ](#infinite-seasonal-events)
+12. [**Oak Charms** ](#custom-oak-charms)
+13. [**Oak Items Overload** ](#custom-oak-items-overload)
+14. [**Oak Items Unlimited** ](#oak-items-unlimited)
+15. [**Omega Protein Gains** ](#omega-protein-gains)
+16. [**Overnight Berry Growth** ](#overnight-berry-growth)
+17. [**Perky Pokerus Pandemic** ](#perky-pokerus-pandemic)
+18. [**Shiny Variants** ](#custom-shiny-variants)
+19. [**Simple Time Changer** ](#custom-simple-time-changer)
+20. [**Simple Weather Changer** ](#simple-weather-changer)
+21. [**Synthetic Shiny Synapse** ](#custom-synthetic-shiny-synapse)
+<!-- @end-variants -->
+<!-- @variants automation -->
+# Scripts
+1. [**Automation** ](#automation)
+2. [**Script Manager** (Included in desktop/app.asar)](#script-manager)
+<!-- @end-variants -->
 
+<!-- @variants full -->
 ```diff
 - Note: Please backup your saves before using any and all scripts that would be here!!!
 - Note: All scripts here are meant to be compatible with one another. Where two of them would
@@ -112,18 +200,44 @@ The full, phase-by-phase account of these changes is in [`docs/ROADMAP.md`](//gi
 - Note: Feel free to open an issue if you find any bugs/issues as these aren't fully tested!!!
 - Note: in case it isn't mention below, all user set settings with these scripts are saved and persist even upon game close!!!
 ```
+<!-- @end-variants -->
+<!-- @variants ephymew -->
+```diff
+- Note: Please backup your saves before using any and all scripts that would be here!!!
+- Note: All scripts here are meant to be compatible with one another.
+- Note: Feel free to open an issue if you find any bugs/issues as these aren't fully tested!!!
+- Note: in case it isn't mention below, all user set settings with these scripts are saved and persist even upon game close!!!
+```
+<!-- @end-variants -->
+<!-- @variants automation -->
+```diff
+- Note: Please backup your saves before using any and all scripts that would be here!!!
+- Note: Feel free to open an issue if you find any bugs/issues as these aren't fully tested!!!
+- Note: in case it isn't mention below, all user set settings with these scripts are saved and persist even upon game close!!!
+```
+<!-- @end-variants -->
 
 <hr>
 
+<!-- @variants full automation -->
 <a name="automation"></a>
 ## Automation (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/pokeclickerautomation.user.js">pokeclickerautomation.user.js</a>) (<a href="//github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/pokeclickerautomation.user.js">One-Click Install</a>)
 
+<!-- @end-variants -->
+<!-- @variants full -->
 The largest script here, and the half of the fusion that does not come from the Ephenia project: Farigh's automation suite, bundled into a single file and taught to live alongside the other scripts.
+<!-- @end-variants -->
+<!-- @variants automation -->
+Farigh's automation suite, bundled into a single file.
+<!-- @end-variants -->
+<!-- @variants full automation -->
 
 It adds an **Automation** card to the game screen. Every feature in it is **off by default** — nothing starts doing anything until you switch it on.
 
 ### **Features**
 
+<!-- @end-variants -->
+<!-- @variants full -->
 • <strong>Auto attack</strong> — clicks through route, gym, dungeon and temporary battles, at an interval you set, with live click statistics (tick efficiency, click attacks or DPS, how many clicks the current area needs).<br/>
 • <strong>Auto fight panels</strong> — gym, dungeon, Battle Frontier and Safari panels that appear on the screen they belong to.<br/>
 • <strong>Hatchery, Farming, Mining, Auto Shop, Auto Vitamins</strong> — each with its own advanced settings panel.<br/>
@@ -133,19 +247,36 @@ It adds an **Automation** card to the game screen. Every feature in it is **off 
 • <strong>Max Raid</strong> — in Galar, once the Lair of Giants questline has opened the dens, starts the Max Raid dens open today one after the other, moving you to the den's town first; every win is a Wishing Piece, and losing one turns it off. With the Infinite Max Raid script the open dens are cycled instead of closing after one win.<br/>
 • <strong>Save backups</strong> — desktop client only, since a web page cannot write files. On a schedule you choose, with a retention count.<br/>
 • <strong>Notifications</strong> — per feature, so you can hear from the hatchery without hearing from everything else.
+<!-- @end-variants -->
+<!-- @variants automation -->
+• <strong>Auto attack</strong> — clicks through route, gym, dungeon and temporary battles, at an interval you set, with live click statistics (tick efficiency, click attacks or DPS, how many clicks the current area needs).<br/>
+• <strong>Auto fight panels</strong> — gym, dungeon and Battle Frontier panels that appear on the screen they belong to. There is no Safari automation in this version.<br/>
+• <strong>Hatchery, Farming, Mining, Auto Shop, Auto Vitamins</strong> — each with its own advanced settings panel.<br/>
+• <strong>Oak items and Gems upgrades</strong> — bought automatically as they become affordable.<br/>
+• <strong>Focus on</strong> — pick one long-running goal and let it drive: Experience, Money, Dungeon Tokens, gems of any single type, Achievements, Pokérus cure, Quests, or Shadow purify. If the chosen goal runs out of things to do, it hands over to the fallbacks you picked instead of switching everything off, and takes over again when it can.<br/>
+• <strong>Battle Café</strong> — spins for the Alcremie forms you are missing and that the current time of day can actually give.<br/>
+• <strong>Max Raid</strong> — in Galar, once the Lair of Giants questline has opened the dens, starts the Max Raid dens open today one after the other, moving you to the den's town first; every win is a Wishing Piece, and losing one turns it off.<br/>
+• <strong>Save backups</strong> — desktop client only, since a web page cannot write files. On a schedule you choose, with a retention count.<br/>
+• <strong>Notifications</strong> — per feature, so you can hear from the hatchery without hearing from everything else.
+<!-- @end-variants -->
 
+<!-- @variants full -->
 ### **Living with the other scripts**
 
 Both projects automate overlapping things, and two auto-clickers running at once do not add up. Enabling a feature on either side that conflicts with the other asks you first, then switches the loser off cleanly — including when you click the Ephenia script's own button.
 
 The Ephenia scripts' main switches are also mirrored into an **Ephenia scripts** card, so you do not have to open the Underground to toggle the miner. The mirrors click the real buttons, so the original controls keep working and the conflict prompt still applies. Script settings stay in Settings → Scripts where they have always been; the only things actually moved are the weather and time dropdowns, which their scripts pin to a corner of the town map.
 
+<!-- @end-variants -->
+<!-- @variants full automation -->
 ### **Building it**
 
 `pokeclickerautomation.user.js` is generated. Edit the modules under `automation/` and run `node automation/build.mjs`; never edit the bundle by hand.
 
 <hr>
 
+<!-- @end-variants -->
+<!-- @variants full ephymew -->
 <a name="additional-visual-settings"></a>
 ## Additional Visual Settings (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/additionalvisualsettings.user.js">additionalvisualsettings.user.js</a>) (<a href="//github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/additionalvisualsettings.user.js">One-Click Install</a>)
 This script adds new options to customize the game's graphics alongside a handful of other quality of life features.
@@ -392,6 +523,7 @@ This script should be your first step if you are experiencing bugs, especially a
 
 <hr>
 
+<!-- @end-variants -->
 <a name="script-manager"></a>
 ## Script manager (Exclusive to the desktop client) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/desktop/">app.asar</a>)
 
@@ -399,10 +531,13 @@ This script provides desktop client support for userscripts, allowing you to run
 
 This script is only compatible with the desktop client. For detailed instructions on installing and using the script manager, see [here](//github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/desktop/).
 
+<!-- @variants full ephymew -->
 <img width="840" alt="Script manager options" src="https://github.com/Ephenia/Pokeclicker-Scripts/assets/12092270/dc19411e-c565-48cb-8be6-6ac9b8abe17b">
+<!-- @end-variants -->
 
 <hr>
 
+<!-- @variants full ephymew -->
 <a name="auto-quest-completer"></a>
 ## [Custom] Auto Quest Completer (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/autoquestcompleter.user.js">autoquestcompleter.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/autoquestcompleter.user.js">One-Click Install</a>)
 This script automatically completes and starts quests and can be toggled with this button:<br>
@@ -524,7 +659,11 @@ Note that one of the codes refunds unused vitamins and asks you to confirm befor
 ## [Custom] Infinite Battle Café (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/infinitebattlecafe.user.js">infinitebattlecafe.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/infinitebattlecafe.user.js">One-Click Install</a>)
 This script removes the Battle Café daily spin limit. The spin count never goes down: a spin is refunded as soon as it is taken, so you can spin for the Alcremie forms for as long as you have the berries. The daily spins still add up as usual, and the count shown in the café window simply stops moving. The save keeps the game's own spin count, so it loads fine without the script.<br>
 
+<!-- @end-variants -->
+<!-- @variants full -->
 With the Automation script's Auto Spin on, the café keeps spinning for the forms you are missing until the berries run out.
+<!-- @end-variants -->
+<!-- @variants full ephymew -->
 
 <hr>
 
@@ -532,7 +671,11 @@ With the Automation script's Auto Spin on, the café keeps spinning for the form
 ## [Custom] Infinite Max Raid (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/master/custom/infinitemaxraid.user.js">infinitemaxraid.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/master/custom/infinitemaxraid.user.js">One-Click Install</a>)
 This script keeps Galar's Max Raid dens open after a win, so a den drawn today can be raided for the whole day instead of once. Which ten of the thirty dens the game draws each day is unchanged. Every win still gives a Wishing Piece, and the win statistic is left alone, so the save stays what the unmodified game would write.<br>
 
+<!-- @end-variants -->
+<!-- @variants full -->
 Pairs with the Automation script's Max Raid panel, which then cycles the open dens for as long as it is on.
+<!-- @end-variants -->
+<!-- @variants full ephymew -->
 
 <hr>
 
@@ -703,7 +846,14 @@ This script removes the limit for the amount of Proteins that you're able to use
 
 ![image](https://i.imgur.com/2kXCzUA.png)
 
+<!-- @end-variants -->
+<!-- @variants full -->
 The game caps the vitamins per Pokémon at 5 per region reached, all three types combined. The script lifts that cap (the Pokémon statistics window shows it as ∞): Protein and Calcium are unlimited, and Carbos is capped at 70, the amount that makes every non-Magikarp Pokémon hatch in 300 steps. The Automation script's Auto Vitamins reaches its targets past the game's cap as well; keep its Carbos target at 70 or below.
+<!-- @end-variants -->
+<!-- @variants ephymew -->
+The game caps the vitamins per Pokémon at 5 per region reached, all three types combined. The script lifts that cap (the Pokémon statistics window shows it as ∞): Protein and Calcium are unlimited, and Carbos is capped at 70, the amount that makes every non-Magikarp Pokémon hatch in 300 steps.
+<!-- @end-variants -->
+<!-- @variants full ephymew -->
 
 <hr>
 
@@ -757,7 +907,11 @@ This script adds a dropdown next to the weather selector that forces the in-game
 
 Everything that depends on the time of day follows it: the day cycle indicator, time-locked evolutions, and which Alcremie forms the Battle Cafe can give you. Only the hour is forced, so minutes and seconds keep running normally, and the setting persists across reloads.
 
+<!-- @end-variants -->
+<!-- @variants full -->
 If the Automation script is installed, this dropdown and the weather one are moved together into a "Time and weather" section of its Ephenia scripts card, instead of sitting in a corner of the town map.
+<!-- @end-variants -->
+<!-- @variants full ephymew -->
 
 <hr>
 
@@ -773,4 +927,5 @@ Each row can be given its own odds, or you can set a single global rate that ove
 
 <hr>
 
+<!-- @end-variants -->
 <b>More to be added soon.</b>

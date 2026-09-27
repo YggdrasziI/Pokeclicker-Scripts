@@ -18,8 +18,9 @@ priority function throws, or when the scenario fails.
   (run the client once). `--docs=<dir>` points at another `docs` folder, such as a
   local build of the game.
 - **Scripts** are named by their file without `.user.js`, looked up in `custom/` then
-  at the root. Their desktop enable flag is set, so they register as they would in
-  the client.
+  at the root. A path to a `.js` file is taken as is, for a generated version of a
+  script (`tools/variants/publish.mjs` starts the Automation-only bundle this way).
+  Their desktop enable flag is set, so they register as they would in the client.
 - **A save** (`--save=<file>`) starts the game from a save file instead of a fresh
   game: a game export or an Automation backup (the desktop client keeps those under
   `%APPDATA%pokeclicker-desktopsave-backups`), the base64 the game's own

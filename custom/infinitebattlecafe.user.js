@@ -30,7 +30,12 @@ function initInfiniteBattleCafe() {
     // The game takes one spin off the count when a spin ends (BattleCafeController.spin) and
     // adds spinsPerDay() once a day (accumulateSpins). Keep the additions, undo the removals:
     // the count never drops, the save keeps a value the unmodified game would write, and
+    // @variants full
     // whatever reads spinsLeft() (the café window, the Automation's Auto Spin) sees spins left.
+    // @end-variants
+    // @variants ephymew
+    // whatever reads spinsLeft() (the café window, any auto spin) sees spins left.
+    // @end-variants
     // A count already at 0 is raised to 1, or nothing could ever start the first spin.
     let lastKnown = Math.max(1, BattleCafeController.spinsLeft());
     BattleCafeController.spinsLeft(lastKnown);

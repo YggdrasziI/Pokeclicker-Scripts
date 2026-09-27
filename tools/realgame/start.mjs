@@ -8,7 +8,8 @@
 //   node tools/realgame/start.mjs pokeclickerautomation --save=path/to/backup.txt
 //
 // Scripts are named by their file without .user.js, looked up in custom/ then at
-// the root. A scenario is a plain script run in the page once the game started; it
+// the root; a path to a .js file is taken as is (a generated version of a script).
+// A scenario is a plain script run in the page once the game started; it
 // must set window.__scenario to true or false (see the README of this folder).
 //
 // The game build is the one the desktop client downloaded, under its data folder
@@ -53,6 +54,9 @@ const PAGE_SCRIPTS = [
 ];
 
 function scriptFile(name) {
+    if (name.endsWith('.js') && existsSync(name)) {
+        return path.resolve(name);
+    }
     for (const candidate of [path.join(REPO_ROOT, 'custom', `${name}.user.js`), path.join(REPO_ROOT, `${name}.user.js`)]) {
         if (existsSync(candidate)) {
             return candidate;
@@ -126,8 +130,8 @@ run('window.__probe = { client: App.isUsingClient, version: document.querySelect
 console.log(`game bundles loaded (${options.docs})`);
 
 for (const name of scripts) {
-    // The desktop client enables a downloaded script through this flag
-    window.localStorage.setItem(name, 'true');
+    // The desktop client enables a downloaded script through this flag, keyed by the file name
+    window.localStorage.setItem(path.basename(name).replace(/\..*$/, ''), 'true');
     ok = run(readFileSync(scriptFile(name), 'utf8'), name) && ok;
 }
 // The priority functions run on $(document).ready

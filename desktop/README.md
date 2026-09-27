@@ -16,10 +16,12 @@ A version of the PokéClicker desktop client modified to manage and run userscr
 4. There should be an `app.asar` file already inside the `resources` folder. Replace it with the modified `app.asar` downloaded here.
 5. Open the PokéClicker app again. It should automatically download the scripts from this GitHub repository.
 6. Load a save and open the game's settings.
-7. In the settings menu, there should be a tab to the far right called "Scripts" that lists all of the installed scripts. (Some settings from enabled scripts will appear here as well.) Newly-downloaded scripts start out disabled; enable any that you want to use.
+7. In the settings menu, there should be a tab to the far right called "Scripts" that lists all of the installed scripts. (Some settings from enabled scripts will appear here as well.) Newly-downloaded scripts start out disabled; enable any that you want to use. The **Scripts version** setting at the top of the tab picks which version of the project the client downloads, as described in the main README; the scripts that are not part of the chosen version are disabled on the next launch.
 8. Restart the app and enjoy using the scripts!
 
+<!-- @variants full ephymew -->
 <img width="840" alt="Script manager options" src="https://github.com/Ephenia/Pokeclicker-Scripts/assets/12092270/dc19411e-c565-48cb-8be6-6ac9b8abe17b">
+<!-- @end-variants -->
 
 Optionally, you can add custom scripts from outside this project. This mod creates two new folders in the app's application data directory, `scripts` and `custom-scripts`. JavaScript (`.js`) files placed in the `custom-scripts` folder will run when the app is launched, and like other scripts can be disabled/enabled in the settings. The application data location depends on operating system:
 

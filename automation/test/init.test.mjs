@@ -6,7 +6,8 @@ import vm from 'node:vm';
 import { JSDOM } from 'jsdom';
 import { makeGameStub } from './gamestub.mjs';
 
-const BUNDLE = new URL('../../pokeclickerautomation.user.js', import.meta.url);
+// AUTOMATION_BUNDLE tests another version of the bundle (tools/variants/publish.mjs sets it)
+const BUNDLE = process.env.AUTOMATION_BUNDLE ?? new URL('../../pokeclickerautomation.user.js', import.meta.url);
 
 const dom = new JSDOM(`<!doctype html><html><head></head><body>
   <div id="game" class=""></div>

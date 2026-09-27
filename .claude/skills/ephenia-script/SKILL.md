@@ -109,6 +109,9 @@ Automation bridges. Account names inside *URLs* are ours to change; these are no
   the card rather than mirroring it.
 - A script that drives the same activity as an Automation feature needs a conflict
   entry in `Bridges.js`'s conflict matrix, or the two will fight.
+- Neither the script nor its README section may name the Automation script
+  outside `@variants full` markers: the Ephymew-only version ships them too. Give
+  it a neutral `@variants ephymew` rewrite (see the `variants-release` skill).
 
 ## Safety rules
 
@@ -147,3 +150,8 @@ Stage only the files the task touched, write the message in the style of
 `git log` (imperative subject, a short body saying what changed and why), and
 push to `origin master`. Only leave a change uncommitted when the user asks
 for that explicitly.
+
+Then publish the two other versions of the project: `node tools/variants/publish.mjs`.
+The `ephymew-only` and `automation-only` branches are generated from master and
+are never edited directly; if the publish reports a leak, mark the passage on master
+with `@variants` and publish again (see the `variants-release` skill).
