@@ -591,7 +591,7 @@ This script adds six Oak Items to the game's own Oak Items window. Three of them
 | 9 | ×2.80 | 6,667 | 5,000,000,000 |
 | 10 | ×3.00 | 13,334 | – |
 
-<strong>Mining Charm</strong> multiplies the Underground experience a completed mine layer gives: ×2 at level 5, ×4 at level 10. It applies to every layer completed while it is equipped, yours or a hired helper's, and the share of that experience the game hands to the other side grows with it; items dug up are not multiplied. It unlocks once you have mined 100 layers in the Underground, and gains 1 experience per layer completed while equipped. It shows up with the Underground's hammer icon.
+<strong>Mining Charm</strong> multiplies the Underground experience a completed mine layer gives: ×2 at level 5, ×4 at level 10. It applies to every layer completed while it is equipped, yours or a hired helper's, and the share of that experience the game hands to the other side grows with it; items dug up are not multiplied. It unlocks once you have mined 100 layers in the Underground, and gains 1 experience per layer completed while equipped. It shows up with the Explorer Kit icon.
 
 | Level | Bonus | Layers completed (total) | Upgrade cost |
 |:-----:|:-----:|:------------------------:|:------------:|
