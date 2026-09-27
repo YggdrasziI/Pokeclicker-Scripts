@@ -30,6 +30,113 @@ class AutomationBattleCafe
         }
     }
 
+    /******************************************************************************\
+    |***    Focus specific members, should only be used by focus sub-classes    ***|
+    \******************************************************************************/
+
+    // Mirrored from the game's src/modules/dayCycle/DayCyclePart.ts.
+    // DayCycle itself is a global (the game's town map binds DayCycle.color), but the enum is only
+    // ever referenced from typescript, so the values are restated here rather than assumed present
+    static __DayCyclePart = { Dawn: 0, Day: 1, Dusk: 2, Night: 3 };
+
+    /**
+     * @brief Suspends the 'Auto Spin' feature while another feature drives the café, or gives it back
+     *
+     * @param {boolean} suspended: True to stop the feature and lock its button, false to restore
+     *                             whatever state the player chose
+     * @param {string} reason: The reason displayed on the locked button
+     */
+    static __setAutoSpinSuspended(suspended, reason = "")
+    {
+        if (suspended)
+        {
+            this.__internal__toggleAutoSpin(false);
+            Automation.Menu.setButtonDisabledState(this.Settings.FeatureEnabled, true, reason);
+        }
+        else
+        {
+            Automation.Menu.setButtonDisabledState(this.Settings.FeatureEnabled, false);
+            this.__internal__toggleAutoSpin();
+        }
+    }
+
+    /**
+     * @brief Spins for the given @p target
+     *
+     * @param target: An object holding the sweet, spin duration and direction
+     *
+     * @returns False if the game's duration input is missing, true otherwise
+     */
+    static __spin(target)
+    {
+        // The game's spin() reads the duration straight from this input, so nothing can be
+        // triggered without it
+        const durationInput = document.getElementById("battleCafeDuration");
+        if (durationInput === null)
+        {
+            return false;
+        }
+
+        BattleCafeController.selectedSweet(target.sweet);
+        durationInput.value = target.duration;
+        BattleCafeController.spin(target.clockwise);
+        return true;
+    }
+
+    /**
+     * @brief Lists the spins that can be performed at the given time of day, shortest first
+     *
+     * Mirrors the game's BattleCafeController.unlockAlcremie: only Dusk with a counter-clockwise
+     * spin longer than 10 seconds gives the rainbow form, and every other Dusk spin is resolved
+     * as a day one. The 3600 second spin for Milcery (Cheesy) is left out on purpose, an hour of
+     * real time is not something to start behind the player's back.
+     *
+     * @param dayCyclePart: [Optional] The DayCyclePart to list the spins of, the current one by default
+     *
+     * @returns An array of { spin, duration, clockwise }, shortest spin first
+     */
+    static __getReachableSpins(dayCyclePart = DayCycle.currentDayCyclePart())
+    {
+        if ((dayCyclePart === this.__DayCyclePart.Night)
+            || (dayCyclePart === this.__DayCyclePart.Dawn))
+        {
+            return [
+                       { spin: GameConstants.AlcremieSpins.nightClockwiseBelow5, duration: 1, clockwise: true },
+                       { spin: GameConstants.AlcremieSpins.nightCounterclockwiseBelow5, duration: 1, clockwise: false },
+                       { spin: GameConstants.AlcremieSpins.nightClockwiseAbove5, duration: 5, clockwise: true },
+                       { spin: GameConstants.AlcremieSpins.nightCounterclockwiseAbove5, duration: 5, clockwise: false }
+                   ];
+        }
+
+        const daySpins = [
+                             { spin: GameConstants.AlcremieSpins.dayClockwiseBelow5, duration: 1, clockwise: true },
+                             { spin: GameConstants.AlcremieSpins.dayCounterclockwiseBelow5, duration: 1, clockwise: false },
+                             { spin: GameConstants.AlcremieSpins.dayClockwiseAbove5, duration: 5, clockwise: true },
+                             { spin: GameConstants.AlcremieSpins.dayCounterclockwiseAbove5, duration: 5, clockwise: false }
+                         ];
+
+        if (dayCyclePart === this.__DayCyclePart.Dusk)
+        {
+            // The rainbow form is the only one that needs Dusk, so it is worth the longer spin
+            daySpins.push({ spin: GameConstants.AlcremieSpins.at5Above10, duration: 11, clockwise: false });
+        }
+
+        return daySpins;
+    }
+
+    /**
+     * @brief Computes how many berries are still missing to afford the given @p sweet
+     *
+     * @param sweet: The sweet to check
+     *
+     * @returns The total number of missing berries, all types combined
+     */
+    static __getBerryDeficit(sweet)
+    {
+        return BattleCafeController.getPrice(sweet).reduce(
+            (total, cost) => total + Math.max(0, cost.amount - App.game.farming.berryInventory[cost.berry]()), 0);
+    }
+
     /*********************************************************************\
     |***    Internal members, should never be used by other classes    ***|
     \*********************************************************************/
@@ -42,11 +149,6 @@ class AutomationBattleCafe
 
     static __internal__autoSpinLoop = null;
     static __internal__farmRequestedBerry = null;
-
-    // Mirrored from the game's src/modules/dayCycle/DayCyclePart.ts.
-    // DayCycle itself is a global (the game's town map binds DayCycle.color), but the enum is only
-    // ever referenced from typescript, so the values are restated here rather than assumed present
-    static __internal__DayCyclePart = { Dawn: 0, Day: 1, Dusk: 2, Night: 3 };
 
     /**
      * @brief Builds the 'Battle Café' menu panel
@@ -159,8 +261,7 @@ class AutomationBattleCafe
     {
         // The game's spin() reads the duration straight from this input, so nothing can be
         // triggered without it
-        const durationInput = document.getElementById("battleCafeDuration");
-        if (durationInput === null)
+        if (document.getElementById("battleCafeDuration") === null)
         {
             return;
         }
@@ -196,9 +297,7 @@ class AutomationBattleCafe
             return;
         }
 
-        BattleCafeController.selectedSweet(target.sweet);
-        durationInput.value = target.duration;
-        BattleCafeController.spin(target.clockwise);
+        this.__spin(target);
     }
 
     /**
@@ -212,7 +311,7 @@ class AutomationBattleCafe
      */
     static __internal__getNextSpinTarget()
     {
-        const reachableSpins = this.__internal__getReachableSpins();
+        const reachableSpins = this.__getReachableSpins();
 
         let closestTarget = null;
         let closestDeficit = Number.MAX_SAFE_INTEGER;
@@ -242,7 +341,7 @@ class AutomationBattleCafe
                 return candidate;
             }
 
-            const deficit = this.__internal__getBerryDeficit(sweet);
+            const deficit = this.__getBerryDeficit(sweet);
             if (deficit < closestDeficit)
             {
                 closestDeficit = deficit;
@@ -251,60 +350,6 @@ class AutomationBattleCafe
         }
 
         return closestTarget;
-    }
-
-    /**
-     * @brief Lists the spins that can be performed at the current time of day, shortest first
-     *
-     * Mirrors the game's BattleCafeController.unlockAlcremie: only Dusk with a counter-clockwise
-     * spin longer than 10 seconds gives the rainbow form, and every other Dusk spin is resolved
-     * as a day one. The 3600 second spin for Milcery (Cheesy) is left out on purpose, an hour of
-     * real time is not something to start behind the player's back.
-     *
-     * @returns An array of { spin, duration, clockwise }, shortest spin first
-     */
-    static __internal__getReachableSpins()
-    {
-        const dayCyclePart = DayCycle.currentDayCyclePart();
-
-        if ((dayCyclePart === this.__internal__DayCyclePart.Night)
-            || (dayCyclePart === this.__internal__DayCyclePart.Dawn))
-        {
-            return [
-                       { spin: GameConstants.AlcremieSpins.nightClockwiseBelow5, duration: 1, clockwise: true },
-                       { spin: GameConstants.AlcremieSpins.nightCounterclockwiseBelow5, duration: 1, clockwise: false },
-                       { spin: GameConstants.AlcremieSpins.nightClockwiseAbove5, duration: 5, clockwise: true },
-                       { spin: GameConstants.AlcremieSpins.nightCounterclockwiseAbove5, duration: 5, clockwise: false }
-                   ];
-        }
-
-        const daySpins = [
-                             { spin: GameConstants.AlcremieSpins.dayClockwiseBelow5, duration: 1, clockwise: true },
-                             { spin: GameConstants.AlcremieSpins.dayCounterclockwiseBelow5, duration: 1, clockwise: false },
-                             { spin: GameConstants.AlcremieSpins.dayClockwiseAbove5, duration: 5, clockwise: true },
-                             { spin: GameConstants.AlcremieSpins.dayCounterclockwiseAbove5, duration: 5, clockwise: false }
-                         ];
-
-        if (dayCyclePart === this.__internal__DayCyclePart.Dusk)
-        {
-            // The rainbow form is the only one that needs Dusk, so it is worth the longer spin
-            daySpins.push({ spin: GameConstants.AlcremieSpins.at5Above10, duration: 11, clockwise: false });
-        }
-
-        return daySpins;
-    }
-
-    /**
-     * @brief Computes how many berries are still missing to afford the given @p sweet
-     *
-     * @param sweet: The sweet to check
-     *
-     * @returns The total number of missing berries, all types combined
-     */
-    static __internal__getBerryDeficit(sweet)
-    {
-        return BattleCafeController.getPrice(sweet).reduce(
-            (total, cost) => total + Math.max(0, cost.amount - App.game.farming.berryInventory[cost.berry]()), 0);
     }
 
     /**

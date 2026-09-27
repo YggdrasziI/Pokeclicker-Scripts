@@ -56,6 +56,8 @@ const SOURCES = [
     'lib/Utils/Pokeball.js',
     'lib/Utils/Route.js',
     'lib/Instances/BattleCafe.js',
+    // Focus sub-class, after the Battle Café class its static members read
+    'lib/Focus/BattleCafe.js',
     'lib/Instances/BattleFrontier.js',
     'lib/Instances/Dungeon.js',
     'lib/Instances/Gym.js',

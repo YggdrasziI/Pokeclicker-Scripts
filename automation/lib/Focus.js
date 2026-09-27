@@ -9,6 +9,7 @@ class AutomationFocus
     static PokerusCure = AutomationFocusPokerusCure;
     static ShadowPurification = AutomationFocusShadowPurification;
     static Roamers = AutomationFocusRoamers;
+    static BattleCafe = AutomationFocusBattleCafe;
 
     static Settings = {
                           FeatureEnabled: "Focus-Enabled",
@@ -803,6 +804,7 @@ class AutomationFocus
         this.PokerusCure.__registerFunctionalities(this.__internal__functionalities);
         this.ShadowPurification.__registerFunctionalities(this.__internal__functionalities);
         this.Roamers.__registerFunctionalities(this.__internal__functionalities);
+        this.BattleCafe.__registerFunctionalities(this.__internal__functionalities);
 
         this.__internal__addGemsFocusFunctionalities();
     }
