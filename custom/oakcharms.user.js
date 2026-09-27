@@ -5,7 +5,7 @@
 // @description   Adds six Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route, and shows its bonus next to the roaming odds of the route's encounters window, and the Mining Charm multiplies the Underground experience a completed mine layer gives, up to x4. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.9.1
+// @version       1.9.2
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -117,7 +117,7 @@ const oakCharms = [
         currency: null,
         isUnlocked: () => App.game.statistics.undergroundLayersMined() >= 100,
         hint: 'Mine 100 layers in the Underground',
-        icon: 'assets/images/underground/Hammer.png',
+        icon: 'assets/images/keyitems/Explorer_kit.png',
     },
 ];
 
