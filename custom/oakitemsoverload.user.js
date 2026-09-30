@@ -5,7 +5,7 @@
 // @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are kept outside the game save, so the save stays exactly what the unmodified game would write.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.4.2
+// @version       1.5.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -27,11 +27,13 @@
 //              expList (the game asks 10,000 in total for level 5, the Cell Battery 150).
 //              The game never shows this total: its progress bar shows uses, that is
 //              ceil((expList[n] - expList[n - 1]) / expGain), the item's expGain being
-//              the experience one use gives. The Shiny Charm (expGain 150) ends up with
-//              [500, 1000, 2500, 5000, 10000, 30000, 100000, 300000, 1000000, 2000000],
-//              so level 9 costs 1,000,000 - 300,000 = 700,000 experience and the bar
-//              shows "x / 4,667". The game's own levels read the same way: level 5
-//              shows 34, not 10,000.
+//              the experience one use gives. The Shiny Charm (expGain 150) has the game's
+//              [500, 1000, 2500, 5000, 10000]: level 5 costs 10,000 - 5,000 = 5,000
+//              experience and the bar shows "x / 34", not 10,000.
+//   usesList:  instead of expList, the uses each level needs on its own, not a running
+//              total: the very number the progress bar shows. The Shiny Charm is written
+//              this way, in shinies per level; its expList is worked out from the item's
+//              expGain, starting from the game's level 5 total.
 //   costList:  the price of each level, in the currency of the item's regular upgrades
 const overloadedOakItems = {
     Magic_Ball: {
@@ -55,13 +57,14 @@ const overloadedOakItems = {
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
     Sprayduck: {
-        bonusList: [2.00, 3.00, 3.50, 4.00, 5.00],
+        bonusList: [3.00, 4.00, 6.00, 8.00, 10.00],
         expList: [30000, 100000, 150000, 200000, 250000],
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
     Shiny_Charm: {
         bonusList: [2.25, 2.50, 3.00, 3.50, 4.00],
-        expList: [30000, 100000, 300000, 1000000, 2000000],
+        // Shinies per level
+        usesList: [150, 500, 1000, 1500, 2000],
         costList: [10000000, 50000000, 250000000, 1000000000, 5000000000],
     },
     Magma_Stone: {
@@ -92,6 +95,20 @@ function overloadedItemsOf(oakItems) {
         .filter((item) => item !== undefined && item.overloadBaseMaxLevel !== undefined);
 }
 
+// The running experience totals of levels needing usesList[n] uses each, from startExp on
+function expListFromUses(startExp, usesList, expGain) {
+    let exp = startExp;
+    return usesList.map((uses) => (exp += uses * expGain));
+}
+
+// The experience of a restored level, kept within that level's range: when the table
+// changes, a stored total can fall outside it and show a negative or overfull bar
+function expWithinLevel(item, level, exp) {
+    const low = item.expList[level - 1] ?? 0;
+    const high = item.expList[level] ?? low;
+    return Math.min(high, Math.max(low, exp));
+}
+
 // Raises the item's maximum and extends its bonus, cost and experience lists with the
 // table entry. Safe to call again: an item is only extended once.
 function overloadOakItem(item, overload) {
@@ -104,7 +121,8 @@ function overloadOakItem(item, overload) {
     item.overloadBaseMaxLevel = baseMaxLevel;
     item.bonusList = item.bonusList.concat(overload.bonusList);
     item.costList = item.costList.concat(AmountFactory.createArray(overload.costList, lastCost.currency));
-    item.expList = item.expList.concat(overload.expList);
+    item.expList = item.expList.concat(overload.expList
+        ?? expListFromUses(item.expList[baseMaxLevel - 1], overload.usesList, item.expGain));
     item.maxLevel = baseMaxLevel + overload.bonusList.length;
 }
 
@@ -169,9 +187,10 @@ function overloadAchievementDefinitions() {
 // would break the game's upgrade path, so refuse to install rather than half-extend.
 function checkOverloadTable() {
     Object.entries(overloadedOakItems).forEach(([key, overload]) => {
-        const lists = [overload.bonusList, overload.expList, overload.costList];
-        if (!lists.every((list) => Array.isArray(list) && list.length > 0 && list.length === overload.bonusList.length)) {
-            throw new Error(`Oak Items Overload: ${key} needs bonusList, expList and costList of the same length.`);
+        const lists = [overload.bonusList, overload.expList ?? overload.usesList, overload.costList];
+        if ((overload.expList === undefined) === (overload.usesList === undefined)
+            || !lists.every((list) => Array.isArray(list) && list.length > 0 && list.length === overload.bonusList.length)) {
+            throw new Error(`Oak Items Overload: ${key} needs bonusList, costList and one of expList or usesList, of the same length.`);
         }
     });
 }
@@ -344,7 +363,7 @@ function initOakItemsOverloadOverrides() {
                 if (item?.overloadBaseMaxLevel === undefined) {
                     preservedLevels[key] = entry;
                 } else if (item.level === item.overloadBaseMaxLevel && entry.level > item.level) {
-                    item.fromJSON({ ...item.toJSON(), level: entry.level, exp: entry.exp });
+                    item.fromJSON({ ...item.toJSON(), level: entry.level, exp: expWithinLevel(item, entry.level, entry.exp) });
                 }
             });
         }

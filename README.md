@@ -576,21 +576,21 @@ This script adds six Oak Items to the game's own Oak Items window. Three of them
 | 9 | ×1.46 | 25,000 | 12,500,000,000 |
 | 10 | ×1.50 | 50,000 | – |
 
-<strong>Roaming Charm</strong> makes roaming Pokémon appear more often on every route, the way the game's boosted route does: level 10 is the boosted route's own ×3, and the two stack, as do the Roaming farm auras. The route info window already shows the resulting odds. It is the Shiny Charm's twin: it unlocks once you have captured 70 unique Pokémon, follows the Shiny Charm's experience and Pokédollar costs (levels 6 to 10 on the Oak Items Overload scale), and gains 150 experience per roaming Pokémon encountered while equipped, like the Shiny Charm's 150 per shiny, which the window shows as roamers met. It shows up with the roaming icon of the route info window, redrawn at the size of the game's Oak Item sprites so its tile matches the others.
+<strong>Roaming Charm</strong> makes roaming Pokémon appear more often on every route, the way the game's boosted route does: level 10 is the boosted route's own ×3, and the two stack, as do the Roaming farm auras. The route info window already shows the resulting odds. It is the Shiny Charm's twin: it unlocks once you have captured 70 unique Pokémon, needs as many roamers per level as the Shiny Charm needs shinies, at the same Pokédollar costs (levels 6 to 10 on the Oak Items Overload scale), and counts every roaming Pokémon encountered while equipped, which the window shows as roamers met. It shows up with the roaming icon of the route info window, redrawn at the size of the game's Oak Item sprites so its tile matches the others.
 
-| Level | Bonus | Roamers encountered (total) | Upgrade cost |
-|:-----:|:-----:|:---------------------------:|:------------:|
-| 0 | ×1.50 | – | 50,000 |
-| 1 | ×1.60 | 4 | 100,000 |
-| 2 | ×1.70 | 7 | 250,000 |
-| 3 | ×1.80 | 17 | 500,000 |
-| 4 | ×1.90 | 34 | 1,000,000 |
-| 5 | ×2.00 | 67 | 10,000,000 |
-| 6 | ×2.20 | 200 | 50,000,000 |
-| 7 | ×2.40 | 667 | 250,000,000 |
-| 8 | ×2.60 | 2,000 | 1,000,000,000 |
-| 9 | ×2.80 | 6,667 | 5,000,000,000 |
-| 10 | ×3.00 | 13,334 | – |
+| Level | Bonus | Roamers for this level | Roamers encountered (total) | Upgrade cost |
+|:-----:|:-----:|:----------------------:|:---------------------------:|:------------:|
+| 0 | ×1.50 | – | – | 50,000 |
+| 1 | ×1.60 | 4 | 4 | 100,000 |
+| 2 | ×1.70 | 4 | 8 | 250,000 |
+| 3 | ×1.80 | 10 | 18 | 500,000 |
+| 4 | ×1.90 | 17 | 35 | 1,000,000 |
+| 5 | ×2.00 | 34 | 69 | 10,000,000 |
+| 6 | ×2.20 | 150 | 219 | 50,000,000 |
+| 7 | ×2.40 | 500 | 719 | 250,000,000 |
+| 8 | ×2.60 | 1,000 | 1,719 | 1,000,000,000 |
+| 9 | ×2.80 | 1,500 | 3,219 | 5,000,000,000 |
+| 10 | ×3.00 | 2,000 | 5,219 | – |
 
 <strong>Mining Charm</strong> multiplies the Underground experience a completed mine layer gives: ×2 at level 5, ×4 at level 10. It applies to every layer completed while it is equipped, yours or a hired helper's, and the share of that experience the game hands to the other side grows with it; items dug up are not multiplied. It unlocks once you have mined 100 layers in the Underground, and gains 1 experience per layer completed while equipped. It shows up with the Explorer Kit icon.
 
@@ -622,13 +622,13 @@ The charms never count toward the game's "max level Oak Item" achievements, whic
 ## [Custom] Oak Items Overload (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/blob/ephymew-only/custom/oakitemsoverload.user.js">oakitemsoverload.user.js</a>) (<a href="https://github.com/YggdrasziI/Pokeclicker-Scripts/raw/ephymew-only/custom/oakitemsoverload.user.js">One-Click Install</a>)
 This script lets Oak Items be upgraded past their maximum level, from 5 to 10, through the game's own Oak Items window: once an item reaches level 5 its progress bar keeps filling, and the usual Upgrade button buys the next level. The overloaded levels cost far more than the game's own and need far more experience.
 
-Each item has its own lists of bonuses, experience and costs for levels 6 to 10, written by hand in the `overloadedOakItems` table at the top of the script, so every item can be tuned on its own scale. The experience is a running total, like the game's own (a regular Oak Item needs 10,000 in total for level 5), and the costs are in the currency of the item's regular upgrades. The costs shipped are 10M, 50M, 250M, 1B then 5B Pokédollars for every item except the Explosive Charge (20M, 100M, 500M, 2B then 10B); the experience totals are in the table below.
+Each item has its own lists of bonuses, experience and costs for levels 6 to 10, written by hand in the `overloadedOakItems` table at the top of the script, so every item can be tuned on its own scale. The experience is a running total, like the game's own (a regular Oak Item needs 10,000 in total for level 5), and the costs are in the currency of the item's regular upgrades. An item can instead be written as the number of uses each level needs on its own, the number its progress bar shows: the Shiny Charm is, in shinies per level. The costs shipped are 10M, 50M, 250M, 1B then 5B Pokédollars for every item except the Explosive Charge (20M, 100M, 500M, 2B then 10B); the experience totals, and the Shiny Charm's shinies per level, are in the table below.
 
 | Item | 6 | 7 | 8 | 9 | 10 |
 |:-----|:-----:|:-----:|:-----:|:-----:|:-----:|
 | Magic Ball, Amulet Coin, Rocky Helmet, EXP Share, Magma Stone, Explosive Charge | 30,000 | 100,000 | 300,000 | 1,000,000 | 3,000,000 |
 | Sprayduck | 30,000 | 100,000 | 150,000 | 200,000 | 300,000 |
-| Shiny Charm | 30,000 | 100,000 | 300,000 | 1,000,000 | 2,000,000 |
+| Shiny Charm (shinies per level) | 150 | 500 | 1,000 | 1,500 | 2,000 |
 | Cell Battery | 450 | 1,000 | 2,000 | 3,500 | 8,000 |
 | Treasure Scanner | 20,000 | 30,000 | 40,000 | 50,000 | 80,000 |
 

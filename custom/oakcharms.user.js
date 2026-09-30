@@ -5,7 +5,7 @@
 // @description   Adds six Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route, and shows its bonus next to the roaming odds of the route's encounters window, and the Mining Charm multiplies the Underground experience a completed mine layer gives, up to x4. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.9.2
+// @version       1.10.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -29,6 +29,9 @@
 //   expOnGain: exp granted when that currency is gained (base amount, bonus applied)
 //   expGain:   exp granted by one plain use of the charm, 1 when omitted; the window
 //              shows the progress in uses, like the game does for its own items
+//   usesList:  instead of expList, the uses each level needs on its own, not a running
+//              total: the very number the window shows; expList is worked out from it
+//              and expGain
 //   icon:      replaces the missing assets/images/oakitems/<key>.png; a raster icon
 //              is redrawn at the size of the game's sprites, an SVG used as is
 const oakCharms = [
@@ -92,10 +95,11 @@ const oakCharms = [
         key: 'Roaming_Charm',
         displayName: 'Roaming Charm',
         description: 'Encounter roaming Pokémon more often',
-        // The Shiny Charm's own levels, as extended by Oak Items Overload: level 10 is
-        // the x3 of a boosted route (GameConstants.ROAMING_INCREASED_CHANCE)
+        // Level 10 is the x3 of a boosted route (GameConstants.ROAMING_INCREASED_CHANCE)
         bonusList: [1.50, 1.60, 1.70, 1.80, 1.90, 2.00, 2.20, 2.40, 2.60, 2.80, 3.00],
-        expList: [500, 1000, 2500, 5000, 10000, 30000, 100000, 300000, 1000000, 2000000],
+        // Roamers per level, the Shiny Charm's shinies per level as the game shows them
+        // and as Oak Items Overload extends them
+        usesList: [4, 4, 10, 17, 34, 150, 500, 1000, 1500, 2000],
         costList: [50000, 100000, 250000, 500000, 1000000, 10000000, 50000000, 250000000, 1000000000, 5000000000],
         // Not a currency charm: exp comes from the roaming encounter hook, 150 per
         // roamer met, like the Shiny Charm's 150 per shiny
@@ -124,6 +128,12 @@ const oakCharms = [
 // Exp a dungeon chest grants the Dowsing Charm, by the game's loot tier weight
 // (common 4, rare 3, epic 2, legendary 1, mythic 0): common chests give nothing
 const dowsingChestExp = { 3: 1, 2: 2, 1: 3, 0: 5 };
+
+// The running exp totals of levels needing usesList[n] uses each, from startExp on
+function expListFromUses(startExp, usesList, expGain) {
+    let exp = startExp;
+    return usesList.map((uses) => (exp += uses * expGain));
+}
 
 function oakCharmItem(charm) {
     return App.game.oakItems.itemList[OakItemType[charm.key]];
@@ -326,7 +336,7 @@ function initOakCharmsOverrides() {
     class OakCharm extends OakItem {
         constructor(charm) {
             super(OakItemType[charm.key], charm.displayName, charm.description, true, charm.bonusList, 1, 0, charm.expGain ?? 1,
-                charm.expList, charm.costList.length, AmountFactory.createArray(charm.costList, GameConstants.Currency.money));
+                charm.expList ?? expListFromUses(0, charm.usesList, charm.expGain ?? 1), charm.costList.length, AmountFactory.createArray(charm.costList, GameConstants.Currency.money));
             this.charm = charm;
             // Not one of the game's Oak Items: never counted by the game's "max level
             // Oak Item" achievements, see maxLevelOakItems below
@@ -358,8 +368,16 @@ function initOakCharmsOverrides() {
             return { ...super.toJSON(), uses: this.uses };
         }
 
+        // The exp is kept within the level's range: when the lists change, a stored
+        // total can fall outside it and show a negative or overfull bar
         fromJSON(json) {
             super.fromJSON(json);
+            const low = this.expList[this.level - 1] ?? 0;
+            const high = this.expList[this.level] ?? low;
+            const exp = this.toJSON().exp;
+            if (exp < low || exp > high) {
+                super.fromJSON({ ...json, exp: Math.min(high, Math.max(low, exp)) });
+            }
             this.uses = Number(json?.uses) || 0;
         }
 
