@@ -95,7 +95,7 @@ const oakCharms = [
         // The Shiny Charm's own levels, as extended by Oak Items Overload: level 10 is
         // the x3 of a boosted route (GameConstants.ROAMING_INCREASED_CHANCE)
         bonusList: [1.50, 1.60, 1.70, 1.80, 1.90, 2.00, 2.20, 2.40, 2.60, 2.80, 3.00],
-        expList: [500, 1000, 2500, 5000, 10000, 30000, 100000, 300000, 1000000, 1000000],
+        expList: [500, 1000, 2500, 5000, 10000, 30000, 100000, 300000, 500000, 800000],
         costList: [50000, 100000, 250000, 500000, 1000000, 10000000, 50000000, 250000000, 1000000000, 5000000000],
         // Not a currency charm: exp comes from the roaming encounter hook, 150 per
         // roamer met, like the Shiny Charm's 150 per shiny
