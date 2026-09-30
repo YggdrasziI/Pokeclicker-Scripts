@@ -1990,7 +1990,12 @@ class AutomationMenu
             .automationTabLabelButton:nth-of-type(2):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(2),
             .automationTabLabelButton:nth-of-type(3):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(3),
             .automationTabLabelButton:nth-of-type(4):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(4),
-            .automationTabLabelButton:nth-of-type(5):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(5)
+            .automationTabLabelButton:nth-of-type(5):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(5),
+            .automationTabLabelButton:nth-of-type(6):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(6),
+            .automationTabLabelButton:nth-of-type(7):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(7),
+            .automationTabLabelButton:nth-of-type(8):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(8),
+            .automationTabLabelButton:nth-of-type(9):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(9),
+            .automationTabLabelButton:nth-of-type(10):checked ~ .automationTabLabelContainer .automationTabLabel:nth-of-type(10)
             {
                 cursor: default;
                 border-bottom-color: #333f55;
@@ -1998,12 +2003,17 @@ class AutomationMenu
                 color: #eeeeee;
             }
 
-            /* The magic (up to 5 tabs) */
+            /* The magic (up to 10 tabs) */
             .automationTabLabelButton:nth-of-type(1):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(1),
             .automationTabLabelButton:nth-of-type(2):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(2),
             .automationTabLabelButton:nth-of-type(3):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(3),
             .automationTabLabelButton:nth-of-type(4):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(4),
-            .automationTabLabelButton:nth-of-type(5):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(5)
+            .automationTabLabelButton:nth-of-type(5):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(5),
+            .automationTabLabelButton:nth-of-type(6):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(6),
+            .automationTabLabelButton:nth-of-type(7):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(7),
+            .automationTabLabelButton:nth-of-type(8):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(8),
+            .automationTabLabelButton:nth-of-type(9):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(9),
+            .automationTabLabelButton:nth-of-type(10):checked ~ .automationTabContentContainer .automationTabContent:nth-of-type(10)
             {
                 height: unset;
                 overflow: unset;
