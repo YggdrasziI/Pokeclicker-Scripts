@@ -42,8 +42,15 @@ try {
     check('Roaming Charm 1.5x .. 2x .. 3x, the boosted route value, on the Shiny Charm\'s lists', roaming.bonusList[0] === 1.5 && roaming.bonusList[5] === 2 && roaming.bonusList[10] === GameConstants.ROAMING_INCREASED_CHANCE
         && roaming.costList[0].amount === 50000 && roaming.costList[4].amount === 1000000 && roaming.costList[5].amount === 10000000 && roaming.costList[9].amount === 5000000000
         && roaming.costList[9].currency === GameConstants.Currency.money
-        && roaming.expList[0] === 500 && roaming.expList[4] === 10000 && roaming.expList[5] === 30000 && roaming.expList[9] === 2000000 && roaming.expGain === 150);
+        && roaming.expList[0] === 600 && roaming.expList[4] === 10350 && roaming.expList[5] === 32850 && roaming.expList[9] === 782850 && roaming.expGain === 150);
     check('Roaming Charm progress counts roamers, 4 for the first level', roaming.progressString === '0 / 4');
+    roaming.fromJSON({ level: 6, exp: 32850, isActive: false });
+    check('Roaming Charm level 6 needs 500 roamers', roaming.progressString === '0 / 500', roaming.progressString);
+    roaming.fromJSON({ level: 7, exp: 100000, isActive: false });
+    check('a stored exp below its level is raised to the level start', roaming.normalizedExp === 0 && roaming.progressString === '0 / 1,000', roaming.progressString);
+    roaming.fromJSON({ level: 7, exp: 300000, isActive: false });
+    check('a stored exp above its level is capped to the next step', roaming.hasEnoughExp() && roaming.progressString === '1,000 / 1,000', roaming.progressString);
+    roaming.fromJSON({ level: 0, exp: 0, isActive: false });
     check('Mining Charm 1.2x .. 2x .. 4x for 12.5B, one exp per layer', mining.bonusList[0] === 1.2 && mining.bonusList[5] === 2 && mining.bonusList[10] === 4
         && mining.costList[0].amount === 100000 && mining.costList[9].amount === 12500000000 && mining.costList[9].currency === GameConstants.Currency.money
         && mining.expList[0] === 10 && mining.expList[4] === 250 && mining.expList[9] === 75000 && mining.expGain === 1 && mining.progressString === '0 / 10');
@@ -165,7 +172,7 @@ try {
     check('roaming multiplier is 1 with the charm unequipped', App.game.multiplier.getBonus('roaming') === 1);
     const route = Routes.getRoute(GameConstants.Region.kanto, 1);
     const rateUnequipped = PokemonFactory.roamingRate(route);
-    roaming.fromJSON({ level: 10, exp: 2000000, isActive: true });
+    roaming.fromJSON({ level: 10, exp: 782850, isActive: true });
     check('roaming multiplier is 3 at level 10', App.game.multiplier.getBonus('roaming') === 3);
     check('the route\'s roaming odds are three times better at level 10', rateUnequipped > 0 && near(PokemonFactory.roamingRate(route), rateUnequipped / 3), `${rateUnequipped} -> ${PokemonFactory.roamingRate(route)}`);
     roaming.fromJSON({ level: 2, exp: 1000, isActive: true });
@@ -195,7 +202,7 @@ try {
     check('the route window shows +70% at level 2', charmMark()?.textContent === '+70%' && charmMark().style.display !== 'none', `${player.region}/${player.route}: ${charmMark()?.outerHTML}`);
     check('the roaming tooltip has the charm\'s line', roamingTooltip().includes('Roaming Charm: +70% (×1.7)'), roamingTooltip());
     check('the roaming odds shown count the charm', routeWindow.textContent.includes(`1 / ${Math.floor(PokemonFactory.roamingRate(Routes.getRoute(player.region, player.route))).toLocaleString('en-US')} `));
-    setRoaming({ level: 10, exp: 2000000, isActive: true });
+    setRoaming({ level: 10, exp: 782850, isActive: true });
     check('the route window shows +200% at level 10', charmMark()?.textContent === '+200%', charmMark()?.textContent);
     setRoaming({ level: 2, exp: 1000, isActive: false });
     check('the route window hides the mark of an unequipped charm', charmMark()?.style.display === 'none', charmMark()?.outerHTML);
@@ -223,7 +230,7 @@ try {
     roaming.fromJSON({ level: 2, exp: 1000, isActive: false, uses: 1 });
     encounter = roamingEncounter(true);
     check('an unequipped charm gains nothing from roamers', typeof encounter.result === 'string' && encounter.exp === 0 && encounter.uses === 0, JSON.stringify(encounter));
-    roaming.fromJSON({ level: 10, exp: 2000000, isActive: true, uses: 1 });
+    roaming.fromJSON({ level: 10, exp: 782850, isActive: true, uses: 1 });
     encounter = roamingEncounter(true);
     check('a max-level charm still counts its uses', encounter.exp === 0 && encounter.uses === 1 && roaming.uses === 2, JSON.stringify(encounter));
     roaming.fromJSON({ level: 2, exp: 1000, isActive: true, uses: 2 });

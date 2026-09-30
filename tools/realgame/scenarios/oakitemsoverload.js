@@ -30,6 +30,13 @@ try {
     check('EXP Share reaches 1.75x', item('Exp_Share').maxLevel === 10 && item('Exp_Share').bonusList[10] === 1.75);
     check('Squirtbottle keeps the game maximum', item('Squirtbottle').maxLevel === 5 && item('Squirtbottle').overloadBaseMaxLevel === undefined);
     check('Sprinklotad keeps the game maximum', item('Sprinklotad').maxLevel === 5);
+    const shiny = item('Shiny_Charm');
+    check('Shiny Charm experience is worked out from shinies per level', shiny.expList[4] === 10000 && shiny.expList[5] === 32500 && shiny.expList[9] === 782500, JSON.stringify(shiny.expList));
+    shiny.fromJSON({ level: 5, exp: 10000, isActive: false });
+    check('Shiny Charm level 6 needs 150 shinies', shiny.progressString === '0 / 150', shiny.progressString);
+    shiny.fromJSON({ level: 9, exp: 482500, isActive: false });
+    check('Shiny Charm level 10 needs 2,000 shinies', shiny.progressString === '0 / 2,000', shiny.progressString);
+    shiny.fromJSON({ level: 0, exp: 0, isActive: false });
     if (OakItemType.Quest_Charm !== undefined) {
         check('the Oak Charms are left to their own script', item('Quest_Charm').overloadBaseMaxLevel === undefined && item('Quest_Charm').maxLevel === 10);
     } else {
@@ -112,6 +119,14 @@ try {
     App.game = new Game();
     App.game.initialize();
     check('a save below the maximum ignores the store', item('Amulet_Coin').level === 3);
+
+    // A stored exp outside its level's range, left by an older table, is brought back in it
+    localStorage.setItem(`oakItemsOverload-${Save.key}`, JSON.stringify({ Shiny_Charm: { level: 7, exp: 100000 } }));
+    saveObject.oakItems.Shiny_Charm = { level: 5, exp: 10000, isActive: false };
+    localStorage.setItem(`save${Save.key}`, JSON.stringify(saveObject));
+    App.game = new Game();
+    App.game.initialize();
+    check('a stored exp below its level is raised to the level start', item('Shiny_Charm').level === 7 && item('Shiny_Charm').progressString === '0 / 1,000', item('Shiny_Charm').progressString);
 
     console.log(out.join('\n'));
     window.__scenario = !window.__scenarioFailed;
