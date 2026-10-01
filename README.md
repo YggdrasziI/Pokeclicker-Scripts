@@ -80,7 +80,7 @@ It adds an **Automation** card to the game screen. Every feature in it is **off 
 • <strong>Focus on</strong> — pick one long-running goal and let it drive: Experience, Money, Dungeon Tokens, gems of any single type, Achievements, Pokérus cure, Quests, Shadow purify, or Alcremie forms (grows the berries, then spins at the Battle Café). If the chosen goal runs out of things to do, it hands over to the fallbacks you picked instead of switching everything off, and takes over again when it can.<br/>
 • <strong>Battle Café</strong> — spins for the Alcremie forms you are missing and that the current time of day can actually give.<br/>
 • <strong>Max Raid</strong> — in Galar, once the Lair of Giants questline has opened the dens, starts the Max Raid dens open today one after the other, moving you to the den's town first; every win is a Wishing Piece, and losing one turns it off.<br/>
-• <strong>Save backups</strong> — desktop client only, since a web page cannot write files. On a schedule you choose, with a retention count.<br/>
+• <strong>Save backups</strong> — desktop client only, since a web page cannot write files. On a schedule you choose, with a retention count. A backup that could not be written, such as to a folder the client may not write to, shows a notification in the game and is tried again every minute.<br/>
 • <strong>Notifications</strong> — per feature, so you can hear from the hatchery without hearing from everything else.
 
 ### **Building it**
