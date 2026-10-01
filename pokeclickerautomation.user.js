@@ -20134,6 +20134,7 @@ class AutomationSaveBackup
         }
 
         // Tell the game a backup exists, which is also what silences its Save Reminder
+        this.__internal__previousLastDownloaded = App.game.saveReminder.lastDownloaded();
         App.game.saveReminder.lastDownloaded(App.game.statistics.secondsPlayed());
 
         return {
@@ -20144,11 +20145,39 @@ class AutomationSaveBackup
                };
     }
 
+    /**
+     * @brief Called back by the desktop client once it tried to write the backup handed over
+     *
+     * collect() counts the backup as done, since an older client never calls back. When the
+     * write failed (a folder the client may not write to, a full disk), take that back: the
+     * backup is due again at the next poll, and the game's Save Reminder is no longer silenced
+     * by a file that does not exist. The client is the one telling the player.
+     *
+     * @param succeeded: True if the file was written
+     */
+    static onWriteResult(succeeded)
+    {
+        if (succeeded)
+        {
+            this.__internal__previousLastDownloaded = null;
+            return;
+        }
+
+        this.__internal__lastBackup = null;
+
+        if (this.__internal__previousLastDownloaded !== null)
+        {
+            App.game.saveReminder.lastDownloaded(this.__internal__previousLastDownloaded);
+            this.__internal__previousLastDownloaded = null;
+        }
+    }
+
     /*********************************************************************\
     |***    Internal members, should never be used by other classes    ***|
     \*********************************************************************/
 
     static __internal__lastBackup = null;
+    static __internal__previousLastDownloaded = null;
 
     /**
      * @brief Names the file after the trainer and the moment it was taken

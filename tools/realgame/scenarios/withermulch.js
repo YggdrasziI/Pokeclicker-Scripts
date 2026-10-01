@@ -1,7 +1,7 @@
 // Scenario for tools/realgame/start.mjs, with withermulch: the Wither Mulch is a mulch the
 // farm lists and the berry shops sell; put on a plot it withers the plant at once through
 // the game's own Plot.die, one mulch per plant, which is what drops the Banettite from a
-// Kasib Berry. The save keeps the game's own mulch list, the stock lives in a side store.
+// Kasib Berry. The save keeps the game's own mulch list, and the stock under a key of its own.
 try {
     const out = [];
     const check = (label, condition, detail) => {
@@ -96,19 +96,39 @@ try {
     farming.addMulch(index, MulchType.Boost_Mulch, 1);
     check('a Boost Mulch still mulches the plot', plot().mulch === MulchType.Boost_Mulch && plot().mulchTimeLeft > 0);
 
-    // The save keeps the game's own list; the stock comes back from the side store
+    // The save keeps the game's own list, and the stock under its own key
     item.buy(4);
     const json = farming.toJSON();
     check('the save keeps 7 mulch entries, the last one 0', json.mulchList.length === 7 && json.mulchList[6] === 0, JSON.stringify(json.mulchList));
-    check('the side store holds the stock', JSON.parse(localStorage.getItem(`withermulch-${Save.key}`))?.stock === 5, localStorage.getItem(`withermulch-${Save.key}`));
+    check('the save holds the stock under its own key', json.witherMulch === 5, json.witherMulch);
+    const mirrorKey = `withermulch-${Save.key}`;
+    check('the mirror holds the stock', JSON.parse(localStorage.getItem(mirrorKey))?.stock === 5, localStorage.getItem(mirrorKey));
     const saveObject = Save.getSaveObject();
-    check('the game save object keeps 7 entries', saveObject.farming.mulchList.length === 7);
-    localStorage.setItem(`save${Save.key}`, JSON.stringify(saveObject));
-    localStorage.setItem(`player${Save.key}`, JSON.stringify(player));
-    App.game = new Game();
-    App.game.initialize();
-    farming = App.game.farming;
-    check('the stock of 5 is back after a reload', stock() === 5, stock());
+    check('the game save object keeps 7 entries and the stock', saveObject.farming.mulchList.length === 7 && saveObject.farming.witherMulch === 5);
+    const reload = (farmingJson) => {
+        localStorage.setItem(`save${Save.key}`, JSON.stringify({ ...saveObject, farming: farmingJson }));
+        localStorage.setItem(`player${Save.key}`, JSON.stringify(player));
+        App.game = new Game();
+        App.game.initialize();
+        farming = App.game.farming;
+    };
+
+    // From the save alone, as after importing it into another browser profile
+    localStorage.removeItem(mirrorKey);
+    reload(saveObject.farming);
+    check('the stock of 5 comes back from the save, without the mirror', stock() === 5, stock());
+
+    // The save wins over a mirror left by another session
+    localStorage.setItem(mirrorKey, JSON.stringify({ stock: 40 }));
+    reload(saveObject.farming);
+    check('the save wins over the mirror', stock() === 5, stock());
+
+    // A save without the key, as 1.0.0 wrote it or as the unmodified game rewrites it
+    const { witherMulch: dropped, ...withoutStock } = saveObject.farming;
+    localStorage.setItem(mirrorKey, JSON.stringify({ stock: 5 }));
+    reload(withoutStock);
+    check('a save without the stock takes it from the mirror', stock() === 5, stock());
+    check('and writes it to the save from then on', farming.toJSON().witherMulch === 5);
 
     console.log(out.join('\n'));
     window.__scenario = !window.__scenarioFailed;

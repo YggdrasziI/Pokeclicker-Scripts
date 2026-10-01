@@ -1,8 +1,8 @@
 // Scenario for tools/realgame/start.mjs, with oakcharms (and optionally customachievements for
 // the achievement checks, and oakitemsoverload,
 // in either order): the six charms exist with their own ten levels, bonuses, costs and
-// experience; a level past 5 is bought through the game's own upgrade path, kept out of
-// the save in the charms' side store, and restored on reload. The Dowsing Charm feeds
+// experience; a level past 5 is bought through the game's own upgrade path, kept in
+// the save and in the charms' mirror, and restored on reload. The Dowsing Charm feeds
 // the game's rare item multiplier, gains exp from held item drops and rare chests, and
 // scales the chest "more loot" roll of a real dungeon. The Roaming Charm feeds the
 // game's roaming multiplier, gains exp and counts its uses on roaming encounters. The
@@ -267,21 +267,42 @@ try {
     check('a layer a helper completes is multiplied too, the player\'s share with it', dig.player === helperShare && dig.uses === 1, `${JSON.stringify(dig)} vs ${helperShare}`);
     mining.fromJSON({ level: 4, exp: 100, isActive: true, uses: 3 });
 
-    // The save stays vanilla; the side store keeps the charms at level 7, 3 and 2
+    // The save holds the charms, at level 7, 3, 2 and 4; the mirror holds the same
     const save = App.game.oakItems.toJSON();
-    check('save holds no charm', save.Quest_Charm === undefined && save.Farm_Charm === undefined && save.Battle_Charm === undefined && save.Dowsing_Charm === undefined && save.Roaming_Charm === undefined && save.Mining_Charm === undefined);
-    const stored = JSON.parse(localStorage.getItem(`oakCharms-${Save.key}`));
-    check('side store holds levels 7 and 3', stored?.Quest_Charm?.level === 7 && stored.Quest_Charm.exp === 30000 && stored.Dowsing_Charm?.level === 3, JSON.stringify(stored));
-    check('side store holds the Mining Charm level and uses', stored?.Mining_Charm?.level === 4 && stored.Mining_Charm.uses === 3, JSON.stringify(stored?.Mining_Charm));
-    check('side store holds the Roaming Charm level and uses', stored?.Roaming_Charm?.level === 2 && stored.Roaming_Charm.uses === 2, JSON.stringify(stored?.Roaming_Charm));
+    check('save holds the six charms', ['Quest_Charm', 'Farm_Charm', 'Battle_Charm', 'Dowsing_Charm', 'Roaming_Charm', 'Mining_Charm'].every((key) => save[key] !== undefined));
+    check('save holds levels 7 and 3', save.Quest_Charm?.level === 7 && save.Quest_Charm.exp === 30000 && save.Dowsing_Charm?.level === 3, JSON.stringify(save.Quest_Charm));
+    check('save holds the Mining Charm level and uses', save.Mining_Charm?.level === 4 && save.Mining_Charm.uses === 3, JSON.stringify(save.Mining_Charm));
+    const mirrorKey = `oakCharms-${Save.key}`;
+    const stored = JSON.parse(localStorage.getItem(mirrorKey));
+    check('mirror holds levels 7 and 3', stored?.Quest_Charm?.level === 7 && stored.Quest_Charm.exp === 30000 && stored.Dowsing_Charm?.level === 3, JSON.stringify(stored));
+    check('mirror holds the Mining Charm level and uses', stored?.Mining_Charm?.level === 4 && stored.Mining_Charm.uses === 3, JSON.stringify(stored?.Mining_Charm));
+    check('mirror holds the Roaming Charm level and uses', stored?.Roaming_Charm?.level === 2 && stored.Roaming_Charm.uses === 2, JSON.stringify(stored?.Roaming_Charm));
 
-    // Reload: the levels come back from the store
+    // Reload from the save alone, as after importing it into another browser profile
     const saveObject = Save.getSaveObject();
-    check('game save object holds no charm', saveObject.oakItems.Quest_Charm === undefined && saveObject.oakItems.Dowsing_Charm === undefined);
-    localStorage.setItem(`save${Save.key}`, JSON.stringify(saveObject));
-    localStorage.setItem(`player${Save.key}`, JSON.stringify(player));
-    App.game = new Game();
-    App.game.initialize();
+    check('game save object holds the charms', saveObject.oakItems.Quest_Charm?.level === 7 && saveObject.oakItems.Roaming_Charm?.uses === 2);
+    const reload = (oakItems) => {
+        localStorage.setItem(`save${Save.key}`, JSON.stringify({ ...saveObject, oakItems }));
+        localStorage.setItem(`player${Save.key}`, JSON.stringify(player));
+        App.game = new Game();
+        App.game.initialize();
+    };
+    localStorage.removeItem(mirrorKey);
+    reload(saveObject.oakItems);
+    check('the levels come back from the save, without the mirror', item('Quest_Charm').level === 7 && item('Dowsing_Charm').level === 3 && item('Mining_Charm').uses === 3);
+
+    // A save without its charms, as 1.10.0 wrote it or as the unmodified game rewrites
+    // it, takes them from the mirror
+    const withoutCharms = Object.fromEntries(Object.entries(saveObject.oakItems).filter(([key]) => !key.endsWith('_Charm') || key === 'Shiny_Charm'));
+    check('the stripped save holds the game items only', withoutCharms.Quest_Charm === undefined && withoutCharms.Shiny_Charm !== undefined && withoutCharms.Amulet_Coin !== undefined);
+    localStorage.setItem(mirrorKey, JSON.stringify(stored));
+    reload(withoutCharms);
+    check('a save without charms takes them from the mirror', item('Quest_Charm').level === 7 && item('Dowsing_Charm').level === 3 && item('Roaming_Charm').uses === 2);
+    check('and writes them to the save from then on', App.game.oakItems.toJSON().Quest_Charm?.level === 7);
+
+    // The save wins over a mirror left by another session
+    localStorage.setItem(mirrorKey, JSON.stringify({ ...stored, Quest_Charm: { level: 2, exp: 0, isActive: false, uses: 0 } }));
+    reload(saveObject.oakItems);
     const reloaded = item('Quest_Charm');
     check('level 7 restored after reload', reloaded.level === 7 && reloaded.maxLevel === 10 && reloaded.calculateBonusIfActive() === 2.75);
     const reloadedDowsing = item('Dowsing_Charm');

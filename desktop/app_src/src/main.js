@@ -35,12 +35,13 @@ const MOD_EXPECTED_CLIENT_VERSION = '1.2.0';
 // Used for update checking as the real client version gets overridden by the mod
 const MOD_EXPECTED_ELECTRON_VERSION = '^21.3.1';
 // VERY IMPORTANT: update this in desktopupdatechecker.js as well!
-const POKECLICKER_SCRIPTS_DESKTOP_VERSION = '2.3.0';
+const POKECLICKER_SCRIPTS_DESKTOP_VERSION = '2.4.0';
 
 console.info("Data directory:", dataDir);
 
 let checkForUpdatesInterval;
 let saveBackupInterval; // SAVE BACKUP ADDITION
+let lastSaveBackupError = null; // SAVE BACKUP ADDITION
 let newVersion = "0.0.0";
 let currentVersion = "0.0.0";
 let windowClosed = false;
@@ -1029,42 +1030,16 @@ function injectDesktopScriptsModifications(gameWindow) {
     }
 
     if (backup && backup.contents && backup.filename) {
-      if (writeSaveBackupFile(backup.filename, backup.contents)) {
+      const written = writeSaveBackupFile(backup.filename, backup.contents);
+      if (written) {
         pruneSaveBackups(backup.retention);
       }
+      // The script counted the backup as done when it handed it over; tell it how it went, so
+      // a failed one is tried again and the game's own Save Reminder is not kept quiet for it
+      gameWindow.webContents.executeJavaScript(
+        `window.AutomationSaveBackup && window.AutomationSaveBackup.onWriteResult && window.AutomationSaveBackup.onWriteResult(${written});0`)
+        .catch(() => {});
     }
-
-    await writeSidecarBackups();
-  }
-
-  // Other scripts keep their own data next to the save backups, so that the save itself stays
-  // vanilla: each one registers a function on window.DesktopSaveBackupProviders that returns
-  // { filename, contents } when something changed, or null. The files are small and named per
-  // save, so they overwrite themselves and never go through the retention pruning.
-  async function writeSidecarBackups() {
-    let sidecars;
-    try {
-      sidecars = await gameWindow.webContents.executeJavaScript(
-        '(window.DesktopSaveBackupProviders || []).map((provider) => { try { return provider(); } catch (err) { return null; } })');
-    } catch (err) {
-      return;
-    }
-
-    if (!Array.isArray(sidecars)) {
-      return;
-    }
-
-    sidecars.forEach((sidecar) => {
-      if (!sidecar || !sidecar.contents || typeof sidecar.filename !== 'string') {
-        return;
-      }
-      // A page-provided name must stay inside the folder
-      if (path.basename(sidecar.filename) !== sidecar.filename) {
-        logInGameWindow(`Refused to write a save backup outside its folder: '${sidecar.filename}'`, 'error');
-        return;
-      }
-      writeSaveBackupFile(sidecar.filename, sidecar.contents);
-    });
   }
 
   function writeSaveBackupFile(filename, contents) {
@@ -1074,17 +1049,52 @@ function injectDesktopScriptsModifications(gameWindow) {
       }
       fs.writeFileSync(path.join(saveBackupsDir, filename), contents, 'utf-8');
       logInGameWindow(`Wrote save backup '${filename}'`, 'debug');
+      lastSaveBackupError = null;
       return true;
     } catch (err) {
-      logInGameWindow(`Could not write the save backup:\n${err}`, 'error');
+      reportSaveBackupFailure(err);
       return false;
     }
   }
 
-  // The reverse trip: the page cannot read files either, so the sidecar files are handed over
-  // before any script runs, as window.DesktopSaveBackupFiles = { filename: contents }. A script
-  // restores from them when the browser storage holds nothing for the save, which is what
-  // happens after a backup is imported into a fresh install.
+  // A backup that cannot be written (a folder the client may not write to, a full disk) must
+  // not fail silently: the player believes backups are being made. The page console is hidden
+  // with the menu bar, so the failure also goes to the game's notifications. The script tries
+  // again every minute; the notification is only shown again when the error changes, or after
+  // a backup went through in between.
+  function reportSaveBackupFailure(err) {
+    const error = String(err);
+    console.error(`Could not write the save backup to '${saveBackupsDir}':\n${error}`);
+
+    // The message names the file, whose name changes every minute: compare the error code
+    const kind = (err && err.code) || error;
+    const repeated = kind === lastSaveBackupError;
+    lastSaveBackupError = kind;
+    // The texts go through JSON.stringify: a Windows path is full of backslashes, which a
+    // template literal would read as escapes. The notification shows its message as HTML.
+    const escapeHtml = (text) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    const logged = JSON.stringify(`Could not write the save backup to '${saveBackupsDir}':\n${error}`);
+    const message = JSON.stringify(`The save backup could not be written to:\n${escapeHtml(saveBackupsDir)}\n\n${escapeHtml(error)}\n\n`
+      + 'Check that the folder exists and that the client is allowed to write to it. No backup is being kept until then.');
+    gameWindow.webContents.executeJavaScript(`console.error(${logged});
+      if (!${repeated}) {
+        Notifier.notify({
+          type: NotificationConstants.NotificationOption.danger,
+          title: 'Save backup failed',
+          message: ${message},
+          timeout: GameConstants.HOUR,
+        });
+      }0`)
+      .catch((notifyErr) => {
+        console.log(`Failed to report the save backup failure:\n${notifyErr}`);
+      });
+  }
+
+  // Up to 2.3.0, some scripts kept their own data in small '.json' files next to the save
+  // backups, which the client wrote for them. That data is in the save itself now, so nothing
+  // is written any more; the files already there are still handed over before any script runs,
+  // as window.DesktopSaveBackupFiles = { filename: contents }, for a script to restore from
+  // when neither the save nor the browser storage holds its data.
   function injectSaveBackupSidecars() {
     const files = {};
     try {

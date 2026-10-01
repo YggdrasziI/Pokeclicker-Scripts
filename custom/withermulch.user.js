@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Wither Mulch
 // @namespace     Pokeclicker Scripts
 // @author        YggdrasziI
-// @description   Adds a Wither Mulch to the farm, sold for Farm Points next to the game's own mulches: put on a plot, it makes the Berry plant wither at once, with everything the game does when a plant withers (half its harvest dropped, a chance to replant itself, a chance to turn into a Kasib Berry). One mulch per plant. A Kasib Berry that withers is what gives the Banettite, 5% of the time once you reached Kalos and caught Banette. The save stays exactly what the unmodified game would write.
+// @description   Adds a Wither Mulch to the farm, sold for Farm Points next to the game's own mulches: put on a plot, it makes the Berry plant wither at once, with everything the game does when a plant withers (half its harvest dropped, a chance to replant itself, a chance to turn into a Kasib Berry). One mulch per plant. A Kasib Berry that withers is what gives the Banettite, 5% of the time once you reached Kalos and caught Banette. The stock is saved with the game save, under a key of its own, so the save still loads without the script.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.0.0
+// @version       1.1.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -33,8 +33,11 @@ const witherMulch = {
 let witherMulchType = null;
 let vanillaMulchListLength = null;
 
-// The stock lives outside the game save, per save file, in the browser storage: a save
-// loaded without this script must not meet a mulchList longer than the game's own.
+// The stock is saved with the game save, under a key of its own in the farm's entry: a
+// save loaded without this script must not meet a mulchList longer than the game's own,
+// while a key the game does not know is simply not read. The unmodified game rewrites
+// the save without it, so the stock is mirrored per save file in the browser storage,
+// and read back from there when a save comes without it.
 let witherMulchLoaded = false;
 
 function witherMulchStoreKey() {
@@ -127,7 +130,8 @@ function initWitherMulchOverrides() {
     };
 
     // The save keeps the game's own mulchList, with the unused last slot at 0 as the
-    // game writes it; the stock goes to the side store. toJSON runs at every save tick.
+    // game writes it; the stock goes next to it, under its own key, and to the mirror.
+    // toJSON runs at every save tick.
     const toJSONOld = Farming.prototype.toJSON;
     Farming.prototype.toJSON = function (...args) {
         const json = toJSONOld.apply(this, args);
@@ -138,18 +142,22 @@ function initWitherMulchOverrides() {
                 json.mulchList[witherMulchType] = 0;
             }
         }
+        json.witherMulch = stock;
         // Game.load() may save before loading on a brand-new save; never let the
-        // default overwrite a store that has not been read yet
+        // default overwrite a mirror that has not been read yet
         if (witherMulchLoaded) {
             localStorage.setItem(witherMulchStoreKey(), JSON.stringify({ stock }));
         }
         return json;
     };
 
+    // The stock of the save wins. A save without it takes the mirror: one written by
+    // 1.0.0, which kept the stock out of it, or by the unmodified game in between.
     const fromJSONOld = Farming.prototype.fromJSON;
-    Farming.prototype.fromJSON = function (...args) {
-        const result = fromJSONOld.apply(this, args);
-        this.mulchList[witherMulchType]?.(loadWitherMulchStock());
+    Farming.prototype.fromJSON = function (json, ...args) {
+        const result = fromJSONOld.call(this, json, ...args);
+        const saved = json?.witherMulch;
+        this.mulchList[witherMulchType]?.(Number.isFinite(saved) && saved >= 0 ? saved : loadWitherMulchStock());
         witherMulchLoaded = true;
         return result;
     };
