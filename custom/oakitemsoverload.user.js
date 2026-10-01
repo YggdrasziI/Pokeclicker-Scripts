@@ -2,10 +2,10 @@
 // @name          [Pokeclicker] Oak Items Overload
 // @namespace     Pokeclicker Scripts
 // @author        YggdrasziI
-// @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are kept outside the game save, so the save stays exactly what the unmodified game would write.
+// @description   Lets Oak Items be upgraded past their maximum level, from 5 to 10, for a bonus far above the game's own, at a cost that grows out of all proportion. The overloaded levels are saved with the game save, next to the item's own level, which stays at the game's maximum: the save still loads without the script.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.5.0
+// @version       1.6.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -195,20 +195,25 @@ function checkOverloadTable() {
     });
 }
 
-// The overloaded levels live outside the game save, per save file, in the browser
-// storage: the save keeps the game's own maximum, so a save file or a backup never
-// carries a level the unmodified game would not write. The desktop client mirrors
-// the store to a small file next to its save backups.
+// The overloaded levels are saved with the game save, in an 'overload' field of the
+// item's own entry: { level, exp }. The entry itself keeps the game's maximum, and the
+// unmodified game only reads the fields it knows, so a save holding the field still
+// loads without this script, at level 5. It also rewrites the save without the field,
+// so the levels are mirrored per save file in the browser storage (the side store),
+// and read back from there when a save comes without it.
 let overloadLoaded = false;
-let lastOverloadHandedOver = null;
 
 function overloadStoreKey() {
     return `oakItemsOverload-${Save.key}`;
 }
 
+function isOverloadEntry(entry) {
+    return Number.isInteger(entry?.level) && typeof entry?.exp === 'number';
+}
+
 function isOverloadStore(value) {
     return value !== null && typeof value === 'object'
-        && Object.values(value).every((entry) => Number.isInteger(entry?.level) && typeof entry?.exp === 'number');
+        && Object.values(value).every(isOverloadEntry);
 }
 
 function loadOverloadStore() {
@@ -232,9 +237,11 @@ function currentProfileName() {
     }
 }
 
-// The desktop client hands over the files found in its save-backups folder as
-// DesktopSaveBackupFiles. Only used when this browser profile holds nothing for the
-// save: the file for the same save key wins, then one for the same trainer name.
+// Up to 1.5.0 the levels lived outside the save, and the desktop client kept a copy
+// in a small file next to its save backups. It still hands over the files found in
+// that folder as DesktopSaveBackupFiles. Only used when this browser profile holds
+// nothing for the save: the file for the same save key wins, then one for the same
+// trainer name.
 function restoreOverloadFromClient() {
     const files = Object.values(window.DesktopSaveBackupFiles ?? {}).flatMap((contents) => {
         try {
@@ -248,28 +255,6 @@ function restoreOverloadFromClient() {
     const match = files.find((file) => file.saveKey === Save.key)
         ?? files.find((file) => profile !== null && file.profile === profile);
     return match?.levels ?? null;
-}
-
-// Polled by the desktop client's main process, which owns the filesystem. Returns
-// null while nothing changed, so the poll costs nothing between level-ups.
-function collectOakItemsOverloadBackup() {
-    if (!overloadLoaded || !App.game?.oakItems) {
-        return null;
-    }
-    const levels = overloadStoreContents(App.game.oakItems);
-    const serialized = JSON.stringify(levels);
-    if (serialized === lastOverloadHandedOver) {
-        return null;
-    }
-    lastOverloadHandedOver = serialized;
-
-    const profile = App.game.profile.name() || 'Trainer';
-    // Keep it filesystem-safe: the trainer name is free text
-    const safe = (text) => String(text).replace(/[^\w \-.]/g, '_');
-    return {
-        filename: `${safe(profile)} [${safe(Save.key || 'default')}] oak-items-overload.json`,
-        contents: JSON.stringify({ format: 1, kind: 'oakItemsOverload', saveKey: Save.key, profile, levels }, null, 2),
-    };
 }
 
 // The level and experience of every game item standing above its regular maximum
@@ -330,12 +315,19 @@ function initOakItemsOverloadOverrides() {
         return result;
     };
 
-    // The save keeps the game's own maximum for the game's items; the overloaded
-    // level goes to the side store instead. toJSON runs at every save tick, on
-    // download and for backups, which is the cadence wanted for the store.
+    // The entry of a game item keeps the game's own maximum; its real level goes to the
+    // entry's 'overload' field, and to the side store. Every item of the table gets the
+    // field, whatever its level: a save holding it was written by this script, and its
+    // levels win over the side store. An item turned off carries its stored level along.
+    // toJSON runs at every save tick, on download and for backups.
     const toJSONOld = OakItems.prototype.toJSON;
     OakItems.prototype.toJSON = function (...args) {
         const save = toJSONOld.apply(this, args);
+        Object.keys(overloadedOakItems).forEach((key) => {
+            if (save[key] !== undefined) {
+                save[key].overload = preservedLevels[key] ?? { level: save[key].level, exp: save[key].exp };
+            }
+        });
         const levels = collectOverloadedLevels(this);
         Object.keys(levels).forEach((key) => {
             const item = this.itemList[OakItemType[key]];
@@ -350,23 +342,33 @@ function initOakItemsOverloadOverrides() {
         return save;
     };
 
-    // An overloaded level is only restored over a save standing at the game's maximum:
+    // The level of an item comes from its 'overload' field in the save; an item without
+    // the field takes it from the side store: a save written by 1.5.0 or older, which
+    // kept the levels out of it, or one the unmodified game wrote in between. Either way
+    // an overloaded level is only restored over an entry standing at the game's maximum:
     // a save that was levelled down, or another save under the same key, is left alone.
     const fromJSONOld = OakItems.prototype.fromJSON;
     OakItems.prototype.fromJSON = function (json, ...args) {
         const result = fromJSONOld.call(this, json, ...args);
-        const stored = loadOverloadStore() ?? restoreOverloadFromClient();
+        const saved = {};
+        Object.entries(json ?? {}).forEach(([key, entry]) => {
+            if (isOverloadEntry(entry?.overload)) {
+                saved[key] = entry.overload;
+            }
+        });
+        const stored = { ...(loadOverloadStore() ?? restoreOverloadFromClient()), ...saved };
         preservedLevels = {};
-        if (stored) {
-            Object.entries(stored).forEach(([key, entry]) => {
-                const item = this.itemList[OakItemType[key]];
-                if (item?.overloadBaseMaxLevel === undefined) {
+        Object.entries(stored).forEach(([key, entry]) => {
+            const item = this.itemList[OakItemType[key]];
+            if (item?.overloadBaseMaxLevel === undefined) {
+                // Not overloaded this session: only a level past the game's maximum is worth keeping
+                if (item === undefined || entry.level > item.maxLevel) {
                     preservedLevels[key] = entry;
-                } else if (item.level === item.overloadBaseMaxLevel && entry.level > item.level) {
-                    item.fromJSON({ ...item.toJSON(), level: entry.level, exp: expWithinLevel(item, entry.level, entry.exp) });
                 }
-            });
-        }
+            } else if (item.level === item.overloadBaseMaxLevel && entry.level > item.level) {
+                item.fromJSON({ ...item.toJSON(), level: entry.level, exp: expWithinLevel(item, entry.level, entry.exp) });
+            }
+        });
         overloadLoaded = true;
         return result;
     };
@@ -375,12 +377,6 @@ function initOakItemsOverloadOverrides() {
 function initOakItemsOverload() {
     if (!OakItems.prototype.overloadInstalled) {
         throw new Error('The Oak Items were not overloaded; the script probably loaded after the game started.');
-    }
-
-    // Only the desktop client can write files; it polls this list from its main process
-    if (App.isUsingClient) {
-        window.DesktopSaveBackupProviders = window.DesktopSaveBackupProviders ?? [];
-        window.DesktopSaveBackupProviders.push(collectOakItemsOverloadBackup);
     }
 
     // One switch per item in the Scripts tab of the settings

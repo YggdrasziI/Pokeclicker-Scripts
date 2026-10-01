@@ -5,7 +5,7 @@
 // @description   Adds six Oak Items to the game's own Oak Items window: the Quest Charm, Farm Charm and Battle Charm multiply the Quest Points, Farm Points and Battle Points you gain, the way the Amulet Coin multiplies money, the Dowsing Charm makes Pokémon drop held items and dungeon chests multiply their loot more often, like the Dowsing Machine, and the Roaming Charm makes roaming Pokémon appear more often, up to the x3 of a boosted route, and shows its bonus next to the roaming odds of the route's encounters window, and the Mining Charm multiplies the Underground experience a completed mine layer gives, up to x4. Each unlocks on its own condition and levels up by using it.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.10.0
+// @version       1.11.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -225,12 +225,12 @@ function oakCharmAchievementDefinitions() {
     return levels.concat(roamers, layers);
 }
 
-// The charm progress (level, exp, equipped) lives outside the game save, so a save
-// file or a backup never carries anything the unmodified game would not write.
-// It is kept per save file in the browser storage, like the game's own save, and
-// the desktop client mirrors it to a small file next to its save backups.
+// The charm progress (level, exp, equipped, uses) is saved with the game save, under
+// the charms' own Oak Item keys: the unmodified game only reads the Oak Items it
+// knows, so a save holding them still loads without this script. It also rewrites
+// the save without them, so the progress is mirrored per save file in the browser
+// storage, and read back from there when a save comes without its charms.
 let charmsLoaded = false;
-let lastCharmsHandedOver = null;
 
 function charmProgressKey() {
     return `oakCharms-${Save.key}`;
@@ -262,10 +262,11 @@ function currentProfileName() {
     }
 }
 
-// The desktop client hands over the files found in its save-backups folder as
-// DesktopSaveBackupFiles. Only used when this browser profile holds nothing for the
-// save, which is what happens after importing a backup into a fresh install: the
-// file for the same save key wins, then one for the same trainer name.
+// Up to 1.10.0 the progress lived outside the save, and the desktop client kept a copy
+// in a small file next to its save backups. It still hands over the files found in
+// that folder as DesktopSaveBackupFiles. Only used when neither the save nor this
+// browser profile holds the charms: the file for the same save key wins, then one
+// for the same trainer name.
 function restoreCharmProgressFromClient() {
     const files = Object.values(window.DesktopSaveBackupFiles ?? {}).flatMap((contents) => {
         try {
@@ -279,31 +280,6 @@ function restoreCharmProgressFromClient() {
     const match = files.find((file) => file.saveKey === Save.key)
         ?? files.find((file) => profile !== null && file.profile === profile);
     return match?.charms ?? null;
-}
-
-// Polled by the desktop client's main process, which owns the filesystem. Returns
-// null while nothing changed, so the poll costs nothing between charm level-ups.
-function collectOakCharmsBackup() {
-    if (!charmsLoaded || !App.game?.oakItems) {
-        return null;
-    }
-    const charms = {};
-    oakCharms.forEach((charm) => {
-        charms[charm.key] = oakCharmItem(charm).toJSON();
-    });
-    const serialized = JSON.stringify(charms);
-    if (serialized === lastCharmsHandedOver) {
-        return null;
-    }
-    lastCharmsHandedOver = serialized;
-
-    const profile = App.game.profile.name() || 'Trainer';
-    // Keep it filesystem-safe: the trainer name is free text
-    const safe = (text) => String(text).replace(/[^\w \-.]/g, '_');
-    return {
-        filename: `${safe(profile)} [${safe(Save.key || 'default')}] oak-charms.json`,
-        contents: JSON.stringify({ format: 1, saveKey: Save.key, profile, charms }, null, 2),
-    };
 }
 
 // Runs on document ready, before the game builds its Oak Item list and applies
@@ -427,40 +403,41 @@ function initOakCharmsOverrides() {
         return result;
     };
 
-    // The game serializes every item of the list, charms included. Take them back out
-    // so the save stays vanilla, and refresh the side store instead: toJSON runs at
-    // every save tick, on download and for backups, which is exactly the cadence wanted.
+    // The game serializes every item of the list, charms included: they stay in the
+    // save. The mirror is refreshed alongside: toJSON runs at every save tick, on
+    // download and for backups, which is exactly the cadence wanted.
     const toJSONOld = OakItems.prototype.toJSON;
     OakItems.prototype.toJSON = function (...args) {
         const save = toJSONOld.apply(this, args);
         const charms = {};
         oakCharms.forEach((charm) => {
             charms[charm.key] = save[charm.key];
-            delete save[charm.key];
         });
         // Game.load() may call toJSON before fromJSON on a brand-new save; never let
-        // the defaults overwrite a store that has not been read yet
+        // the defaults overwrite a mirror that has not been read yet
         if (charmsLoaded) {
             storeCharmProgress(charms);
         }
         return save;
     };
 
-    // The original still applies charm keys found in a save written by an older
-    // version of this script, so an upgrade loses nothing; the side store then wins.
+    // The original applies the charms found in the save, which win. A charm the save
+    // does not hold comes from the mirror: a save written by 1.10.0 or older, which
+    // kept the charms out of it, or one the unmodified game wrote in between.
     const fromJSONOld = OakItems.prototype.fromJSON;
     OakItems.prototype.fromJSON = function (json, ...args) {
         const result = fromJSONOld.call(this, json, ...args);
-        const stored = loadCharmProgress() ?? restoreCharmProgressFromClient();
+        const missing = oakCharms.filter((charm) => json?.[charm.key] === undefined);
+        const stored = missing.length ? loadCharmProgress() ?? restoreCharmProgressFromClient() : null;
         if (stored) {
-            oakCharms.forEach((charm) => {
+            missing.forEach((charm) => {
                 const item = this.itemList[OakItemType[charm.key]];
                 if (item && stored[charm.key]) {
                     item.fromJSON(stored[charm.key]);
                 }
             });
         }
-        // A charm turned off in the settings is never equipped, whatever the store says
+        // A charm turned off in the settings is never equipped, whatever the save says
         oakCharms.filter((charm) => !charmEnabled(charm)).forEach((charm) => {
             this.itemList[OakItemType[charm.key]].isActive = false;
         });
@@ -698,12 +675,6 @@ function initOakCharmsOverrides() {
 function initOakCharms() {
     if (oakCharms.some((charm) => oakCharmItem(charm) === undefined)) {
         throw new Error('The Oak Charms were not added to the game; the script probably loaded after the game started.');
-    }
-
-    // Only the desktop client can write files; it polls this list from its main process
-    if (App.isUsingClient) {
-        window.DesktopSaveBackupProviders = window.DesktopSaveBackupProviders ?? [];
-        window.DesktopSaveBackupProviders.push(collectOakCharmsBackup);
     }
 
     // One switch per charm in the Scripts tab of the settings
