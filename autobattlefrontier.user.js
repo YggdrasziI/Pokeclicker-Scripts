@@ -5,7 +5,7 @@
 // @description   Adds in stage resetting to the Battle Frontier that allows you to set a target stage and infinitely farm the Battle Frontier while being fully AFK. Also, gives the appropriate amount of Battle Points and Money without needing to fail and lose a stage.
 // @copyright     https://github.com/YggdrasziI
 // @license       GPL-3.0 License
-// @version       1.5.5
+// @version       1.6.0
 
 // @homepageURL   https://github.com/YggdrasziI/Pokeclicker-Scripts/
 // @supportURL    https://github.com/YggdrasziI/Pokeclicker-Scripts/issues
@@ -21,6 +21,8 @@
 class AutoBattleFrontier {
     static battleFrontCeil;
     static battleFrontAttackCeil;
+    static battleFrontSpeed;
+    static battleFrontSpeeds = [1, 2, 4, 8, 16];
 
     static {
         if (localStorage.getItem('battleFrontCeil') == null) {
@@ -36,6 +38,13 @@ class AutoBattleFrontier {
         this.battleFrontAttackCeil = +localStorage.getItem('battleFrontAttackCeil');
         if (![0,1,2].includes(this.battleFrontAttackCeil)) {
             this.battleFrontAttackCeil = 0;
+        }
+        if (localStorage.getItem('battleFrontSpeed') == null) {
+            localStorage.setItem("battleFrontSpeed", 1);
+        }
+        this.battleFrontSpeed = +localStorage.getItem('battleFrontSpeed');
+        if (!this.battleFrontSpeeds.includes(this.battleFrontSpeed)) {
+            this.battleFrontSpeed = 1;
         }
     }
 
@@ -54,6 +63,14 @@ class AutoBattleFrontier {
         const attackCeilButton = attackCeilContainer.querySelector('#bf-attack-ceil-start');
         attackCeilButton.setAttribute('data-bind', 'class: `btn btn-block btn-${AutoBattleFrontier.battleFrontAttackCeil ? \'success\' : \'danger\'}`, text: `Max Attacks: ${AutoBattleFrontier.battleFrontAttackCeil}`');
         attackCeilButton.setAttribute('onclick', 'AutoBattleFrontier.toggleBattleFrontAttackCeil()');
+        const speedSelect = document.createElement("select");
+        speedSelect.setAttribute("id", "bf-speed-select");
+        speedSelect.setAttribute("title", "Battle speed");
+        speedSelect.setAttribute("style", "font-size: 8pt; margin-left: 5px;");
+        speedSelect.innerHTML = AutoBattleFrontier.battleFrontSpeeds.map((speed) => `<option value="${speed}">x${speed}</option>`).join('');
+        speedSelect.value = AutoBattleFrontier.battleFrontSpeed;
+        speedSelect.setAttribute('onchange', 'AutoBattleFrontier.setBattleFrontSpeed(this.value)');
+        attackCeilContainer.appendChild(speedSelect);
         const bfInput = document.createElement("div");
         bfInput.innerHTML = `Max Stage: <input id="battle-front-input" style="width: 70px; margin: 5px;"> <button id="battle-front-input-submit" class="btn btn-block btn-danger" style="font-size: 8pt; width: 42px; display:inline-block;">OK</button>`;
         bfInput.setAttribute("id", "battle-front-cont");
@@ -90,6 +107,27 @@ class AutoBattleFrontier {
                 }
             }
             return oldPokemonAttack.apply(this, arguments);
+        }
+
+        const oldRunnerTick = BattleFrontierRunner.tick;
+        BattleFrontierRunner.tick = function() {
+            var result = oldRunnerTick.apply(this, arguments);
+            // Battle speed: replay the game's own Battle Frontier tick for each extra step, timer included
+            for (let i = 1; i < AutoBattleFrontier.battleFrontSpeed; i++) {
+                if (!BattleFrontierRunner.started()) {
+                    break;
+                }
+                // The game only allows 1 attack per 450ms, lift that for the replayed ticks
+                BattleFrontierBattle.lastPokemonAttack = 0;
+                BattleFrontierBattle.counter += GameConstants.TICK_TIME;
+                if (BattleFrontierBattle.counter >= GameConstants.BATTLE_FRONTIER_TICK) {
+                    BattleFrontierBattle.tick();
+                }
+                // ...and for the game's next attack, which would otherwise come too soon after this one
+                BattleFrontierBattle.lastPokemonAttack = 0;
+                oldRunnerTick.apply(this, arguments);
+            }
+            return result;
         }
     }
 
@@ -141,6 +179,13 @@ class AutoBattleFrontier {
         }
         localStorage.setItem("battleFrontAttackCeil", this.battleFrontAttackCeil);
         document.getElementById('bf-attack-ceil-start').innerHTML = `Max Attacks: ${this.battleFrontAttackCeil || 'OFF'}`;
+    }
+
+    static setBattleFrontSpeed(value) {
+        const speed = +value;
+        this.battleFrontSpeed = (this.battleFrontSpeeds.includes(speed) ? speed : 1);
+        localStorage.setItem("battleFrontSpeed", this.battleFrontSpeed);
+        document.getElementById('bf-speed-select').value = this.battleFrontSpeed;
     }
 
     static setBattleFrontCeil() {
