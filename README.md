@@ -310,6 +310,8 @@ You can specify a maximum stage in the input box on the right. When you complete
 
 The Max Attacks mode restarts the Battle Frontier when you reach a stage with battles that you cannot defeat in the specified number of attacks, allowing you to loop through the early stages for quicker farming. The button toggles through 1 attack, 2 attacks, and disabling the mode. Max Attacks is an enhancement of the previous One Click mode: the two-attack mode is slightly more efficient for farming BP.
 
+The speed list next to the Max Attacks button (x1, x2, x4, x8, x16) makes the battles run that many times faster. Your Pokémon attack as usual, only more often, and the stage timer runs down at the same faster pace: you reach the same stages as before, in less time.
+
 <hr>
 
 <a name="auto-battle-items"></a>
